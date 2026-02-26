@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>My Recipe Library</title>
+<style>
+:root {
+  --bg: #0F1117;
+  --bg2: #1a1f2e;
+  --bg3: #12151f;
+  --bg4: #1e2330;
+  --border: #2a2f3e;
+  --text: #E8E4DC;
+  --text2: #9a9fae;
+  --text3: #556;
+  --accent: #6e8efb;
+  --green: #4CAF50;
+  --green-bg: #E8F5E9;
+  --green-text: #1B5E20;
+  --red: #e07070;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: Georgia, serif; min-height: 100vh; }
+a { color: var(--accent); }
+
+/* ── LOGIN ── */
+#login-screen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #0a0d14 0%, #0F1117 100%);
+  padding: 20px;
+}
+.login-box {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 16px;
+  padding: 40px 36px; width: 100%; max-width: 380px; text-align: center;
+}
+.login-box h1 { font-size: 28px; margin-bottom: 6px; }
+.login-box p { color: var(--text2); font-size: 14px; margin-bottom: 28px; }
+.login-box input {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 16px; color: var(--text); font-size: 16px;
+  outline: none; text-align: center; letter-spacing: 4px; margin-bottom: 14px;
+  font-family: monospace; transition: border-color .2s;
+}
+.login-box input:focus { border-color: var(--accent); }
+.login-error { color: var(--red); font-size: 13px; margin-top: 8px; font-family: monospace; min-height: 20px; }
+
+/* ── APP ── */
+#app { display: none; }
+
+/* ── HEADER ── */
+.header {
+  background: linear-gradient(135deg, #1a1f2e, var(--bg));
+  border-bottom: 1px solid var(--border); padding: 20px 24px 18px;
+  position: sticky; top: 0; z-index: 50;
+}
+.header-inner { max-width: 1300px; margin: 0 auto; }
+.header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+.header h1 { font-size: 24px; font-weight: 700; color: #F5F0E8; display: flex; align-items: center; gap: 10px; }
+.header-actions { display: flex; gap: 8px; align-items: center; }
+.count-badge { font-size: 12px; color: #888; font-family: monospace; font-weight: 400; }
+.pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.pill {
+  display: inline-flex; align-items: center; gap: 5px; border-radius: 20px;
+  padding: 4px 12px; font-size: 11px; cursor: pointer; font-family: monospace;
+  border: 1px solid var(--border); background: var(--bg4); color: #aaa;
+  transition: all .2s; user-select: none;
+}
+.pill.active { border-color: var(--dot); background: var(--bg); color: var(--text); }
+.pill .dot { width: 6px; height: 6px; border-radius: 50%; background: #555; display: inline-block; flex-shrink: 0; }
+.pill.active .dot { background: var(--dot); }
+
+/* ── MAIN ── */
+.main { max-width: 1300px; margin: 0 auto; padding: 20px 24px; }
+
+/* ── BUTTONS ── */
+.btn {
+  border: none; border-radius: 8px; padding: 9px 16px; font-size: 13px;
+  font-family: Georgia, serif; cursor: pointer; transition: all .2s;
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #5a7df0; }
+.btn-primary:disabled { background: #3a4060; color: #666; cursor: default; }
+.btn-success { background: #2d6a4f; color: #7bcf8e; border: 1px solid #3a8a65; }
+.btn-success:hover { background: #3a7a5f; }
+.btn-danger { background: #4a1a1a; color: var(--red); border: 1px solid #6a3030; font-size: 12px; padding: 6px 11px; }
+.btn-danger:hover { background: #5a2a2a; }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: #aaa; }
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+.btn-ghost { background: transparent; border: none; color: var(--text2); padding: 8px 10px; }
+.btn-ghost:hover { color: var(--text); }
+.grocery-badge {
+  background: var(--red); color: #fff; border-radius: 50%;
+  width: 18px; height: 18px; display: inline-flex; align-items: center;
+  justify-content: center; font-size: 10px; font-family: monospace;
+}
+
+/* ── TOPBAR ── */
+.topbar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+.search-wrap { position: relative; flex: 1; min-width: 200px; }
+.search-wrap input {
+  width: 100%; background: var(--bg4); border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 36px 9px 14px; color: var(--text);
+  font-size: 14px; outline: none; font-family: Georgia, serif;
+  transition: border-color .2s;
+}
+.search-wrap input:focus { border-color: var(--accent); }
+.search-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #556; cursor: pointer; font-size: 16px; padding: 2px; }
+select.flt {
+  background: var(--bg4); border: 1px solid var(--border); border-radius: 8px;
+  padding: 9px 10px; color: var(--text); font-size: 12px; outline: none;
+  font-family: Georgia, serif; cursor: pointer;
+}
+
+/* ── INGREDIENT MATCHER ── */
+.fridge-bar {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px; margin-bottom: 16px; display: none;
+}
+.fridge-bar.show { display: block; }
+.fridge-bar h3 { font-size: 13px; color: #F5F0E8; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.fridge-row { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
+.fridge-row textarea {
+  flex: 1; min-width: 200px; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px; color: var(--text); font-size: 13px;
+  outline: none; font-family: Georgia, serif; resize: vertical; min-height: 60px;
+  transition: border-color .2s;
+}
+.fridge-row textarea:focus { border-color: var(--accent); }
+.fridge-info { font-size: 11px; color: var(--text3); margin-top: 8px; font-family: monospace; }
+.match-badge {
+  display: inline-flex; align-items: center; gap: 4px; border-radius: 10px;
+  padding: 2px 8px; font-size: 10px; font-family: monospace; font-weight: 600;
+}
+.match-full { background: #1a3a1a; color: #7bcf8e; border: 1px solid #2a5a2a; }
+.match-partial { background: #2a2a10; color: #d4b84a; border: 1px solid #4a4a20; }
+
+/* ── COUNT ── */
+.count { font-size: 12px; color: #666; font-family: monospace; margin-bottom: 12px; }
+.clear-link { cursor: pointer; margin-left: 10px; color: var(--accent); text-decoration: underline; }
+
+/* ── TABLE ── */
+.table { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.thead {
+  display: grid; grid-template-columns: 28px 1fr 90px 100px 100px 50px 30px;
+  padding: 10px 14px; background: var(--bg3); border-bottom: 1px solid var(--border);
+  font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--text3); font-family: monospace; gap: 8px; align-items: center;
+}
+.trow-wrap { border-bottom: 1px solid var(--bg4); }
+.trow-wrap:last-child { border-bottom: none; }
+.trow {
+  display: grid; grid-template-columns: 28px 1fr 90px 100px 100px 50px 30px;
+  padding: 11px 14px; align-items: center; gap: 8px; cursor: pointer;
+  transition: background .15s;
+}
+.trow:hover { background: var(--bg4); }
+.recipe-name { font-size: 13px; font-weight: 500; color: var(--text); display: flex; align-items: center; gap: 6px; min-width: 0; }
+.recipe-name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.expand-icon { font-size: 8px; color: #445; transition: transform .2s; flex-shrink: 0; }
+.trow-wrap.open .expand-icon { transform: rotate(90deg); }
+.has-details .recipe-name { color: #b8d8ff; }
+.no-details-hint { font-size: 9px; color: #334; font-family: monospace; flex-shrink: 0; }
+.badge { display: inline-flex; align-items: center; gap: 3px; border-radius: 10px; padding: 2px 8px; font-size: 10px; font-family: monospace; white-space: nowrap; }
+.badge .dot { width: 4px; height: 4px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.meta { font-size: 11px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cost { font-size: 11px; color: #7bcf8e; font-family: monospace; font-weight: 600; }
+.link-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 6px; background: #1e2a3a;
+  border: 1px solid #2a3f5e; color: var(--accent); font-size: 11px;
+  text-decoration: none; transition: all .15s; flex-shrink: 0;
+}
+.link-btn:hover { background: #2a3f5e; }
+input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
+
+/* ── DETAIL PANEL ── */
+.detail-panel { display: none; padding: 0 14px 18px 46px; background: #0e1118; border-top: 1px solid var(--bg4); }
+.trow-wrap.open .detail-panel { display: block; }
+.detail-inner { display: grid; grid-template-columns: 1fr 1.6fr; gap: 24px; padding-top: 18px; }
+.detail-section h3 { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); font-family: monospace; margin-bottom: 8px; }
+.ing-list { list-style: none; }
+.ing-list li { font-size: 12px; color: #c0c8da; padding: 3px 0 3px 12px; border-bottom: 1px solid #1a1f2e; position: relative; line-height: 1.4; }
+.ing-list li:last-child { border-bottom: none; }
+.ing-list li::before { content: "·"; color: var(--accent); position: absolute; left: 0; }
+.steps-list { list-style: none; counter-reset: steps; }
+.steps-list li { font-size: 12px; color: #c0c8da; padding: 6px 0 6px 28px; border-bottom: 1px solid #1a1f2e; position: relative; counter-increment: steps; line-height: 1.5; }
+.steps-list li:last-child { border-bottom: none; }
+.steps-list li::before {
+  content: counter(steps); position: absolute; left: 0; top: 6px;
+  width: 18px; height: 18px; background: #1e2a3a; border: 1px solid #2a3f5e;
+  border-radius: 50%; font-size: 9px; color: var(--accent); font-family: monospace;
+  text-align: center; line-height: 18px;
+}
+.detail-actions { margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+.detail-loading { display: flex; align-items: center; gap: 10px; color: var(--text2); font-size: 13px; padding: 18px 0; }
+.spinner { width: 15px; height: 15px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── ADD PANEL ── */
+.add-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 18px; display: none; }
+.add-panel.show { display: block; }
+.add-panel h2 { font-size: 15px; color: #F5F0E8; margin-bottom: 14px; }
+.add-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.field label { display: block; font-size: 10px; color: var(--text3); font-family: monospace; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+.field input, .field select {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 10px; color: var(--text); font-size: 13px;
+  outline: none; font-family: Georgia, serif; transition: border-color .2s;
+}
+.field input:focus, .field select:focus { border-color: var(--accent); }
+.field.full { grid-column: 1/-1; }
+.url-row { display: flex; gap: 8px; align-items: flex-end; }
+.url-row .field { flex: 1; margin: 0; }
+.add-msg { font-size: 12px; font-family: monospace; padding: 8px 10px; border-radius: 6px; margin-top: 8px; display: flex; align-items: center; gap: 8px; }
+.add-msg.error { background: #2a1515; color: var(--red); border: 1px solid #4a2020; }
+.add-msg.success { background: #152a1e; color: #7bcf8e; border: 1px solid #2a5a3e; }
+.add-msg.loading { background: var(--bg2); color: var(--text2); border: 1px solid var(--border); }
+
+/* ── MODALS ── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.8); z-index: 100;
+  display: none; align-items: flex-start; justify-content: center;
+  padding: 24px 16px; overflow-y: auto;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 16px;
+  width: 100%; max-width: 640px; padding: 28px; position: relative;
+  margin: auto;
+}
+.modal h2 { font-size: 20px; color: #F5F0E8; margin-bottom: 4px; }
+.modal .subtitle { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
+.modal-close { position: absolute; top: 14px; right: 14px; background: none; border: none; color: #666; font-size: 20px; cursor: pointer; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 6px; }
+.modal-close:hover { background: var(--border); color: var(--text); }
+.g-section { margin-bottom: 18px; }
+.g-section h3 { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); font-family: monospace; margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
+.g-item { display: flex; align-items: baseline; gap: 8px; padding: 5px 0; font-size: 14px; color: #c8d0e0; border-bottom: 1px solid #141820; }
+.g-item:last-child { border-bottom: none; }
+.g-item::before { content: "☐"; color: #4a5070; font-size: 12px; flex-shrink: 0; }
+.g-from { font-size: 10px; color: #445; font-family: monospace; margin-left: auto; flex-shrink: 0; padding-left: 8px; }
+.modal-footer { margin-top: 20px; display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+
+/* ── MATCH RESULTS ── */
+.match-result-header { font-size: 12px; color: var(--text2); margin-bottom: 10px; font-family: monospace; }
+.match-score-bar { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.score-track { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.score-fill { height: 100%; border-radius: 2px; transition: width .4s; }
+.score-pct { font-size: 10px; font-family: monospace; color: var(--text3); width: 28px; text-align: right; }
+
+/* ── EMPTY ── */
+.empty { padding: 40px; text-align: center; color: #555; font-size: 14px; }
+.footer-note { margin-top: 12px; font-size: 11px; color: #444; text-align: center; font-family: monospace; }
+
+/* ── MOBILE ── */
+@media (max-width: 700px) {
+  .header { padding: 14px 16px 12px; }
+  .header h1 { font-size: 20px; }
+  .main { padding: 14px 16px; }
+  .thead { display: none; }
+  .trow {
+    grid-template-columns: 28px 1fr 28px;
+    grid-template-rows: auto auto;
+  }
+  .trow > *:nth-child(3),
+  .trow > *:nth-child(4),
+  .trow > *:nth-child(5),
+  .trow > *:nth-child(6) { display: none; }
+  .trow > *:nth-child(7) { grid-column: 3; grid-row: 1; }
+  .recipe-name { font-size: 13px; }
+  .recipe-mobile-meta { grid-column: 2; font-size: 11px; color: var(--text2); }
+  .detail-panel { padding: 0 10px 16px 10px; }
+  .detail-inner { grid-template-columns: 1fr; gap: 16px; }
+  .add-grid { grid-template-columns: 1fr; }
+  .field.full { grid-column: 1; }
+  .modal { padding: 20px 16px; }
+  .topbar { gap: 6px; }
+  .pills { gap: 5px; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>🍽 Recipe Library</h1>
+    <p>Enter your password to continue</p>
+    <input type="password" id="pw-input" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:13px" onclick="doLogin()" id="login-btn">Unlock</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="header">
+    <div class="header-inner">
+      <div class="header-top">
+        <h1>🍽 My Recipe Library <span class="count-badge" id="total-badge"></span></h1>
+        <div class="header-actions">
+          <button class="btn btn-outline" style="font-size:12px" onclick="toggleFridge()">🥦 What's in my fridge?</button>
+          <button class="btn btn-outline" style="font-size:12px" onclick="toggleAdd()">＋ Add</button>
+          <button class="btn btn-success" id="grocery-btn" onclick="openGrocery()" style="display:none">
+            🛒 <span class="grocery-badge" id="grocery-count">0</span>
+          </button>
+        </div>
+      </div>
+      <div class="pills" id="pills"></div>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- Fridge bar -->
+    <div class="fridge-bar" id="fridge-bar">
+      <h3>🥦 What's in my fridge? <span style="font-size:11px;color:var(--text3);font-family:monospace;font-weight:400">— AI will find recipes you can make</span></h3>
+      <div class="fridge-row">
+        <textarea id="fridge-input" placeholder="Type ingredients you have, e.g: chicken breast, garlic, onion, olive oil, chicken broth, canned tomatoes..."></textarea>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <button class="btn btn-primary" onclick="matchIngredients()" id="match-btn">✨ Find Recipes</button>
+          <button class="btn btn-outline" onclick="clearMatch()">Clear</button>
+        </div>
+      </div>
+      <div class="fridge-info" id="fridge-info"></div>
+    </div>
+
+    <!-- Add panel -->
+    <div class="add-panel" id="add-panel">
+      <h2>➕ Add New Recipe from URL</h2>
+      <div class="add-grid">
+        <div class="field full url-row">
+          <div class="field"><label>Recipe URL *</label><input type="url" id="new-url" placeholder="https://..."></div>
+          <button class="btn btn-primary" id="fetch-btn" onclick="fetchAndAdd()">✨ Fetch</button>
+        </div>
+        <div class="field"><label>Recipe Name</label><input type="text" id="new-name" placeholder="Auto-filled"></div>
+        <div class="field"><label>Category</label>
+          <select id="new-cat">
+            <option value="Breakfast">Breakfast</option>
+            <option value="Lunch/Dinner" selected>Lunch/Dinner</option>
+            <option value="Salad">Salad</option>
+            <option value="Side">Side</option>
+            <option value="Dessert">Dessert</option>
+          </select>
+        </div>
+        <div class="field"><label>Protein</label><input type="text" id="new-protein" placeholder="e.g. Chicken"></div>
+        <div class="field"><label>Method</label><input type="text" id="new-method" placeholder="e.g. Slow Cooker"></div>
+        <div class="field"><label>Source</label><input type="text" id="new-source" placeholder="e.g. Kay Nutrition"></div>
+        <div class="field"><label>Est. Aldi Cost</label><input type="text" id="new-cost" placeholder="e.g. $10-13"></div>
+      </div>
+      <div id="add-msg" style="display:none" class="add-msg"></div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="saveNew()">Save Recipe</button>
+        <button class="btn btn-outline" onclick="toggleAdd()">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="search-wrap">
+        <input type="text" id="search" placeholder="Search recipes…" oninput="onSearch(this.value)">
+        <button class="search-clear" onclick="clearSearch()" title="Clear">×</button>
+      </div>
+      <select class="flt" id="filterProt" onchange="fProt=this.value;render()"><option value="">All Proteins</option></select>
+      <select class="flt" id="filterMeth" onchange="fMeth=this.value;render()"><option value="">All Methods</option></select>
+      <select class="flt" id="sortBy" onchange="sort=this.value;render()">
+        <option value="category">Category</option>
+        <option value="name">Name A-Z</option>
+        <option value="protein">Protein</option>
+        <option value="method">Method</option>
+        <option value="cost">Cost ↑</option>
+        <option value="match">Match %</option>
+      </select>
+    </div>
+
+    <div class="count" id="count"></div>
+
+    <div class="table">
+      <div class="thead">
+        <div></div><div>Recipe</div><div>Category</div><div>Method</div><div>Source</div><div>Cost</div><div></div>
+      </div>
+      <div id="rows"></div>
+    </div>
+    <div class="footer-note">Blue = has saved details · Click row to expand · ✓ to add to grocery list</div>
+  </div>
+</div>
+
+<!-- Grocery Modal -->
+<div class="modal-overlay" id="grocery-modal" onclick="if(event.target===this)closeGrocery()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeGrocery()">✕</button>
+    <h2>🛒 Grocery List</h2>
+    <p class="subtitle" id="g-subtitle"></p>
+    <div id="g-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="copyList()">📋 Copy</button>
+      <button class="btn btn-primary" onclick="closeGrocery()">Done</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── BASE RECIPES ────────────────────────────────────────────────────────────
+const BASE = [
+  {id:1,name:"Freezer Breakfast Burritos",category:"Breakfast",protein:"Turkey & Beef",method:"Stovetop / Air Fryer",source:"Flexible Dieting Lifestyle",url:"https://flexibledietinglifestyle.com/472-cal-freezer-breakfast-burritos/",cost:"$8-10"},
+  {id:2,name:"Meal Prep Breakfast Burritos",category:"Breakfast",protein:"Sausage & Eggs",method:"Stovetop / Oven",source:"Kay Nutrition",url:"https://kaynutrition.com/meal-prep-breakfast-burritos/",cost:"$9-12"},
+  {id:3,name:"Veggie-Loaded Egg Scramble",category:"Breakfast",protein:"Eggs",method:"Stovetop",source:"Awaken180",url:"https://awaken180weightloss.com/4-low-calorie-high-volume-breakfasts-you-can-make-in-5-minutes/",cost:"$4-6"},
+  {id:4,name:"Protein Yogurt Bowl",category:"Breakfast",protein:"Protein Powder",method:"No Cook",source:"Awaken180",url:"https://awaken180weightloss.com/4-low-calorie-high-volume-breakfasts-you-can-make-in-5-minutes/",cost:"$3-5"},
+  {id:5,name:"Cauliflower & Egg Fried Rice Breakfast Bowl",category:"Breakfast",protein:"Eggs",method:"Stovetop",source:"Awaken180",url:"https://awaken180weightloss.com/4-low-calorie-high-volume-breakfasts-you-can-make-in-5-minutes/",cost:"$4-6"},
+  {id:6,name:"Savory Egg Muffin Veggie Bake",category:"Breakfast",protein:"Eggs",method:"Oven",source:"Awaken180",url:"https://awaken180weightloss.com/4-low-calorie-high-volume-breakfasts-you-can-make-in-5-minutes/",cost:"$4-6"},
+  {id:7,name:"Spinach Breakfast Casserole",category:"Breakfast",protein:"Eggs",method:"Oven",source:"Kay Nutrition",url:"https://kaynutrition.com/spinach-breakfast-casserole/",cost:"$5-7"},
+  {id:8,name:"Breakfast Egg Bake",category:"Breakfast",protein:"Eggs",method:"Oven",source:"Kay Nutrition",url:"https://kaynutrition.com/breakfast-egg-bake/",cost:"$5-7"},
+  {id:9,name:"Spinach Egg Muffins with Feta",category:"Breakfast",protein:"Eggs",method:"Oven",source:"Kay Nutrition",url:"https://kaynutrition.com/spinach-egg-muffins-with-feta/",cost:"$5-8"},
+  {id:10,name:"Bacon Egg Muffin Cups",category:"Breakfast",protein:"Eggs & Bacon",method:"Oven",source:"Kay Nutrition",url:"https://kaynutrition.com/bacon-egg-muffin-cups/",cost:"$6-9"},
+  {id:11,name:"Greek Omelette Casserole",category:"Breakfast",protein:"Eggs",method:"Oven",source:"Kay Nutrition",url:"https://kaynutrition.com/greek-omelette-casserole/",cost:"$6-8"},
+  {id:12,name:"Egg Muffins with Red Pepper & Spinach",category:"Breakfast",protein:"Eggs",method:"Oven",source:"Kay Nutrition",url:"https://kaynutrition.com/egg-muffins-red-pepper-spinach/",cost:"$4-6"},
+  {id:13,name:"Big Chicken Caesar Salad",category:"Salad",protein:"Chicken",method:"Air Fryer",source:"Flexible Dieting Lifestyle",url:"https://flexibledietinglifestyle.com/456-cal-big-as-chicken-caesar-salad/",cost:"$12-15"},
+  {id:14,name:"Meal Prep Taco Salad",category:"Salad",protein:"Ground Beef/Turkey",method:"Stovetop",source:"Kay Nutrition",url:"https://kaynutrition.com/meal-prep-taco-salad/",cost:"$10-13"},
+  {id:15,name:"Mediterranean Tuna Pasta Salad",category:"Salad",protein:"Tuna",method:"No Cook",source:"Kay Nutrition",url:"https://kaynutrition.com/mediterranean-tuna-pasta-salad/",cost:"$7-10"},
+  {id:16,name:"Chicken Shawarma Salad",category:"Salad",protein:"Chicken",method:"Stovetop / Oven",source:"Kay Nutrition",url:"https://kaynutrition.com/chicken-shawarma-salad/",cost:"$10-13"},
+  {id:17,name:"Ground Taco Meat with Cauliflower Rice",category:"Lunch/Dinner",protein:"Ground Beef",method:"Stovetop",source:"Clean & Delicious",url:"https://cleananddelicious.com/ground-taco-meat-with-cauliflower-rice/",cost:"$10-13"},
+  {id:18,name:"Cauliflower Chicken Fried Rice",category:"Lunch/Dinner",protein:"Chicken",method:"Stovetop",source:"Flexible Dieting Lifestyle",url:"https://flexibledietinglifestyle.com/326-cal-cauliflower-chicken-fried-rice/",cost:"$10-13"},
+  {id:19,name:"XL Grinder Salad Wraps",category:"Lunch/Dinner",protein:"Deli Chicken",method:"No Cook",source:"Flexible Dieting Lifestyle",url:"https://flexibledietinglifestyle.com/516-cal-xl-grinder-salad-wraps/",cost:"$12-15"},
+  {id:20,name:"Chicken Tenders & Fries",category:"Lunch/Dinner",protein:"Chicken",method:"Stovetop / Air Fryer",source:"Flexible Dieting Lifestyle",url:"https://flexibledietinglifestyle.com/518-cal-chicken-tenders-the-easiest-fries-meal/",cost:"$10-13"},
+  {id:21,name:"Slow Cooker Beef Barbacoa",category:"Lunch/Dinner",protein:"Beef",method:"Slow Cooker",source:"Taste of Home",url:"https://www.tasteofhome.com/recipes/slow-cooker-beef-barbacoa/",cost:"$15-20"},
+  {id:22,name:"Chickpea and Chorizo Taco Soup",category:"Lunch/Dinner",protein:"Chorizo",method:"Stovetop",source:"SISU Fitness",url:"https://sisufitness.com/eat-more-food-high-volume-recipes/",cost:"$8-11"},
+  {id:23,name:"Slow Cooker Southwest Sweet Potato Chili",category:"Lunch/Dinner",protein:"Chicken",method:"Slow Cooker",source:"SISU Fitness",url:"https://sisufitness.com/eat-more-food-high-volume-recipes/",cost:"$10-13"},
+  {id:24,name:"Creamy Taco Soup",category:"Lunch/Dinner",protein:"Ground Beef/Turkey",method:"Stovetop",source:"SISU Fitness",url:"https://sisufitness.com/eat-more-food-high-volume-recipes/",cost:"$9-12"},
+  {id:25,name:"Slow Cooker Chicken Fajitas",category:"Lunch/Dinner",protein:"Chicken",method:"Slow Cooker",source:"SISU Fitness",url:"https://sisufitness.com/eat-more-food-high-volume-recipes/",cost:"$10-13"},
+  {id:26,name:"Copycat KFC Famous Bowls",category:"Lunch/Dinner",protein:"Chicken",method:"Oven / Stovetop",source:"SISU Fitness",url:"https://sisufitness.com/eat-more-food-high-volume-recipes/",cost:"$8-11"},
+  {id:27,name:"Tex-Mex Roasted Veggie Quesadillas",category:"Lunch/Dinner",protein:"Vegetarian",method:"Oven",source:"SISU Fitness",url:"https://sisufitness.com/eat-more-food-high-volume-recipes/",cost:"$7-10"},
+  {id:28,name:"Copycat Bacon Cheeseburger Hamburger Helper",category:"Lunch/Dinner",protein:"Ground Beef",method:"Stovetop",source:"SISU Fitness",url:"https://sisufitness.com/eat-more-food-high-volume-recipes/",cost:"$10-13"},
+  {id:29,name:"Taco Salad with Pan Fried Tortilla Strips",category:"Lunch/Dinner",protein:"Ground Beef/Turkey",method:"Stovetop",source:"SISU Fitness",url:"https://sisufitness.com/eat-more-food-high-volume-recipes/",cost:"$10-12"},
+  {id:30,name:"Honey Sriracha Shrimp Fried Cauliflower Rice",category:"Lunch/Dinner",protein:"Shrimp",method:"Stovetop",source:"SISU Fitness",url:"https://sisufitness.com/eat-more-food-high-volume-recipes/",cost:"$12-15"},
+  {id:31,name:"Microwavable BBQ Chicken Pasta Bake",category:"Lunch/Dinner",protein:"Chicken",method:"Microwave",source:"SISU Fitness",url:"https://sisufitness.com/eat-more-food-high-volume-recipes/",cost:"$8-11"},
+  {id:32,name:"Pan Roasted Corn & Black Bean Burrito Bowls",category:"Lunch/Dinner",protein:"Vegetarian",method:"Stovetop",source:"SISU Fitness",url:"https://sisufitness.com/eat-more-food-high-volume-recipes/",cost:"$6-9"},
+  {id:33,name:"Slow Cooker Pesto Chicken Pasta",category:"Lunch/Dinner",protein:"Chicken",method:"Slow Cooker",source:"Hungry Hobby",url:"https://hungryhobby.net/16-high-protein-crockpot-meals/",cost:"$11-14"},
+  {id:34,name:"Slow Cooker Sesame Chicken",category:"Lunch/Dinner",protein:"Chicken",method:"Slow Cooker",source:"Hungry Hobby",url:"https://hungryhobby.net/16-high-protein-crockpot-meals/",cost:"$10-13"},
+  {id:35,name:"Slow Cooker Chicken Shawarma",category:"Lunch/Dinner",protein:"Chicken",method:"Slow Cooker",source:"Hungry Hobby",url:"https://hungryhobby.net/16-high-protein-crockpot-meals/",cost:"$10-13"},
+  {id:36,name:"Slow Cooker Salsa Verde Chicken",category:"Lunch/Dinner",protein:"Chicken",method:"Slow Cooker",source:"Hungry Hobby",url:"https://hungryhobby.net/16-high-protein-crockpot-meals/",cost:"$8-11"},
+  {id:37,name:"Slow Cooker BBQ Wings",category:"Lunch/Dinner",protein:"Chicken",method:"Slow Cooker",source:"Hungry Hobby",url:"https://hungryhobby.net/16-high-protein-crockpot-meals/",cost:"$10-14"},
+  {id:38,name:"BBQ Pulled Pork Lettuce Wraps",category:"Lunch/Dinner",protein:"Pork",method:"Slow Cooker",source:"Hungry Hobby",url:"https://hungryhobby.net/16-high-protein-crockpot-meals/",cost:"$12-16"},
+  {id:39,name:"Crockpot Turkey Meatballs",category:"Lunch/Dinner",protein:"Turkey",method:"Slow Cooker",source:"Hungry Hobby",url:"https://hungryhobby.net/16-high-protein-crockpot-meals/",cost:"$10-13"},
+  {id:40,name:"Slow Cooker Turkey Meatball Subs",category:"Lunch/Dinner",protein:"Turkey",method:"Slow Cooker",source:"Hungry Hobby",url:"https://hungryhobby.net/16-high-protein-crockpot-meals/",cost:"$11-14"},
+  {id:41,name:"Chipotle Chicken Tacos",category:"Lunch/Dinner",protein:"Chicken",method:"Slow Cooker",source:"Hungry Hobby",url:"https://hungryhobby.net/16-high-protein-crockpot-meals/",cost:"$10-13"},
+  {id:42,name:"Slow Cooker Chicken Adobo",category:"Lunch/Dinner",protein:"Chicken",method:"Slow Cooker",source:"Hungry Hobby",url:"https://hungryhobby.net/16-high-protein-crockpot-meals/",cost:"$9-12"},
+  {id:43,name:"Slow Cooker Meatball Soup",category:"Lunch/Dinner",protein:"Beef/Turkey",method:"Slow Cooker",source:"Hungry Hobby",url:"https://hungryhobby.net/16-high-protein-crockpot-meals/",cost:"$10-13"},
+  {id:44,name:"Crockpot Pork Carnitas",category:"Lunch/Dinner",protein:"Pork",method:"Slow Cooker",source:"Hungry Hobby",url:"https://hungryhobby.net/16-high-protein-crockpot-meals/",cost:"$13-17"},
+  {id:45,name:"Slow Cooker Thai Chicken Lettuce Wraps",category:"Lunch/Dinner",protein:"Chicken",method:"Slow Cooker",source:"Hungry Hobby",url:"https://hungryhobby.net/16-high-protein-crockpot-meals/",cost:"$10-13"},
+  {id:46,name:"Slow Cooker Chicken Tortilla Soup",category:"Lunch/Dinner",protein:"Chicken",method:"Slow Cooker",source:"Hungry Hobby",url:"https://hungryhobby.net/16-high-protein-crockpot-meals/",cost:"$10-13"},
+  {id:47,name:"Slow Cooker Beef Carnitas",category:"Lunch/Dinner",protein:"Beef",method:"Slow Cooker",source:"Hungry Hobby",url:"https://hungryhobby.net/16-high-protein-crockpot-meals/",cost:"$14-18"},
+  {id:48,name:"Korean Beef Meal Prep Bowls",category:"Lunch/Dinner",protein:"Beef",method:"Stovetop",source:"Kay Nutrition",url:"https://kaynutrition.com/korean-beef-meal-prep-bowls/",cost:"$12-15"},
+  {id:49,name:"Turkey Taco Skillet",category:"Lunch/Dinner",protein:"Turkey",method:"Stovetop",source:"Kay Nutrition",url:"https://kaynutrition.com/turkey-taco-skillet/",cost:"$9-12"},
+  {id:50,name:"Firecracker Beef Meal Prep Bowls",category:"Lunch/Dinner",protein:"Beef",method:"Stovetop",source:"Kay Nutrition",url:"https://kaynutrition.com/firecracker-beef-meal-prep-bowls/",cost:"$12-15"},
+  {id:51,name:"Chicken Broccoli Rice Casserole",category:"Lunch/Dinner",protein:"Chicken",method:"Oven",source:"Kay Nutrition",url:"https://kaynutrition.com/chicken-broccoli-rice-casserole/",cost:"$10-13"},
+  {id:52,name:"Greek Turkey Meatballs",category:"Lunch/Dinner",protein:"Turkey",method:"Oven / Stovetop",source:"Kay Nutrition",url:"https://kaynutrition.com/greek-turkey-meatballs/",cost:"$9-12"},
+  {id:53,name:"Greek Chicken Casserole",category:"Lunch/Dinner",protein:"Chicken",method:"Oven",source:"Kay Nutrition",url:"https://kaynutrition.com/greek-chicken-casserole/",cost:"$11-14"},
+  {id:54,name:"Sheet Pan Chicken and Broccoli",category:"Lunch/Dinner",protein:"Chicken",method:"Oven",source:"Kay Nutrition",url:"https://kaynutrition.com/sheet-pan-chicken-and-broccoli/",cost:"$9-12"},
+  {id:55,name:"Spaghetti Squash Casserole",category:"Lunch/Dinner",protein:"Ground Beef/Turkey",method:"Oven",source:"Kay Nutrition",url:"https://kaynutrition.com/spaghetti-squash-casserole/",cost:"$10-13"},
+  {id:56,name:"Spinach Artichoke Chicken Casserole",category:"Lunch/Dinner",protein:"Chicken",method:"Oven",source:"Kay Nutrition",url:"https://kaynutrition.com/spinach-artichoke-chicken-casserole/",cost:"$11-14"},
+  {id:57,name:"Shredded Beef Tacos",category:"Lunch/Dinner",protein:"Beef",method:"Slow Cooker",source:"Kay Nutrition",url:"https://kaynutrition.com/shredded-beef-tacos/",cost:"$14-18"},
+  {id:58,name:"Beef Shawarma",category:"Lunch/Dinner",protein:"Beef",method:"Oven / Stovetop",source:"Kay Nutrition",url:"https://kaynutrition.com/beef-shawarma/",cost:"$13-16"},
+  {id:59,name:"Ground Turkey Meal Prep Bowls",category:"Lunch/Dinner",protein:"Turkey",method:"Stovetop",source:"Kay Nutrition",url:"https://kaynutrition.com/ground-turkey-meal-prep-bowls/",cost:"$9-12"},
+  {id:60,name:"Stuffed Pepper Casserole",category:"Lunch/Dinner",protein:"Ground Beef/Turkey",method:"Oven",source:"Kay Nutrition",url:"https://kaynutrition.com/stuffed-pepper-casserole/",cost:"$10-13"},
+  {id:61,name:"Beef and Mushroom Stew",category:"Lunch/Dinner",protein:"Beef",method:"Slow Cooker / Stovetop",source:"Kay Nutrition",url:"https://kaynutrition.com/beef-and-mushroom-stew/",cost:"$13-16"},
+  {id:62,name:"Sheet Pan Steak Fajitas",category:"Lunch/Dinner",protein:"Beef",method:"Oven",source:"Kay Nutrition",url:"https://kaynutrition.com/sheet-pan-steak-fajitas/",cost:"$14-18"},
+  {id:63,name:"Sheet Pan Bruschetta Chicken",category:"Lunch/Dinner",protein:"Chicken",method:"Oven",source:"Kay Nutrition",url:"https://kaynutrition.com/sheet-pan-bruschetta-chicken/",cost:"$10-13"},
+  {id:64,name:"Chicken Burrito Casserole",category:"Lunch/Dinner",protein:"Chicken",method:"Oven",source:"Kay Nutrition",url:"https://kaynutrition.com/chicken-burrito-casserole/",cost:"$10-13"},
+  {id:65,name:"Meal Prep Instant Noodle Cups",category:"Lunch/Dinner",protein:"Chicken",method:"No Cook",source:"Kay Nutrition",url:"https://kaynutrition.com/meal-prep-instant-noodle-cups/",cost:"$8-11"},
+  {id:66,name:"Air Fryer Broccoli",category:"Side",protein:"None",method:"Air Fryer",source:"Eating Bird Food",url:"https://www.eatingbirdfood.com/air-fryer-broccoli/",cost:"$2-4"},
+  {id:67,name:"Honey Mustard Pan Roasted Brussels Sprouts",category:"Side",protein:"None",method:"Stovetop",source:"SISU Fitness",url:"https://sisufitness.com/eat-more-food-high-volume-recipes/",cost:"$3-5"},
+  {id:68,name:"Crock Pot Salsa Chicken",category:"Lunch/Dinner",protein:"Chicken",method:"Slow Cooker",source:"Budget Bytes",url:"https://www.budgetbytes.com/crock-pot-salsa-chicken/",cost:"$7-10"},
+  {id:69,name:"Crockpot Swedish Meatballs",category:"Lunch/Dinner",protein:"Beef (Frozen Meatballs)",method:"Slow Cooker",source:"Cooking in the Midwest",url:"https://cookinginthemidwest.com/blog/crockpot-swedish-meatballs/",cost:"$11-14"},
+  {id:70,name:"Crockpot Chicken Parmesan Soup",category:"Lunch/Dinner",protein:"Chicken",method:"Slow Cooker",source:"Eating on a Dime",url:"https://www.eatingonadime.com/crock-pot-creamy-chicken-parmesan-soup/",cost:"$12-15"}
+];
+
+const CC={"Breakfast":{bg:"#FFF3E0",text:"#E65100",dot:"#FF9800"},"Lunch/Dinner":{bg:"#E8F5E9",text:"#1B5E20",dot:"#4CAF50"},"Salad":{bg:"#E3F2FD",text:"#0D47A1",dot:"#2196F3"},"Side":{bg:"#F3E5F5",text:"#4A148C",dot:"#9C27B0"},"Dessert":{bg:"#FCE4EC",text:"#880E4F",dot:"#E91E63"}};
+const MI={"Slow Cooker":"🥘","Oven":"🔥","Stovetop":"🍳","Air Fryer":"💨","No Cook":"🥗","Microwave":"📡","Stovetop / Air Fryer":"🍳","Stovetop / Oven":"🍳","Oven / Stovetop":"🔥","Slow Cooker / Stovetop":"🥘"};
+
+// ── State ──
+let token = sessionStorage.getItem("rl_token") || "";
+let recipes = [...BASE];
+let details = {};
+let checked = new Set();
+let fCat="", fProt="", fMeth="", sort="category", q="";
+let matchScores = {}; // id -> {score, match, note}
+let matchActive = false;
+let pendingDetails = null;
+
+// ── Auth ──
+async function doLogin() {
+  const pw = document.getElementById("pw-input").value;
+  const btn = document.getElementById("login-btn");
+  const err = document.getElementById("login-error");
+  btn.disabled = true; btn.textContent = "Checking…";
+  try {
+    const res = await fetch("/.netlify/functions/auth", {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ password: pw })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Wrong password");
+    token = data.token;
+    sessionStorage.setItem("rl_token", token);
+    showApp();
+  } catch(e) {
+    err.textContent = e.message;
+    btn.disabled = false; btn.textContent = "Unlock";
+  }
+}
+
+function api(path, method="GET", body=null) {
+  return fetch(`/.netlify/functions/${path}`, {
+    method,
+    headers: { "Content-Type":"application/json", "Authorization": `Bearer ${token}` },
+    body: body ? JSON.stringify(body) : undefined
+  }).then(async r => {
+    if (r.status === 401) { sessionStorage.removeItem("rl_token"); location.reload(); }
+    return r.json();
+  });
+}
+
+async function showApp() {
+  document.getElementById("login-screen").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  await loadData();
+  buildSelects();
+  render();
+}
+
+async function loadData() {
+  try {
+    const [extraRes, detailsRes] = await Promise.all([
+      api("extra-recipes"),
+      api("recipe-details")
+    ]);
+    if (Array.isArray(extraRes)) {
+      extraRes.forEach(r => { if (!recipes.find(x=>x.id===r.id)) recipes.push(r); });
+    }
+    if (Array.isArray(detailsRes)) {
+      detailsRes.forEach(d => { details[d.recipe_id] = { ingredients: d.ingredients, steps: d.steps }; });
+    }
+  } catch(e) { console.error("Load error", e); }
+}
+
+// ── Render ──
+function getFiltered() {
+  let list = recipes.filter(r => {
+    const s = q.toLowerCase();
+    return (!s || r.name.toLowerCase().includes(s) || r.protein.toLowerCase().includes(s) || r.source.toLowerCase().includes(s))
+      && (!fCat || r.category === fCat)
+      && (!fProt || r.protein === fProt)
+      && (!fMeth || r.method === fMeth)
+      && (!matchActive || matchScores[r.id]);
+  });
+  list.sort((a,b) => {
+    if (sort==="match") return (matchScores[b.id]?.score||0) - (matchScores[a.id]?.score||0);
+    if (sort==="category") return a.category.localeCompare(b.category)||a.name.localeCompare(b.name);
+    if (sort==="name") return a.name.localeCompare(b.name);
+    if (sort==="protein") return a.protein.localeCompare(b.protein);
+    if (sort==="method") return a.method.localeCompare(b.method);
+    if (sort==="cost") return parseInt(a.cost||0)-parseInt(b.cost||0);
+    return 0;
+  });
+  return list;
+}
+
+function buildPills() {
+  const counts={};
+  recipes.forEach(r=>counts[r.category]=(counts[r.category]||0)+1);
+  document.getElementById("pills").innerHTML=Object.entries(counts).map(([cat,n])=>{
+    const c=CC[cat]||{bg:"#333",text:"#ccc",dot:"#888"};
+    return`<span class="pill${fCat===cat?" active":""}" data-cat="${cat}" style="--bg:${c.bg};--text:${c.text};--dot:${c.dot}"><span class="dot"></span>${cat} · ${n}</span>`;
+  }).join("");
+  document.getElementById("pills").querySelectorAll(".pill").forEach(p=>p.addEventListener("click",()=>{fCat=fCat===p.dataset.cat?"":p.dataset.cat;render();}));
+}
+
+function buildSelects() {
+  const prots=[...new Set(recipes.map(r=>r.protein))].sort();
+  const meths=[...new Set(recipes.map(r=>r.method))].sort();
+  const pc=document.getElementById("filterProt"),mc=document.getElementById("filterMeth");
+  const pv=pc.value,mv=mc.value;
+  pc.innerHTML=`<option value="">All Proteins</option>`+prots.map(p=>`<option${p===pv?" selected":""}>${p}</option>`).join("");
+  mc.innerHTML=`<option value="">All Methods</option>`+meths.map(m=>`<option${m===mv?" selected":""}>${m}</option>`).join("");
+}
+
+function render() {
+  buildPills();
+  const list = getFiltered();
+  document.getElementById("total-badge").textContent = recipes.length+" recipes";
+  const hasFilter = fCat||fProt||fMeth||q||matchActive;
+  document.getElementById("count").innerHTML = `Showing ${list.length} of ${recipes.length} recipes${hasFilter?'<span class="clear-link" onclick="clearAll()">Clear</span>':""}`;
+  const gb = document.getElementById("grocery-btn");
+  gb.style.display = checked.size > 0 ? "inline-flex" : "none";
+  document.getElementById("grocery-count").textContent = checked.size;
+
+  if (!list.length) { document.getElementById("rows").innerHTML='<div class="empty">No recipes match.</div>'; return; }
+
+  document.getElementById("rows").innerHTML = list.map(r => {
+    const c = CC[r.category]||{bg:"#333",text:"#ccc",dot:"#888"};
+    const hd = !!details[r.id];
+    const ms = matchScores[r.id];
+    const matchBadge = ms ? `<span class="match-badge ${ms.match==='full'?'match-full':'match-partial'}" title="${esc(ms.note)}">${ms.score}%</span>` : "";
+    return `<div class="trow-wrap" id="wrap-${r.id}">
+  <div class="trow${hd?" has-details":""}" onclick="rowClick(event,${r.id})">
+    <div style="display:flex;align-items:center;justify-content:center"><input type="checkbox"${checked.has(r.id)?" checked":""} onclick="chk(event,${r.id})"></div>
+    <div class="recipe-name">
+      <span class="expand-icon">▶</span>
+      <span class="recipe-name-text">${esc(r.name)}</span>
+      ${matchBadge}
+      ${!hd?'<span class="no-details-hint">+fetch</span>':''}
+    </div>
+    <div><span class="badge" style="background:${c.bg};color:${c.text}"><span class="dot" style="background:${c.dot}"></span>${r.category}</span></div>
+    <div class="meta">${MI[r.method]||"🍴"} ${r.method}</div>
+    <div class="meta">${r.source}</div>
+    <div class="cost">${r.cost}</div>
+    <div><a href="${r.url}" target="_blank" class="link-btn" onclick="event.stopPropagation()">↗</a></div>
+  </div>
+  <div class="detail-panel" id="dp-${r.id}">
+    ${hd ? detailHTML(r) : fetchPromptHTML(r)}
+    ${ms ? `<div style="font-size:12px;color:#9a9fae;margin-top:12px;padding:8px;background:#1a1f2e;border-radius:6px">🧠 <strong>AI match note:</strong> ${esc(ms.note)}</div>` : ""}
+  </div>
+</div>`;
+  }).join("");
+}
+
+function detailHTML(r) {
+  const d = details[r.id];
+  return `<div class="detail-inner">
+    <div class="detail-section"><h3>Ingredients</h3><ul class="ing-list">${d.ingredients.map(i=>`<li>${esc(i)}</li>`).join("")}</ul></div>
+    <div class="detail-section"><h3>Instructions</h3><ol class="steps-list">${d.steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol></div>
+  </div>
+  <div class="detail-actions"><button class="btn btn-danger" onclick="delDetails(${r.id})">🗑 Remove Details</button></div>`;
+}
+
+function fetchPromptHTML(r) {
+  return `<div style="padding:16px 0">
+    <p style="font-size:13px;color:#8a8f9e;margin-bottom:10px">No details saved yet. Click to have AI fetch ingredients &amp; steps from the recipe URL.</p>
+    <button class="btn btn-primary" onclick="fetchDetails(${r.id})">✨ Fetch Ingredients &amp; Steps</button>
+  </div>`;
+}
+
+function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+// ── Interactions ──
+function rowClick(e,id){if(e.target.type==="checkbox"||e.target.tagName==="A")return;document.getElementById("wrap-"+id)?.classList.toggle("open");}
+function chk(e,id){e.stopPropagation();e.target.checked?checked.add(id):checked.delete(id);document.getElementById("grocery-btn").style.display=checked.size>0?"inline-flex":"none";document.getElementById("grocery-count").textContent=checked.size;}
+function onSearch(v){q=v;render();}
+function clearSearch(){document.getElementById("search").value="";q="";render();}
+function clearAll(){fCat="";fProt="";fMeth="";q="";matchActive=false;matchScores={};document.getElementById("search").value="";document.getElementById("filterProt").value="";document.getElementById("filterMeth").value="";document.getElementById("fridge-input").value="";document.getElementById("fridge-info").textContent="";render();}
+function toggleFridge(){document.getElementById("fridge-bar").classList.toggle("show");}
+function toggleAdd(){document.getElementById("add-panel").classList.toggle("show");}
+
+// ── Fetch details ──
+async function fetchDetails(id) {
+  const r = recipes.find(x=>x.id===id);
+  const dp = document.getElementById("dp-"+id);
+  dp.innerHTML = `<div class="detail-loading"><div class="spinner"></div>Fetching from ${esc(r.source)}…</div>`;
+  try {
+    const data = await api("fetch-recipe", "POST", { url: r.url, mode: "details" });
+    if (data.error) throw new Error(data.error);
+    // Save to DB
+    await api("recipe-details", "POST", { recipe_id: id, ingredients: data.ingredients, steps: data.steps });
+    details[id] = { ingredients: data.ingredients, steps: data.steps };
+    const wrap = document.getElementById("wrap-"+id);
+    wrap.querySelector(".trow").classList.add("has-details");
+    const nm = wrap.querySelector(".recipe-name");
+    const nameText = nm.querySelector(".recipe-name-text")?.textContent || r.name;
+    nm.innerHTML = `<span class="expand-icon" style="transform:rotate(90deg)">▶</span><span class="recipe-name-text">${esc(r.name)}</span>`;
+    dp.innerHTML = detailHTML(r);
+    wrap.classList.add("open");
+  } catch(err) {
+    dp.innerHTML = `<div style="padding:12px 0;color:#e07070;font-size:13px">⚠ ${esc(err.message)} <button class="btn btn-outline" style="margin-left:8px;font-size:11px" onclick="fetchDetails(${id})">Retry</button></div>`;
+  }
+}
+
+async function delDetails(id) {
+  if (!confirm("Remove saved details?")) return;
+  await api(`recipe-details?id=${id}`, "DELETE");
+  delete details[id];
+  render();
+}
+
+// ── Add recipe ──
+async function fetchAndAdd() {
+  const url = document.getElementById("new-url").value.trim();
+  if (!url) return addMsg("Please enter a URL first.", "error");
+  setFB(true); addMsg("✨ AI is reading the recipe page…", "loading");
+  try {
+    const data = await api("fetch-recipe", "POST", { url, mode: "full" });
+    if (data.error) throw new Error(data.error);
+    document.getElementById("new-name").value = data.name||"";
+    document.getElementById("new-source").value = data.source||"";
+    document.getElementById("new-protein").value = data.protein||"";
+    document.getElementById("new-method").value = data.method||"";
+    document.getElementById("new-cost").value = data.cost||"";
+    pendingDetails = { ingredients: data.ingredients||[], steps: data.steps||[] };
+    addMsg("✅ Done! Review the fields and click Save.", "success");
+  } catch(err) { addMsg("⚠ "+err.message, "error"); }
+  setFB(false);
+}
+
+async function saveNew() {
+  const name = document.getElementById("new-name").value.trim();
+  const url = document.getElementById("new-url").value.trim();
+  if (!name||!url) return addMsg("Fetch a URL first to fill fields.", "error");
+  const nid = Math.max(...recipes.map(r=>r.id)) + 1;
+  const nr = { id:nid, name, category:document.getElementById("new-cat").value, protein:document.getElementById("new-protein").value||"Other", method:document.getElementById("new-method").value||"Stovetop", source:document.getElementById("new-source").value||"Unknown", url, cost:document.getElementById("new-cost").value||"TBD" };
+  recipes.push(nr);
+  await api("extra-recipes","POST",nr);
+  if (pendingDetails) {
+    await api("recipe-details","POST",{ recipe_id:nid, ingredients:pendingDetails.ingredients, steps:pendingDetails.steps });
+    details[nid] = pendingDetails;
+    pendingDetails = null;
+  }
+  buildSelects();
+  ["new-url","new-name","new-protein","new-method","new-source","new-cost"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("add-panel").classList.remove("show");
+  document.getElementById("add-msg").style.display = "none";
+  render();
+  setTimeout(()=>{const w=document.getElementById("wrap-"+nid);if(w){w.scrollIntoView({behavior:"smooth",block:"center"});w.classList.add("open");}},200);
+}
+
+function addMsg(txt,type){const el=document.getElementById("add-msg");el.style.display="flex";el.className="add-msg "+type;el.innerHTML=type==="loading"?`<div class="spinner"></div>${txt}`:txt;}
+function setFB(on){const b=document.getElementById("fetch-btn");b.disabled=on;b.textContent=on?"Fetching…":"✨ Fetch";}
+
+// ── Ingredient matcher ──
+async function matchIngredients() {
+  const ings = document.getElementById("fridge-input").value.trim();
+  if (!ings) return;
+  const btn = document.getElementById("match-btn");
+  btn.disabled = true; btn.textContent = "Matching…";
+  document.getElementById("fridge-info").textContent = "🧠 AI is checking all recipes against your ingredients…";
+
+  // Pass all recipes with their details
+  const recipeData = recipes.map(r => ({
+    id: r.id,
+    name: r.name,
+    ingredients: details[r.id]?.ingredients || null
+  }));
+
+  try {
+    const data = await api("match-ingredients","POST",{ userIngredients: ings, recipes: recipeData });
+    if (data.error) throw new Error(data.error);
+
+    matchScores = {};
+    let full=0, partial=0;
+    data.results.forEach(x => { matchScores[x.id] = x; if(x.match==="full")full++; else if(x.match==="partial")partial++; });
+    matchActive = true;
+    sort = "match";
+    document.getElementById("sortBy").value = "match";
+    document.getElementById("fridge-info").textContent = `✅ Found ${full} recipes you can make now, ${partial} you can mostly make.`;
+    render();
+  } catch(err) {
+    document.getElementById("fridge-info").textContent = "⚠ Error: "+err.message;
+  }
+  btn.disabled=false; btn.textContent="✨ Find Recipes";
+}
+
+function clearMatch() {
+  matchScores={}; matchActive=false;
+  document.getElementById("fridge-input").value="";
+  document.getElementById("fridge-info").textContent="";
+  if(sort==="match"){sort="category";document.getElementById("sortBy").value="category";}
+  render();
+}
+
+// ── Grocery list ──
+async function openGrocery() {
+  if (!checked.size) return;
+  document.getElementById("grocery-modal").classList.add("show");
+  const sel = recipes.filter(r=>checked.has(r.id));
+  const withD = sel.filter(r=>details[r.id]);
+  const noD = sel.filter(r=>!details[r.id]);
+  document.getElementById("g-subtitle").textContent = `${sel.length} recipe${sel.length>1?"s":""} · ${withD.length} with full ingredient lists`;
+  const body = document.getElementById("g-body");
+  if (!withD.length) { body.innerHTML=`<p style="color:#8a8f9e;font-size:13px">Fetch ingredient details for your selected recipes first.</p>`; return; }
+  body.innerHTML=`<div class="detail-loading"><div class="spinner"></div>Organizing your grocery list…</div>`;
+  const ings=[];
+  withD.forEach(r=>details[r.id].ingredients.forEach(i=>ings.push({ing:i,recipe:r.name})));
+  try {
+    const data = await api("grocery-list","POST",{ingredients:ings});
+    let html = Object.entries(data).filter(([,v])=>v&&v.length).map(([cat,items])=>
+      `<div class="g-section"><h3>${esc(cat)}</h3>${items.map(x=>`<div class="g-item">${esc(x.item)}<span class="g-from">${(x.recipes||[]).map(esc).join(", ")}</span></div>`).join("")}</div>`
+    ).join("");
+    if (noD.length) html+=`<div style="margin-top:14px;padding:10px;background:#1a1f2e;border:1px solid var(--border);border-radius:8px;font-size:12px;color:#8a8f9e"><strong style="color:#aaa">⚠ No details yet:</strong> ${noD.map(r=>esc(r.name)).join(", ")}</div>`;
+    body.innerHTML = html;
+  } catch(err) { body.innerHTML=`<p style="color:#e07070;font-size:13px">⚠ ${err.message}</p>`; }
+}
+
+function closeGrocery(){document.getElementById("grocery-modal").classList.remove("show");}
+
+function copyList(){
+  let text="🛒 GROCERY LIST\n\n";
+  document.querySelectorAll(".g-section").forEach(s=>{
+    text+=s.querySelector("h3").textContent+"\n";
+    s.querySelectorAll(".g-item").forEach(i=>text+="☐ "+i.textContent.trim().replace(/\s+/g," ")+"\n");
+    text+="\n";
+  });
+  navigator.clipboard.writeText(text).then(()=>{const b=event.target;b.textContent="✅ Copied!";setTimeout(()=>b.textContent="📋 Copy",2000);});
+}
+
+// ── Boot ──
+if (token) {
+  // Try to use saved token
+  showApp().catch(()=>{ token=""; sessionStorage.removeItem("rl_token"); });
+}
+</script>
+</body>
+</html>
