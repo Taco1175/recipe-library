@@ -16,12 +16,9 @@ function verifyToken(token) {
     const decoded = Buffer.from(token, "base64").toString("utf8");
     const [timestamp, sig] = decoded.split(":");
     if (!timestamp || !sig) return false;
-    // Token valid for 30 days
     if (Date.now() - parseInt(timestamp) > 30 * 24 * 60 * 60 * 1000) return false;
     return sig === simpleHmac(timestamp, secret);
-  } catch {
-    return false;
-  }
+  } catch { return false; }
 }
 
 function getToken(event) {
