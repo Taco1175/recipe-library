@@ -10,54 +10,21 @@ exports.handler = async (event) => {
   if (!url) return { statusCode: 400, headers, body: JSON.stringify({ error: "Missing url" }) };
 
   const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
-
   const prompt = mode === "details"
-    ? `You are a recipe parser. Visit and extract the recipe at: ${url}
-
-Return ONLY valid JSON (no markdown, no fences):
-{
-  "ingredients": ["2 lbs chicken breast", "3 cloves garlic, minced", ...],
-  "steps": ["Preheat oven to 375°F.", "Season chicken with salt and pepper.", ...]
-}
-
-Get ALL ingredients with exact quantities. Get ALL steps as clear, complete sentences.`
-
-    : `You are a recipe parser. Visit and extract info from: ${url}
-
-Return ONLY valid JSON (no markdown, no fences):
-{
-  "name": "Recipe Name",
-  "source": "Blog or Website Name",
-  "protein": "main protein (e.g. Chicken, Beef, Eggs, Vegetarian, Turkey, Pork, Shrimp)",
-  "method": "cooking method — use ONLY one of: Slow Cooker, Oven, Stovetop, Air Fryer, No Cook, Microwave, or combos like Stovetop / Oven",
-  "cost": "$X-Y",
-  "ingredients": ["2 lbs chicken breast", "3 cloves garlic", ...],
-  "steps": ["Preheat oven to 375°F.", "Season chicken.", ...]
-}
-
-For cost: estimate total ingredient cost shopping at Aldi (US budget grocery store).`;
+    ? `You are a recipe parser. Visit and extract the recipe at: ${url}\nReturn ONLY valid JSON (no markdown):\n{"ingredients":["2 lbs chicken breast","3 cloves garlic, minced"],"steps":["Preheat oven to 375F.","Season chicken."]}\nGet ALL ingredients with exact quantities. Get ALL steps as clear complete sentences.`
+    : `You are a recipe parser. Visit and extract info from: ${url}\nReturn ONLY valid JSON (no markdown):\n{"name":"Recipe Name","source":"Blog Name","protein":"main protein","method":"cooking method (Slow Cooker/Oven/Stovetop/Air Fryer/No Cook/Microwave or combos)","cost":"$X-Y (Aldi estimate)","ingredients":["2 lbs chicken","3 cloves garlic"],"steps":["Step 1.","Step 2."]}\n`;
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": ANTHROPIC_KEY,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 4096,
-      messages: [{ role: "user", content: prompt }],
-    }),
+    headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" },
+    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 4096, messages: [{ role: "user", content: prompt }] }),
   });
 
   const data = await res.json();
   if (data.error) return { statusCode: 500, headers, body: JSON.stringify({ error: data.error.message }) };
-
   const text = data.content[0].text.replace(/^```json\n?|^```\n?|```$/gm, "").trim();
   try {
-    const parsed = JSON.parse(text);
-    return { statusCode: 200, headers, body: JSON.stringify(parsed) };
+    return { statusCode: 200, headers, body: JSON.stringify(JSON.parse(text)) };
   } catch {
     return { statusCode: 500, headers, body: JSON.stringify({ error: "Could not parse recipe", raw: text }) };
   }
