@@ -689,15 +689,21 @@ function toggleArchived() {
   arrow.style.transform = open ? "rotate(90deg)" : "";
 }
 
+function saveArchived() {
+  localStorage.setItem("archived-recipes", JSON.stringify([...archivedRecipes]));
+}
+
 function archiveRecipe(id) {
   if (!confirm(`Archive "${recipes.find(r=>r.id===id)?.name}"?\nIt will be hidden but you can restore it anytime.`)) return;
   checked.delete(id);
   archivedRecipes.add(id);
+  saveArchived();
   render();
 }
 
 function unarchiveRecipe(id) {
   archivedRecipes.delete(id);
+  saveArchived();
   render();
 }
 
@@ -954,7 +960,9 @@ function clearMatch() {
 // ── Grocery List ──
 let groceryItems = [];
 let _cachedStructuredRows = [];
-let archivedRecipes = new Set(); // ids removed from main list
+let archivedRecipes = new Set(
+  JSON.parse(localStorage.getItem("archived-recipes") || "[]")
+); // persisted across refreshes
 
 const COST_DB = {
   // Proteins
