@@ -872,10 +872,37 @@ function parseRecipeHTML(html, url) {
     if (best && best.length >= 2) result.steps = best;
   }
 
-  // Name fallback
+  // 5. Plain-text fallback: strip all HTML and parse sections by heading
+  if (!result.ingredients.length) {
+    const plain = html.replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&nbsp;/g, " ");
+    const lines = plain.split(/\r?\n|\. (?=[A-Z])/).map(l => l.trim()).filter(Boolean);
+    let inIng = false, inStep = false;
+    for (const line of lines) {
+      if (/^ingredient/i.test(line)) { inIng = true; inStep = false; continue; }
+      if (/^(instruction|direction|method|how to make)/i.test(line)) { inIng = false; inStep = true; continue; }
+      if (/^(note|nutrition|gluten|copyright|powered)/i.test(line)) { inIng = false; inStep = false; continue; }
+      if (inIng) {
+        const c = line.replace(/^[*\-\xB7\d]+[.)]?\s*/, "").trim();
+        if (c.length > 2) result.ingredients.push(c);
+      } else if (inStep) {
+        const c = line.replace(/^\d+[.)\s]+/, "").trim();
+        if (c.length > 10) result.steps.push(c);
+      }
+    }
+    if (!result.servings) {
+      const svLine = lines.find(l => /servings?/i.test(l));
+      if (svLine) { const m = svLine.match(/(\d+)/); if (m) result.servings = parseInt(m[1]); }
+    }
+  }
+
+    // Name fallback
   if (!result.name) {
-    const h1 = html.match(/<h1[^>]*>([^<]+)<\/h1>/);
-    if (h1) result.name = h1[1].trim();
+    const h = html.match(/<h[12][^>]*>([^<]+)<\/h[12]>/);
+    if (h) result.name = h[1].trim();
+    else {
+      const h1 = html.match(/<h1[^>]*>([^<]+)<\/h1>/);
+      if (h1) result.name = h1[1].trim();
+    }
   }
 
   return result;
@@ -910,8 +937,14 @@ async function autoFetchRecipe(url) {
 
   addMsg("🔍 Fetching recipe details...", "loading");
 
-  // Normalize URL - strip print suffixes
-  const fetchUrl = url.replace(/\/print\/\d+\/?$/, "/").replace(/\/print\/?$/, "/");
+  // Normalize URL - strip print path suffixes and print query params
+  let fetchUrl = url
+    .replace(/[/]print[/]\d+[/]?$/, "/")
+    .replace(/[/]print[/]?$/, "/")
+    .replace(/[?&]recipe_print=[^&]*/g, "")
+    .replace(/[?&]print=[^&]*/g, "")
+    .replace(/[?&]format=print[^&]*/g, "")
+    .replace(/[?]$/, "");
 
   // Auto-fill source immediately from URL
   const srcField = document.getElementById("new-source");
