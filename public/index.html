@@ -122,7 +122,7 @@ select.flt {
 /* ── TABLE ── */
 .table { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
 .thead {
-  display: grid; grid-template-columns: 28px 1fr 90px 100px 100px 50px 30px;
+  display: grid; grid-template-columns: 28px 1fr 90px 100px 100px 50px 48px 30px;
   padding: 10px 14px; background: var(--bg3); border-bottom: 1px solid var(--border);
   font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
   color: var(--text3); font-family: monospace; gap: 8px; align-items: center;
@@ -130,7 +130,7 @@ select.flt {
 .trow-wrap { border-bottom: 1px solid var(--bg4); }
 .trow-wrap:last-child { border-bottom: none; }
 .trow {
-  display: grid; grid-template-columns: 28px 1fr 90px 100px 100px 50px 30px;
+  display: grid; grid-template-columns: 28px 1fr 90px 100px 100px 50px 48px 30px;
   padding: 11px 14px; align-items: center; gap: 8px; cursor: pointer;
   transition: background .15s;
 }
@@ -353,7 +353,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
 
     <div class="table">
       <div class="thead">
-        <div></div><div>Recipe</div><div>Category</div><div>Method</div><div>Source</div><div>Cost</div><div></div>
+        <div></div><div>Recipe</div><div>Category</div><div>Method</div><div>Source</div><div>Cost</div><div id="match-col-header"></div><div></div>
       </div>
       <div id="rows"></div>
     </div>
@@ -509,7 +509,10 @@ async function loadData() {
 function getFiltered() {
   let list = recipes.filter(r => {
     const s = q.toLowerCase();
-    return (!s || r.name.toLowerCase().includes(s) || r.protein.toLowerCase().includes(s) || r.source.toLowerCase().includes(s))
+    const d = details[r.id];
+    const ingText = (d?.ingredients||[]).join(' ').toLowerCase();
+    const stepText = (d?.steps||[]).join(' ').toLowerCase();
+    return (!s || r.name.toLowerCase().includes(s) || r.protein.toLowerCase().includes(s) || r.source.toLowerCase().includes(s) || ingText.includes(s) || stepText.includes(s))
       && (!fCat || r.category === fCat)
       && (!fProt || r.protein === fProt)
       && (!fMeth || r.method === fMeth)
@@ -556,30 +559,34 @@ function render() {
   gb.style.display = checked.size > 0 ? "inline-flex" : "none";
   document.getElementById("grocery-count").textContent = checked.size;
 
+  document.getElementById("match-col-header").textContent = matchActive ? "Match" : "";
   if (!list.length) { document.getElementById("rows").innerHTML='<div class="empty">No recipes match.</div>'; return; }
-
   document.getElementById("rows").innerHTML = list.map(r => {
     const c = CC[r.category]||{bg:"#333",text:"#ccc",dot:"#888"};
     const hd = !!details[r.id];
     const ms = matchScores[r.id];
-    const matchBadge = ms ? `<span class="match-badge ${ms.match==='full'?'match-full':'match-partial'}" title="${esc(ms.note)}">${ms.score}%</span>` : "";
+    const matchCol = matchActive
+      ? ms
+        ? `<div><span class="match-badge ${ms.match==='full'?'match-full':'match-partial'}" title="${esc(ms.note)}">${ms.score}%</span></div>`
+        : `<div><span style="font-size:11px;color:#444;font-family:monospace">—</span></div>`
+      : `<div></div>`;
     return `<div class="trow-wrap" id="wrap-${r.id}">
   <div class="trow${hd?" has-details":""}" onclick="rowClick(event,${r.id})">
     <div style="display:flex;align-items:center;justify-content:center"><input type="checkbox"${checked.has(r.id)?" checked":""} onclick="chk(event,${r.id})"></div>
     <div class="recipe-name">
       <span class="expand-icon">▶</span>
       <span class="recipe-name-text">${esc(r.name)}</span>
-      ${matchBadge}
     </div>
     <div><span class="badge" style="background:${c.bg};color:${c.text}"><span class="dot" style="background:${c.dot}"></span>${r.category}</span></div>
     <div class="meta">${MI[r.method]||"🍴"} ${r.method}</div>
     <div class="meta">${r.source}</div>
     <div class="cost">${r.cost}</div>
+    ${matchCol}
     <div><a href="${r.url}" target="_blank" class="link-btn" onclick="event.stopPropagation()">↗</a></div>
   </div>
   <div class="detail-panel" id="dp-${r.id}">
     ${hd ? detailHTML(r) : fetchPromptHTML(r)}
-    ${ms ? `<div style="font-size:12px;color:#9a9fae;margin-top:12px;padding:8px;background:#1a1f2e;border-radius:6px">🧠 <strong>AI match note:</strong> ${esc(ms.note)}</div>` : ""}
+    ${ms ? `<div style="font-size:12px;color:#9a9fae;margin-top:12px;padding:8px;background:#1a1f2e;border-radius:6px">🥦 <strong>Matched:</strong> ${esc(ms.note)}</div>` : ""}
   </div>
 </div>`;
   }).join("");
@@ -590,8 +597,7 @@ function detailHTML(r) {
   return `<div class="detail-inner">
     <div class="detail-section"><h3>Ingredients</h3><ul class="ing-list">${d.ingredients.map(i=>`<li>${esc(i)}</li>`).join("")}</ul></div>
     <div class="detail-section"><h3>Instructions</h3><ol class="steps-list">${d.steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol></div>
-  </div>
-  <div class="detail-actions"><button class="btn btn-danger" onclick="delDetails(${r.id})">🗑 Remove Details</button></div>`;
+  </div>`;
 }
 
 function fetchPromptHTML(r) {
@@ -644,12 +650,22 @@ function addMsg(txt,type){const el=document.getElementById("add-msg");el.style.d
 // ── Fridge / ingredient matcher (local, no AI) ──
 let fridgeSelected = new Set(); // selected ingredient strings
 
+function cleanIngredient(raw) {
+  return raw.trim()
+    .replace(/^\d[\d\s\/\.\-]*/, '')           // strip leading numbers like "1", "1 1/2", "2-3"
+    .replace(/^(cups?|tbsps?|tsps?|tablespoons?|teaspoons?|oz|lbs?|pounds?|ounces?|g|kg|ml|l|cloves?|cans?|pkgs?|packages?|bunches?|slices?|pieces?|pinch|handful|sprigs?|strips?|scoops?|heads?|stalks?|inches?|inch)\s+/i, '')  // strip measurement words
+    .replace(/,.*$/, '')                        // strip everything after comma (", minced" etc)
+    .replace(/\(.*?\)/g, '')                    // strip parentheticals
+    .trim()
+    .toLowerCase();
+}
+
 function getAllIngredients() {
   const all = new Set();
   Object.values(details).forEach(d => {
     (d.ingredients || []).forEach(ing => {
-      // Extract just the ingredient name (after amount/measurement)
-      all.add(ing.trim());
+      const clean = cleanIngredient(ing);
+      if (clean.length > 1) all.add(clean);
     });
   });
   return Array.from(all).sort();
@@ -677,46 +693,47 @@ function fridgeDropdownFilter(q) {
 
 function fridgeAddIngredient(ing) {
   fridgeSelected.add(ing);
-  document.getElementById("fridge-search").value = "";
-  document.getElementById("fridge-dropdown").style.display = "none";
+  document.getElementById(\"fridge-search\").value = \"\";
+  document.getElementById(\"fridge-dropdown\").style.display = \"none\";
   renderFridgeChips();
+  if (fridgeSelected.size > 0) runFridgeMatch();
 }
 
 function renderFridgeChips() {
-  const wrap = document.getElementById("fridge-chips");
+  const wrap = document.getElementById(\"fridge-chips\");
   wrap.innerHTML = Array.from(fridgeSelected).map(ing => `
-    <span style="display:inline-flex;align-items:center;gap:5px;background:#1e2330;border:1px solid #2a2f3e;border-radius:16px;padding:4px 10px;font-size:12px;color:#c8d0e0;font-family:monospace">
+    <span style=\"display:inline-flex;align-items:center;gap:5px;background:#2a3550;border:1px solid #3d5a8a;border-radius:16px;padding:5px 12px;font-size:12px;color:#7eb8f7;font-family:monospace\">
       ${esc(ing)}
-      <span onclick="fridgeRemoveIngredient(${JSON.stringify(ing)})" style="cursor:pointer;color:#556;font-size:14px;line-height:1" title="Remove">✕</span>
-    </span>`).join("");
+      <span onclick=\"fridgeRemoveIngredient(${JSON.stringify(ing)})\" style=\"cursor:pointer;color:#5a7aaa;font-size:15px;line-height:1;margin-left:2px\" title=\"Remove\">✕</span>
+    </span>`).join(\"\");
 }
 
 function fridgeRemoveIngredient(ing) {
   fridgeSelected.delete(ing);
   renderFridgeChips();
+  if (fridgeSelected.size > 0) runFridgeMatch(); else clearMatch();
 }
 
 function runFridgeMatch() {
   if (!fridgeSelected.size) { document.getElementById("fridge-info").textContent = "Add some ingredients first."; return; }
-  const userIngs = Array.from(fridgeSelected).map(i => i.toLowerCase());
+  const userIngs = Array.from(fridgeSelected); // already cleaned
   matchScores = {};
-  let full = 0, partial = 0;
   recipes.forEach(r => {
     const d = details[r.id];
     if (!d || !d.ingredients?.length) return;
-    const recipeIngs = d.ingredients.map(i => i.toLowerCase());
-    const matched = userIngs.filter(u => recipeIngs.some(ri => ri.includes(u) || u.includes(ri.split(" ").slice(-1)[0])));
-    const score = Math.round((matched.length / recipeIngs.length) * 100);
+    const recipeIngsCleaned = d.ingredients.map(i => cleanIngredient(i));
+    const matched = userIngs.filter(u => recipeIngsCleaned.some(ri => ri.includes(u) || u.includes(ri)));
+    const score = Math.round((matched.length / recipeIngsCleaned.length) * 100);
     if (score > 0) {
       const match = score >= 70 ? "full" : "partial";
-      matchScores[r.id] = { score, match, note: `${matched.length} of ${recipeIngs.length} ingredients matched` };
-      if (match === "full") full++; else partial++;
+      matchScores[r.id] = { score, match, note: `${matched.length} of ${recipeIngsCleaned.length} ingredients matched (${matched.join(", ")})` };
     }
   });
   matchActive = true;
   sort = "match";
   document.getElementById("sortBy").value = "match";
-  document.getElementById("fridge-info").textContent = `✅ ${full} recipes you can mostly make, ${partial} partial matches`;
+  const total = Object.keys(matchScores).length;
+  document.getElementById("fridge-info").textContent = `✅ Found ${total} recipes using your ingredients`;
   render();
 }
 
