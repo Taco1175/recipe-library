@@ -283,14 +283,22 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
 
     <!-- Fridge bar -->
     <div class="fridge-bar" id="fridge-bar">
-      <h3>🥦 What's in my fridge? <span style="font-size:11px;color:var(--text3);font-family:monospace;font-weight:400">— AI will find recipes you can make</span></h3>
-      <div class="fridge-row">
-        <textarea id="fridge-input" placeholder="Type ingredients you have, e.g: chicken breast, garlic, onion, olive oil, chicken broth, canned tomatoes..."></textarea>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <button class="btn btn-primary" onclick="matchIngredients()" id="match-btn">✨ Find Recipes</button>
-          <button class="btn btn-outline" onclick="clearMatch()">Clear</button>
+      <h3>🥦 What's in my fridge? <span style="font-size:11px;color:var(--text3);font-family:monospace;font-weight:400">— find recipes you can make</span></h3>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <!-- Searchable dropdown trigger -->
+        <div style="position:relative;flex:1;min-width:220px;" id="fridge-dropdown-wrap">
+          <input id="fridge-search" type="text" placeholder="Search ingredients to add..."
+            oninput="fridgeDropdownFilter(this.value)" onfocus="showFridgeDropdown()"
+            autocomplete="off"
+            style="width:100%;background:#12151f;border:1px solid #2a2f3e;border-radius:8px;padding:9px 14px;color:#E8E4DC;font-size:13px;outline:none;font-family:Georgia,serif;">
+          <div id="fridge-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#1a1f2e;border:1px solid #2a2f3e;border-radius:8px;max-height:220px;overflow-y:auto;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.4);">
+          </div>
         </div>
+        <button class="btn btn-primary" onclick="runFridgeMatch()">🔍 Find Recipes</button>
+        <button class="btn btn-outline" onclick="clearMatch()">Clear</button>
       </div>
+      <!-- Selected ingredient chips -->
+      <div id="fridge-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
       <div class="fridge-info" id="fridge-info"></div>
     </div>
 
@@ -597,7 +605,7 @@ function rowClick(e,id){if(e.target.type==="checkbox"||e.target.tagName==="A")re
 function chk(e,id){e.stopPropagation();e.target.checked?checked.add(id):checked.delete(id);document.getElementById("grocery-btn").style.display=checked.size>0?"inline-flex":"none";document.getElementById("grocery-count").textContent=checked.size;}
 function onSearch(v){q=v;render();}
 function clearSearch(){document.getElementById("search").value="";q="";render();}
-function clearAll(){fCat="";fProt="";fMeth="";q="";matchActive=false;matchScores={};document.getElementById("search").value="";document.getElementById("filterProt").value="";document.getElementById("filterMeth").value="";document.getElementById("fridge-input").value="";document.getElementById("fridge-info").textContent="";render();}
+function clearAll(){fCat="";fProt="";fMeth="";q="";matchActive=false;matchScores={};fridgeSelected.clear();renderFridgeChips();document.getElementById("search").value="";document.getElementById("filterProt").value="";document.getElementById("filterMeth").value="";document.getElementById("fridge-search").value="";document.getElementById("fridge-info").textContent="";render();}
 function toggleFridge(){document.getElementById("fridge-bar").classList.toggle("show");}
 function toggleAdd(){document.getElementById("add-panel").classList.toggle("show");}
 
@@ -633,45 +641,102 @@ async function saveNew() {
 function addMsg(txt,type){const el=document.getElementById("add-msg");el.style.display="flex";el.className="add-msg "+type;el.innerHTML=type==="loading"?`<div class="spinner"></div>${txt}`:txt;}
 
 // ── Ingredient matcher ──
-async function matchIngredients() {
-  const ings = document.getElementById("fridge-input").value.trim();
-  if (!ings) return;
-  const btn = document.getElementById("match-btn");
-  btn.disabled = true; btn.textContent = "Matching…";
-  document.getElementById("fridge-info").textContent = "🧠 AI is checking all recipes against your ingredients…";
+// ── Fridge / ingredient matcher (local, no AI) ──
+let fridgeSelected = new Set(); // selected ingredient strings
 
-  // Pass all recipes with their details
-  const recipeData = recipes.map(r => ({
-    id: r.id,
-    name: r.name,
-    ingredients: details[r.id]?.ingredients || null
-  }));
+function getAllIngredients() {
+  const all = new Set();
+  Object.values(details).forEach(d => {
+    (d.ingredients || []).forEach(ing => {
+      // Extract just the ingredient name (after amount/measurement)
+      all.add(ing.trim());
+    });
+  });
+  return Array.from(all).sort();
+}
 
-  try {
-    const data = await api("match-ingredients","POST",{ userIngredients: ings, recipes: recipeData });
-    if (data.error) throw new Error(data.error);
+function showFridgeDropdown() {
+  fridgeDropdownFilter(document.getElementById("fridge-search").value);
+  document.getElementById("fridge-dropdown").style.display = "block";
+}
 
-    matchScores = {};
-    let full=0, partial=0;
-    data.results.forEach(x => { matchScores[x.id] = x; if(x.match==="full")full++; else if(x.match==="partial")partial++; });
-    matchActive = true;
-    sort = "match";
-    document.getElementById("sortBy").value = "match";
-    document.getElementById("fridge-info").textContent = `✅ Found ${full} recipes you can make now, ${partial} you can mostly make.`;
-    render();
-  } catch(err) {
-    document.getElementById("fridge-info").textContent = "⚠ Error: "+err.message;
-  }
-  btn.disabled=false; btn.textContent="✨ Find Recipes";
+function fridgeDropdownFilter(q) {
+  const dd = document.getElementById("fridge-dropdown");
+  const all = getAllIngredients();
+  const lower = q.toLowerCase();
+  const filtered = all.filter(i => !fridgeSelected.has(i) && i.toLowerCase().includes(lower)).slice(0, 50);
+  if (!filtered.length) { dd.innerHTML = `<div style="padding:10px 14px;color:#555;font-size:13px">No matches</div>`; return; }
+  dd.innerHTML = filtered.map(ing => `
+    <div onclick="fridgeAddIngredient(${JSON.stringify(ing)})"
+      style="padding:9px 14px;font-size:13px;color:#c8d0e0;cursor:pointer;border-bottom:1px solid #12151f"
+      onmouseover="this.style.background='#1e2330'" onmouseout="this.style.background='transparent'">
+      ${esc(ing)}
+    </div>`).join("");
+  dd.style.display = "block";
+}
+
+function fridgeAddIngredient(ing) {
+  fridgeSelected.add(ing);
+  document.getElementById("fridge-search").value = "";
+  document.getElementById("fridge-dropdown").style.display = "none";
+  renderFridgeChips();
+}
+
+function renderFridgeChips() {
+  const wrap = document.getElementById("fridge-chips");
+  wrap.innerHTML = Array.from(fridgeSelected).map(ing => `
+    <span style="display:inline-flex;align-items:center;gap:5px;background:#1e2330;border:1px solid #2a2f3e;border-radius:16px;padding:4px 10px;font-size:12px;color:#c8d0e0;font-family:monospace">
+      ${esc(ing)}
+      <span onclick="fridgeRemoveIngredient(${JSON.stringify(ing)})" style="cursor:pointer;color:#556;font-size:14px;line-height:1" title="Remove">✕</span>
+    </span>`).join("");
+}
+
+function fridgeRemoveIngredient(ing) {
+  fridgeSelected.delete(ing);
+  renderFridgeChips();
+}
+
+function runFridgeMatch() {
+  if (!fridgeSelected.size) { document.getElementById("fridge-info").textContent = "Add some ingredients first."; return; }
+  const userIngs = Array.from(fridgeSelected).map(i => i.toLowerCase());
+  matchScores = {};
+  let full = 0, partial = 0;
+  recipes.forEach(r => {
+    const d = details[r.id];
+    if (!d || !d.ingredients?.length) return;
+    const recipeIngs = d.ingredients.map(i => i.toLowerCase());
+    const matched = userIngs.filter(u => recipeIngs.some(ri => ri.includes(u) || u.includes(ri.split(" ").slice(-1)[0])));
+    const score = Math.round((matched.length / recipeIngs.length) * 100);
+    if (score > 0) {
+      const match = score >= 70 ? "full" : "partial";
+      matchScores[r.id] = { score, match, note: `${matched.length} of ${recipeIngs.length} ingredients matched` };
+      if (match === "full") full++; else partial++;
+    }
+  });
+  matchActive = true;
+  sort = "match";
+  document.getElementById("sortBy").value = "match";
+  document.getElementById("fridge-info").textContent = `✅ ${full} recipes you can mostly make, ${partial} partial matches`;
+  render();
 }
 
 function clearMatch() {
-  matchScores={}; matchActive=false;
-  document.getElementById("fridge-input").value="";
-  document.getElementById("fridge-info").textContent="";
-  if(sort==="match"){sort="category";document.getElementById("sortBy").value="category";}
+  matchScores = {}; matchActive = false; fridgeSelected.clear();
+  renderFridgeChips();
+  document.getElementById("fridge-search").value = "";
+  document.getElementById("fridge-info").textContent = "";
+  document.getElementById("fridge-dropdown").style.display = "none";
+  if (sort === "match") { sort = "category"; document.getElementById("sortBy").value = "category"; }
   render();
 }
+
+// Close dropdown when clicking outside
+document.addEventListener("click", e => {
+  if (!document.getElementById("fridge-dropdown-wrap")?.contains(e.target)) {
+    const dd = document.getElementById("fridge-dropdown");
+    if (dd) dd.style.display = "none";
+  }
+});
 
 // ── Grocery list ──
 // ── Grocery List ──
