@@ -355,13 +355,27 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
 
 <!-- Grocery Modal -->
 <div class="modal-overlay" id="grocery-modal" onclick="if(event.target===this)closeGrocery()">
-  <div class="modal">
+  <div class="modal" style="max-width:700px;max-height:90vh;display:flex;flex-direction:column;">
     <button class="modal-close" onclick="closeGrocery()">✕</button>
     <h2>🛒 Grocery List</h2>
     <p class="subtitle" id="g-subtitle"></p>
-    <div id="g-body"></div>
+
+    <!-- Search bar -->
+    <input id="g-search" type="text" placeholder="Search ingredients..." oninput="filterGrocery(this.value)"
+      style="width:100%;background:#12151f;border:1px solid #2a2f3e;border-radius:8px;padding:9px 14px;color:#E8E4DC;font-size:13px;outline:none;margin-bottom:12px;font-family:Georgia,serif;">
+
+    <!-- Select all / none -->
+    <div style="display:flex;gap:10px;margin-bottom:10px;font-size:12px;font-family:monospace;">
+      <span onclick="selectAllGrocery(true)" style="color:#6e8efb;cursor:pointer;text-decoration:underline">Select all</span>
+      <span onclick="selectAllGrocery(false)" style="color:#6e8efb;cursor:pointer;text-decoration:underline">Deselect all</span>
+      <span id="g-selected-count" style="color:#666;margin-left:auto"></span>
+    </div>
+
+    <!-- Ingredient list -->
+    <div id="g-body" style="overflow-y:auto;flex:1;min-height:0;"></div>
+
     <div class="modal-footer">
-      <button class="btn btn-outline" onclick="copyList()">📋 Copy</button>
+      <button class="btn btn-outline" onclick="copyCheckedGrocery()">📋 Copy checked</button>
       <button class="btn btn-primary" onclick="closeGrocery()">Done</button>
     </div>
   </div>
@@ -660,38 +674,99 @@ function clearMatch() {
 }
 
 // ── Grocery list ──
-async function openGrocery() {
+// ── Grocery List ──
+let groceryItems = []; // [{id, amount, measurement, ingredient, notes, recipes:[]}]
+
+function openGrocery() {
   if (!checked.size) return;
   document.getElementById("grocery-modal").classList.add("show");
-  const sel = recipes.filter(r=>checked.has(r.id));
-  const withD = sel.filter(r=>details[r.id]);
-  const noD = sel.filter(r=>!details[r.id]);
-  document.getElementById("g-subtitle").textContent = `${sel.length} recipe${sel.length>1?"s":""} · ${withD.length} with full ingredient lists`;
-  const body = document.getElementById("g-body");
-  if (!withD.length) { body.innerHTML=`<p style="color:#8a8f9e;font-size:13px">Fetch ingredient details for your selected recipes first.</p>`; return; }
-  body.innerHTML=`<div class="detail-loading"><div class="spinner"></div>Organizing your grocery list…</div>`;
-  const ings=[];
-  withD.forEach(r=>details[r.id].ingredients.forEach(i=>ings.push({ing:i,recipe:r.name})));
-  try {
-    const data = await api("grocery-list","POST",{ingredients:ings});
-    let html = Object.entries(data).filter(([,v])=>v&&v.length).map(([cat,items])=>
-      `<div class="g-section"><h3>${esc(cat)}</h3>${items.map(x=>`<div class="g-item">${esc(x.item)}<span class="g-from">${(x.recipes||[]).map(esc).join(", ")}</span></div>`).join("")}</div>`
-    ).join("");
-    if (noD.length) html+=`<div style="margin-top:14px;padding:10px;background:#1a1f2e;border:1px solid var(--border);border-radius:8px;font-size:12px;color:#8a8f9e"><strong style="color:#aaa">⚠ No details yet:</strong> ${noD.map(r=>esc(r.name)).join(", ")}</div>`;
-    body.innerHTML = html;
-  } catch(err) { body.innerHTML=`<p style="color:#e07070;font-size:13px">⚠ ${err.message}</p>`; }
+  const sel = recipes.filter(r => checked.has(r.id));
+  const withD = sel.filter(r => details[r.id]);
+  const noD = sel.filter(r => !details[r.id]);
+  document.getElementById("g-subtitle").textContent =
+    `${sel.length} recipe${sel.length > 1 ? "s" : ""} · ${withD.length} with ingredient details`;
+  document.getElementById("g-search").value = "";
+
+  // Build deduplicated ingredient list from details (text array format)
+  const merged = {}; // key = ingredient string → {text, recipes:[]}
+  withD.forEach(r => {
+    (details[r.id].ingredients || []).forEach(ing => {
+      const key = ing.trim().toLowerCase();
+      if (!merged[key]) merged[key] = { text: ing.trim(), recipes: [], checked: true };
+      if (!merged[key].recipes.includes(r.name)) merged[key].recipes.push(r.name);
+    });
+  });
+
+  groceryItems = Object.values(merged).sort((a, b) => a.text.localeCompare(b.text));
+  renderGroceryList(groceryItems);
+
+  if (noD.length) {
+    const body = document.getElementById("g-body");
+    body.innerHTML += `<div style="margin-top:14px;padding:10px;background:#1a1f2e;border:1px solid var(--border);border-radius:8px;font-size:12px;color:#8a8f9e">
+      <strong style="color:#aaa">⚠ No details for:</strong> ${noD.map(r => esc(r.name)).join(", ")}
+    </div>`;
+  }
+  updateGroceryCount();
 }
 
-function closeGrocery(){document.getElementById("grocery-modal").classList.remove("show");}
+function renderGroceryList(items) {
+  const body = document.getElementById("g-body");
+  if (!items.length) { body.innerHTML = `<p style="color:#8a8f9e;font-size:13px;padding:12px 0">No ingredients found.</p>`; return; }
+  body.innerHTML = items.map((item, i) => `
+    <label style="display:flex;align-items:flex-start;gap:10px;padding:8px 6px;border-bottom:1px solid #1e2330;cursor:pointer;border-radius:4px;" 
+           onmouseover="this.style.background='#1e2330'" onmouseout="this.style.background='transparent'">
+      <input type="checkbox" data-idx="${i}" ${item.checked ? "checked" : ""}
+        onchange="groceryItems[${i}].checked=this.checked;updateGroceryCount()"
+        style="margin-top:3px;accent-color:#6e8efb;flex-shrink:0;width:15px;height:15px;cursor:pointer;">
+      <div style="flex:1;min-width:0">
+        <span style="font-size:13px;color:#E8E4DC">${esc(item.text)}</span>
+        <span style="font-size:11px;color:#445;font-family:monospace;margin-left:8px">${item.recipes.map(esc).join(", ")}</span>
+      </div>
+    </label>`).join("");
+}
 
-function copyList(){
-  let text="🛒 GROCERY LIST\n\n";
-  document.querySelectorAll(".g-section").forEach(s=>{
-    text+=s.querySelector("h3").textContent+"\n";
-    s.querySelectorAll(".g-item").forEach(i=>text+="☐ "+i.textContent.trim().replace(/\s+/g," ")+"\n");
-    text+="\n";
+function filterGrocery(q) {
+  const lower = q.toLowerCase();
+  const filtered = groceryItems.filter(item => item.text.toLowerCase().includes(lower));
+  // Render filtered but preserve checkbox state via groceryItems array
+  const body = document.getElementById("g-body");
+  if (!filtered.length) { body.innerHTML = `<p style="color:#8a8f9e;font-size:13px;padding:12px 0">No matches.</p>`; return; }
+  body.innerHTML = filtered.map(item => {
+    const i = groceryItems.indexOf(item);
+    return `
+    <label style="display:flex;align-items:flex-start;gap:10px;padding:8px 6px;border-bottom:1px solid #1e2330;cursor:pointer;border-radius:4px;"
+           onmouseover="this.style.background='#1e2330'" onmouseout="this.style.background='transparent'">
+      <input type="checkbox" data-idx="${i}" ${item.checked ? "checked" : ""}
+        onchange="groceryItems[${i}].checked=this.checked;updateGroceryCount()"
+        style="margin-top:3px;accent-color:#6e8efb;flex-shrink:0;width:15px;height:15px;cursor:pointer;">
+      <div style="flex:1;min-width:0">
+        <span style="font-size:13px;color:#E8E4DC">${esc(item.text)}</span>
+        <span style="font-size:11px;color:#445;font-family:monospace;margin-left:8px">${item.recipes.map(esc).join(", ")}</span>
+      </div>
+    </label>`;
+  }).join("");
+}
+
+function selectAllGrocery(val) {
+  groceryItems.forEach(item => item.checked = val);
+  filterGrocery(document.getElementById("g-search").value);
+  updateGroceryCount();
+}
+
+function updateGroceryCount() {
+  const n = groceryItems.filter(i => i.checked).length;
+  document.getElementById("g-selected-count").textContent = `${n} of ${groceryItems.length} selected`;
+}
+
+function closeGrocery() { document.getElementById("grocery-modal").classList.remove("show"); }
+
+function copyCheckedGrocery() {
+  const lines = groceryItems.filter(i => i.checked).map(i => `☐ ${i.text}`);
+  const text = "🛒 GROCERY LIST\n\n" + lines.join("\n");
+  navigator.clipboard.writeText(text).then(() => {
+    const b = event.target; b.textContent = "✅ Copied!";
+    setTimeout(() => b.textContent = "📋 Copy checked", 2000);
   });
-  navigator.clipboard.writeText(text).then(()=>{const b=event.target;b.textContent="✅ Copied!";setTimeout(()=>b.textContent="📋 Copy",2000);});
 }
 
 // ── Boot ──
