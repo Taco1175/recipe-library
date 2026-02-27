@@ -637,6 +637,7 @@ function render() {
     <div class="recipe-name">
       <span class="expand-icon">▶</span>
       <span class="recipe-name-text">${esc(r.name)}</span>
+      ${r.url ? `<a href="${r.url}" target="_blank" class="link-btn" onclick="event.stopPropagation()" title="Open recipe" style="flex-shrink:0;width:22px;height:22px;font-size:10px;margin-left:4px">↗</a>` : ""}
     </div>
     <div><span class="badge" style="background:${c.bg};color:${c.text}"><span class="dot" style="background:${c.dot}"></span>${r.category}</span></div>
     <div class="meta">${MI[r.method]||"🍴"} ${r.method}</div>
@@ -647,15 +648,14 @@ function render() {
       <span style="font-size:13px;color:#c8d0e0;font-family:monospace;min-width:18px;text-align:center">${getServings(r.id)}</span>
       <button onclick="changeServings(event,${r.id},+1)" style="background:#1e2330;border:1px solid #2a2f3e;color:#aaa;border-radius:4px;width:20px;height:20px;cursor:pointer;font-size:13px;line-height:1;padding:0">+</button>
     </div>
-    <div style="pointer-events:all;display:flex;align-items:center;gap:4px">
-      <a href="${r.url}" target="_blank" class="link-btn" onclick="event.stopPropagation()" title="Open recipe">↗</a>
+    <div style="pointer-events:all;display:flex;align-items:center;justify-content:center">
       ${isArchived
         ? `<button onclick="event.stopPropagation();unarchiveRecipe(${r.id})" title="Restore"
             style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:#1e2330;border:1px solid #2a4a2a;color:#4a8a4a;font-size:13px;cursor:pointer"
             onmouseover="this.style.background='#1a3a1a'" onmouseout="this.style.background='#1e2330'">↩</button>`
         : `<button onclick="event.stopPropagation();archiveRecipe(${r.id})" title="Archive"
-            style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:#1e2330;border:1px solid #2a2f3e;color:#445;font-size:13px;cursor:pointer"
-            onmouseover="this.style.color='#cc6666';this.style.borderColor='#663333'" onmouseout="this.style.color='#445';this.style.borderColor='#2a2f3e'">🗄</button>`
+            style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:transparent;border:none;color:#3a3a4a;font-size:16px;font-weight:700;cursor:pointer;line-height:1"
+            onmouseover="this.style.color='#cc4444'" onmouseout="this.style.color='#3a3a4a'">✕</button>`
       }
     </div>
   </div>
