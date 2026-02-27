@@ -312,10 +312,16 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
       <h2>➕ Add New Recipe</h2>
       <div class="add-grid">
         <div class="field full url-row">
-          <div class="field"><label>Recipe URL</label>
-          <input type="url" id="new-url" placeholder="Paste URL and tab away to auto-fill..."
-            onblur="autoFetchRecipe(this.value)" autocomplete="off">
-        </div>
+          <label>Recipe URL</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="url" id="new-url" placeholder="Paste URL here..."
+              onblur="autoFetchRecipe(this.value)" autocomplete="off" style="flex:1">
+            <button type="button" onclick="autoFetchRecipe(document.getElementById('new-url').value)"
+              style="background:#2a3f5e;border:1px solid #3a5a8e;color:#7eb8f7;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:12px;font-family:monospace;white-space:nowrap;flex-shrink:0"
+              onmouseover="this.style.background='#3a5070'" onmouseout="this.style.background='#2a3f5e'">
+              🔍 Fetch
+            </button>
+          </div>
         </div>
         <div class="field"><label>Recipe Name</label><input type="text" id="new-name" placeholder="Auto-filled"></div>
         <div class="field"><label>Category</label>
@@ -742,7 +748,8 @@ let _lastFetchedUrl = "";
 
 async function autoFetchRecipe(url) {
   url = url.trim();
-  if (!url || !url.startsWith("http") || url === _lastFetchedUrl) return;
+  if (!url || !url.startsWith("http")) return;
+  if (url === _lastFetchedUrl && pendingDetails) return; // already fetched this URL
   _lastFetchedUrl = url;
 
   addMsg("🔍 Fetching recipe details...", "loading");
@@ -774,7 +781,11 @@ async function autoFetchRecipe(url) {
       pendingDetails = { ingredients: data.ingredients, steps: data.steps || [], servings: data.servings || 4 };
       addMsg(`✅ Auto-filled! Found ${data.ingredients.length} ingredients, ${data.steps?.length || 0} steps. Review and save.`, "success");
     } else {
-      addMsg("⚠️ Fetched but couldn't find ingredients. Fill in manually.", "error");
+      let dbg = "";
+      if (data.debug) {
+        dbg = ` (HTML: ${data.debug.htmlLength}b, hasIngredient: ${data.debug.hasIngredientWord}, hasUL: ${data.debug.hasUL})`;
+      }
+      addMsg("⚠️ Fetched but couldn't find ingredients. Fill in manually." + dbg, "error");
     }
   } catch (e) {
     addMsg("⚠️ Fetch failed: " + e.message, "error");
