@@ -337,7 +337,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
         <div class="field"><label>Method</label><input type="text" id="new-method" placeholder="e.g. Slow Cooker"></div>
         <div class="field"><label>Source</label><input type="text" id="new-source" placeholder="e.g. Kay Nutrition"></div>
         <div class="field"><label>Est. Aldi Cost</label><input type="text" id="new-cost" placeholder="e.g. $10-13"></div>
-        <div class="field"><label>Servings</label><input type="number" id="new-servings" placeholder="e.g. 4" min="1" max="24" value="4"></div>
+        <div class="field"><label>Servings</label><input type="number" id="new-servings" placeholder="e.g. 4" min="1" max="24"></div>
       </div>
       <div id="add-msg" style="display:none" class="add-msg"></div>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
@@ -932,8 +932,7 @@ async function autoFetchRecipe(url) {
     const data = parseRecipeHTML(html, fetchUrl);
 
     if (data.name) document.getElementById("new-name").value = data.name;
-    if (data.servings && !document.getElementById("new-servings").value)
-      document.getElementById("new-servings").value = data.servings;
+    if (data.servings) document.getElementById("new-servings").value = data.servings;
 
     if (data.ingredients.length) {
       pendingDetails = { ingredients: data.ingredients, steps: data.steps || [], servings: data.servings || 4 };
