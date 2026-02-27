@@ -693,19 +693,19 @@ function fridgeDropdownFilter(q) {
 
 function fridgeAddIngredient(ing) {
   fridgeSelected.add(ing);
-  document.getElementById(\"fridge-search\").value = \"\";
-  document.getElementById(\"fridge-dropdown\").style.display = \"none\";
+  document.getElementById("fridge-search").value = "";
+  document.getElementById("fridge-dropdown").style.display = "none";
   renderFridgeChips();
   if (fridgeSelected.size > 0) runFridgeMatch();
 }
 
 function renderFridgeChips() {
-  const wrap = document.getElementById(\"fridge-chips\");
+  const wrap = document.getElementById("fridge-chips");
   wrap.innerHTML = Array.from(fridgeSelected).map(ing => `
-    <span style=\"display:inline-flex;align-items:center;gap:5px;background:#2a3550;border:1px solid #3d5a8a;border-radius:16px;padding:5px 12px;font-size:12px;color:#7eb8f7;font-family:monospace\">
+    <span style="display:inline-flex;align-items:center;gap:5px;background:#2a3550;border:1px solid #3d5a8a;border-radius:16px;padding:5px 12px;font-size:12px;color:#7eb8f7;font-family:monospace">
       ${esc(ing)}
-      <span onclick=\"fridgeRemoveIngredient(${JSON.stringify(ing)})\" style=\"cursor:pointer;color:#5a7aaa;font-size:15px;line-height:1;margin-left:2px\" title=\"Remove\">✕</span>
-    </span>`).join(\"\");
+      <span onclick="fridgeRemoveIngredient(${JSON.stringify(ing)})" style="cursor:pointer;color:#5a7aaa;font-size:15px;line-height:1;margin-left:2px" title="Remove">✕</span>
+    </span>`).join("");
 }
 
 function fridgeRemoveIngredient(ing) {
