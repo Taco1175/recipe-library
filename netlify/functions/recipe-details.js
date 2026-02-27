@@ -1,10 +1,8 @@
-const { verifyToken, getToken } = require("./_auth-helper");
 const { supabase } = require("./_supabase-helper");
 
 exports.handler = async (event) => {
   const headers = { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" };
   if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers };
-  if (!verifyToken(getToken(event))) return { statusCode: 401, headers, body: JSON.stringify({ error: "Unauthorized" }) };
 
   if (event.httpMethod === "GET") {
     const id = event.queryStringParameters?.id;
