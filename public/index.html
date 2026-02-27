@@ -814,14 +814,34 @@ function parseRecipeHTML(html, url) {
     } catch(e) {}
   }
 
-  // 2. WPRM
+  // 2. WPRM embedded JSON (most reliable — has clean structured data)
   if (!result.ingredients.length) {
-    const ingBlocks = [...html.matchAll(/class="wprm-recipe-ingredient "[^>]*>([\s\S]*?)<\/li>/g)];
+    const wprmJson = html.match(/window\.wprm_recipes\s*=\s*({[\s\S]*?})\s*<\/script>/);
+    if (wprmJson) {
+      try {
+        const recipes = JSON.parse(wprmJson[1]);
+        const recipe = Object.values(recipes)[0];
+        if (recipe?.ingredients?.length) {
+          result.ingredients = recipe.ingredients.map(i => {
+            const parts = [i.amount, i.unit, i.name, i.notes ? `(${i.notes.trim()})` : ""].filter(Boolean);
+            return parts.join(" ").replace(/\s+/g, " ").trim();
+          });
+          if (recipe.originalServingsParsed) result.servings = recipe.originalServingsParsed;
+          if (recipe.name) result.name = result.name || recipe.name;
+        }
+      } catch(e) {}
+    }
+  }
+
+  // 2b. WPRM HTML fallback (flexible class matching)
+  if (!result.ingredients.length) {
+    const ingBlocks = [...html.matchAll(/class="wprm-recipe-ingredient["\s][^>]*>([\s\S]*?)<\/li>/g)];
     ingBlocks.forEach(m => {
       const amt   = (m[1].match(/wprm-recipe-ingredient-amount[^>]*>([^<]+)/) || [])[1] || "";
       const unit  = (m[1].match(/wprm-recipe-ingredient-unit[^>]*>([^<]+)/)   || [])[1] || "";
-      const name  = (m[1].match(/wprm-recipe-ingredient-name[^>]*>([^<]+)/)   || [])[1] || "";
-      const full  = [amt, unit, name].filter(Boolean).join(" ").trim();
+      const name  = (m[1].match(/wprm-recipe-ingredient-name[^>]*>([^<\(]+)/) || [])[1] || "";
+      const notes = (m[1].match(/wprm-recipe-ingredient-notes[^>]*>([^<]+)/)  || [])[1] || "";
+      const full  = [amt, unit, name.trim(), notes ? `(${notes.trim()})` : ""].filter(Boolean).join(" ").trim();
       if (full) result.ingredients.push(full);
     });
   }
