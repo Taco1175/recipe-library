@@ -946,6 +946,29 @@ function formatAmount(amount) {
   return fracStr || '';
 }
 
+// Scale numbers in a text ingredient string
+function scaleIngredientText(text, mult) {
+  if (mult === 1) return text;
+  // Match fractions (1/2, 3/4), mixed numbers (1 1/2), decimals, whole numbers
+  return text.replace(/(\d+\s+)?(\d+\/\d+|\d*\.?\d+)/g, (match) => {
+    const num = match.includes('/') ? evalFraction(match.trim()) : parseFloat(match);
+    if (isNaN(num) || num === 0) return match;
+    const scaled = num * mult;
+    return formatAmount(scaled) || match;
+  });
+}
+
+function evalFraction(str) {
+  // Handle "1 1/2" or "1/2"
+  const parts = str.trim().split(/\s+/);
+  if (parts.length === 2) {
+    const [a, b] = parts[1].split('/');
+    return parseInt(parts[0]) + parseInt(a) / parseInt(b);
+  }
+  const [a, b] = parts[0].split('/');
+  return b ? parseInt(a) / parseInt(b) : parseFloat(a);
+}
+
 async function openGrocery() {
   if (!checked.size) return;
   document.getElementById("grocery-modal").classList.add("show");
@@ -969,12 +992,16 @@ async function openGrocery() {
   const recipeNames = {};
   sel.forEach(r => recipeNames[r.id] = r.name);
 
-  // Build servings multipliers (current / default)
+  // Build servings multipliers (current / default) with 75% cost scaling
   const servingsMult = {};
+  const costMult = {};  // separate multiplier for cost (75% rate)
   sel.forEach(r => {
     const def = getDefaultServings(r.id);
     const cur = getServings(r.id);
-    servingsMult[r.id] = def > 0 ? cur / def : 1;
+    const ratio = def > 0 ? cur / def : 1;
+    servingsMult[r.id] = ratio;
+    // Cost scales at 75% rate: doubling servings = 1.5x cost, not 2x
+    costMult[r.id] = ratio > 1 ? 1 + (ratio - 1) * 0.75 : ratio > 0 ? 1 - (1 - ratio) * 0.75 : 1;
   });
 
   // Build cart header HTML
@@ -1021,11 +1048,25 @@ async function openGrocery() {
     if (rname && !merged[key].recipes.includes(rname)) merged[key].recipes.push(rname);
   });
 
-  // Fallback: use text ingredients for recipes without structured data
+  // Fallback: use text ingredients for recipes without structured data (best-effort scaling)
   fallbackRecipes.forEach(r => {
+    const mult = servingsMult[r.id] || 1;
     (details[r.id].ingredients || []).forEach(ing => {
+      // Try to scale numbers in the text
+      let scaledIng = ing.trim();
+      let wasScaled = false;
+      if (mult !== 1) {
+        scaledIng = scaleIngredientText(ing.trim(), mult);
+        wasScaled = scaledIng !== ing.trim();
+      }
       const key = `__text__${ing.trim().toLowerCase()}`;
-      if (!merged[key]) merged[key] = { ingredient: ing.trim(), measurement: null, amount: 0, hasAmount: false, recipes: [], cost: estimateCost(ing), sortKey: ing.trim().toLowerCase() };
+      if (!merged[key]) merged[key] = {
+        ingredient: scaledIng,
+        measurement: null, amount: 0, hasAmount: false,
+        recipes: [], cost: estimateCost(ing),
+        sortKey: ing.trim().toLowerCase(),
+        needsReview: mult !== 1, // flag for ⚠️
+      };
       if (!merged[key].recipes.includes(r.name)) merged[key].recipes.push(r.name);
     });
   });
@@ -1065,6 +1106,7 @@ function adjustCartServings(id, delta) {
 }
 
 function groceryRowHTML(item, i) {
+  const reviewBadge = item.needsReview ? `<span title="Amounts scaled from text — please review" style="color:#b8860b;font-size:11px;margin-left:4px;cursor:help">⚠️</span>` : '';
   const costStr = item.cost ? `<span style="color:#3a7a3a;font-size:11px;font-family:monospace;margin-left:6px">~$${item.cost.toFixed(2)}</span>` : '';
   const recipesStr = item.recipes.length ? `<span style="font-size:11px;color:#445;font-family:monospace;margin-left:6px">${item.recipes.map(esc).join(", ")}</span>` : '';
   return `<label style="display:flex;align-items:flex-start;gap:10px;padding:9px 6px;border-bottom:1px solid #1e2330;cursor:pointer;"
@@ -1073,7 +1115,7 @@ function groceryRowHTML(item, i) {
       onchange="groceryItems[${i}].checked=this.checked;updateGroceryCount()"
       style="margin-top:3px;accent-color:#6e8efb;flex-shrink:0;width:15px;height:15px;cursor:pointer;">
     <div style="flex:1;min-width:0">
-      <span style="font-size:13px;color:#E8E4DC;font-weight:500">${esc(item.text)}</span>
+      <span style="font-size:13px;color:#E8E4DC;font-weight:500">${esc(item.text)}</span>${reviewBadge}
       ${costStr}${recipesStr}
     </div>
   </label>`;

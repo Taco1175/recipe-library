@@ -44,6 +44,12 @@ function parseJsonLd(html) {
           .filter(Boolean);
       }
 
+      if (data.recipeYield) {
+        const yieldStr = Array.isArray(data.recipeYield) ? data.recipeYield[0] : data.recipeYield;
+        const num = parseInt(String(yieldStr).match(/\d+/)?.[0]);
+        if (num) result.servings = num;
+      }
+
       if (Array.isArray(data.recipeInstructions)) {
         result.steps = data.recipeInstructions.map(s => {
           if (typeof s === "string") return s.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
