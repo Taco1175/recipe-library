@@ -1049,25 +1049,44 @@ function evalFraction(str) {
   return b ? parseInt(a) / parseInt(b) : parseFloat(a);
 }
 
+function scaledCost(r, sv, def) {
+  // Parse low end of cost range like "$6-9" -> 7.5
+  if (!r.cost || r.cost === 'TBD') return null;
+  const nums = r.cost.replace(/[^0-9\-\.]/g,'').split('-').map(Number).filter(n=>n>0);
+  if (!nums.length) return null;
+  const base = nums.reduce((a,b)=>a+b,0)/nums.length;
+  const ratio = def > 0 ? sv / def : 1;
+  const scaled = base * (ratio > 1 ? 1 + (ratio-1)*0.75 : ratio > 0 ? 1-(1-ratio)*0.75 : 1);
+  return scaled;
+}
+
 function buildCartHeaderHTML(sel) {
-  return `<div style="margin-bottom:16px;padding:12px 16px;background:#12151f;border:1px solid #2a2f3e;border-radius:10px">
-    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#556;font-family:monospace;margin-bottom:8px">🛒 In your cart</div>
-    <div style="display:flex;flex-wrap:wrap;gap:8px">
+  const totalCost = sel.reduce((sum, r) => {
+    const c = scaledCost(r, getServings(r.id), getDefaultServings(r.id));
+    return sum + (c || 0);
+  }, 0);
+  return `<div style="margin-bottom:12px;padding:12px 16px;background:#12151f;border:1px solid #2a2f3e;border-radius:10px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#556;font-family:monospace">🛒 In your cart</div>
+      ${totalCost > 0 ? `<div style="font-size:12px;color:#6aaa6a;font-family:monospace">~$${totalCost.toFixed(0)} est.</div>` : ''}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
       ${sel.map(r => {
         const sv = getServings(r.id);
         const def = getDefaultServings(r.id);
-        const costStr = r.cost && r.cost !== 'TBD' ? r.cost : '';
-        return `<div style="display:flex;align-items:center;gap:6px;background:#1a1f2e;border:1px solid #2a2f3e;border-radius:8px;padding:6px 10px">
-          <span style="font-size:13px;color:#E8E4DC">${esc(r.name)}</span>
+        const cost = scaledCost(r, sv, def);
+        const costStr = cost ? `~$${cost.toFixed(0)}` : '';
+        return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#1a1f2e;border:1px solid #2a2f3e;border-radius:8px">
+          <span style="flex:1;font-size:13px;color:#E8E4DC">${esc(r.name)}</span>
           <span style="display:flex;align-items:center;gap:3px;background:#1e2330;border:1px solid #3a4060;border-radius:4px;padding:2px 6px">
             <button onmousedown="event.preventDefault();event.stopPropagation();adjustCartServings(${r.id},-1)" style="background:none;border:none;color:#aaa;cursor:pointer;font-size:14px;padding:0 2px;line-height:1">−</button>
             <span style="font-size:12px;color:#7eb8f7;font-family:monospace;min-width:20px;text-align:center">${sv}<span style="color:#445;font-size:10px"> /${def}</span></span>
             <button onmousedown="event.preventDefault();event.stopPropagation();adjustCartServings(${r.id},+1)" style="background:none;border:none;color:#aaa;cursor:pointer;font-size:14px;padding:0 2px;line-height:1">+</button>
           </span>
-          ${costStr ? `<span style="font-size:11px;color:#6aaa6a;font-family:monospace">${esc(costStr)}</span>` : ''}
+          ${costStr ? `<span style="font-size:11px;color:#6aaa6a;font-family:monospace;min-width:32px;text-align:right">${costStr}</span>` : ''}
           <button onmousedown="event.preventDefault();event.stopPropagation();removeFromCart(${r.id})"
             title="Remove from cart"
-            style="background:none;border:none;color:#664;cursor:pointer;font-size:15px;padding:0 2px;line-height:1;margin-left:2px;opacity:0.6" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">✕</button>
+            style="background:none;border:none;color:#445;cursor:pointer;font-size:16px;padding:0 2px;line-height:1;opacity:0.5" onmouseover="this.style.opacity=1;this.style.color='#cc6666'" onmouseout="this.style.opacity=0.5;this.style.color='#445'">✕</button>
         </div>`;
       }).join('')}
     </div>
@@ -1311,10 +1330,50 @@ function groceryRowHTML(item, i) {
   </label>`;
 }
 
+// Store section classification
+const STORE_SECTIONS = [
+  { label: "🥩 Meat & Seafood",    keys: ["chicken","beef","pork","turkey","shrimp","fish","steak","chorizo","sausage","bacon","salmon","tuna","ground","brisket","carnitas","meatball"] },
+  { label: "🥦 Produce",            keys: ["onion","garlic","pepper","spinach","avocado","tomato","jalapeño","jalapeno","lime","lemon","cilantro","parsley","basil","lettuce","kale","cabbage","carrot","celery","broccoli","cauliflower","zucchini","mushroom","potato","sweet potato","corn","green onion","scallion","ginger","arugula","cucumber","radish","herb","apple","mango","berry","banana","fruit","vegetable","produce","fresh"] },
+  { label: "🧀 Dairy & Eggs",       keys: ["egg","milk","cream","butter","cheese","yogurt","sour cream","ricotta","mozzarella","parmesan","feta","cheddar","heavy cream","cream cheese","half and half"] },
+  { label: "🥫 Canned & Dry Goods", keys: ["can","canned","beans","lentil","chickpea","tomato sauce","diced tomato","crushed tomato","broth","stock","soup","pasta","noodle","rice","quinoa","oat","flour","cornstarch","baking powder","baking soda","sugar","salt"] },
+  { label: "🧂 Spices & Seasonings",keys: ["powder","seasoning","spice","cumin","paprika","oregano","thyme","rosemary","chili","turmeric","cinnamon","cayenne","pepper","salt","bay leaf","red pepper flake","italian seasoning","taco seasoning","everything bagel","za'atar","sumac","curry"] },
+  { label: "🍶 Condiments & Sauces",keys: ["sauce","salsa","pesto","vinegar","oil","mayo","mustard","ketchup","honey","syrup","sriracha","hot sauce","soy sauce","coconut amino","tahini","hummus","dressing","bbq","teriyaki","hoisin","fish sauce","worcestershire","ranch"] },
+  { label: "🧊 Frozen",             keys: ["frozen","tater tot","edamame","pea"] },
+  { label: "🍞 Bread & Bakery",     keys: ["tortilla","bread","roll","bun","pita","wrap","naan","bagel","crouton","panko","breadcrumb"] },
+  { label: "🧴 Deli",               keys: ["deli","lunch meat","ham","pepperoni","salami","prosciutto","rotisserie"] },
+  { label: "🛒 Other",              keys: [] },
+];
+
+function classifyItem(text) {
+  const lower = text.toLowerCase();
+  for (const section of STORE_SECTIONS) {
+    if (section.keys.length && section.keys.some(k => lower.includes(k))) return section.label;
+  }
+  return "🛒 Other";
+}
+
 function renderGroceryList(items) {
   const body = document.getElementById("g-body");
   if (!items.length) { body.innerHTML = `<p style="color:#8a8f9e;font-size:13px;padding:12px 0">No ingredients found.</p>`; return; }
-  body.innerHTML = items.map((item, i) => groceryRowHTML(item, i)).join("");
+
+  // Group by store section
+  const sections = {};
+  items.forEach((item, i) => {
+    const sec = classifyItem(item.text);
+    if (!sections[sec]) sections[sec] = [];
+    sections[sec].push({ item, i });
+  });
+
+  // Render in STORE_SECTIONS order
+  let html = '';
+  for (const { label } of STORE_SECTIONS) {
+    if (!sections[label]) continue;
+    html += `<div style="margin-bottom:4px">
+      <div style="padding:8px 6px 4px;font-size:10px;font-family:monospace;letter-spacing:.08em;text-transform:uppercase;color:#445;border-bottom:1px solid #1e2330;margin-bottom:2px">${label}</div>
+      ${sections[label].map(({item,i}) => groceryRowHTML(item, i)).join("")}
+    </div>`;
+  }
+  body.innerHTML = html;
 }
 
 function filterGrocery(q) {
