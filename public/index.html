@@ -288,7 +288,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
         <!-- Searchable dropdown trigger -->
         <div style="position:relative;flex:1;min-width:220px;" id="fridge-dropdown-wrap">
           <input id="fridge-search" type="text" placeholder="Search ingredients to add..."
-            oninput="fridgeDropdownFilter(this.value)" onfocus="showFridgeDropdown()"
+            oninput="fridgeDropdownFilter(this.value)" onfocus="showFridgeDropdown()" onblur="setTimeout(()=>{document.getElementById('fridge-dropdown').style.display='none'},200)"
             autocomplete="off"
             style="width:100%;background:#12151f;border:1px solid #2a2f3e;border-radius:8px;padding:9px 14px;color:#E8E4DC;font-size:13px;outline:none;font-family:Georgia,serif;">
           <div id="fridge-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#1a1f2e;border:1px solid #2a2f3e;border-radius:8px;max-height:220px;overflow-y:auto;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.4);">
@@ -760,12 +760,7 @@ function clearMatch() {
 }
 
 // Close dropdown when clicking outside
-document.addEventListener("click", e => {
-  if (!document.getElementById("fridge-dropdown-wrap")?.contains(e.target)) {
-    const dd = document.getElementById("fridge-dropdown");
-    if (dd) dd.style.display = "none";
-  }
-});
+// dropdown closed via onblur with delay
 
 // ── Grocery List ──
 let groceryItems = [];
