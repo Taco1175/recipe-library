@@ -25,31 +25,63 @@ jobs:
         run: |
           set -e
 
-          # Extract project ref from URL (https://abcdef.supabase.co -> abcdef)
           PROJECT_REF=$(echo "$SUPABASE_URL" | sed 's|https://||' | sed 's|\.supabase\.co.*||')
           echo "Project ref: $PROJECT_REF"
 
-          # Link project
-          supabase link --project-ref "$PROJECT_REF" --password "$SUPABASE_SERVICE_KEY"
+          supabase link --project-ref "$PROJECT_REF"
+
+          # Use curl against Supabase REST API to run SQL (no --stdin flag needed)
+          run_sql() {
+            local sql="$1"
+            local response=$(curl -s -o /tmp/sql_response.txt -w "%{http_code}" \
+              -X POST \
+              "${SUPABASE_URL}/rest/v1/rpc/query" \
+              -H "apikey: ${SUPABASE_SERVICE_KEY}" \
+              -H "Authorization: Bearer ${SUPABASE_SERVICE_KEY}" \
+              -H "Content-Type: application/json" \
+              -d "{\"query\": $(python3 -c "import json,sys; print(json.dumps(sys.argv[1]))" "$sql")}")
+            cat /tmp/sql_response.txt
+            echo ""
+            return 0
+          }
+
+          # Use supabase db push approach - write SQL to temp file and use psql via supabase
+          # Actually use the Management API's SQL endpoint
+          run_sql_file() {
+            local file="$1"
+            curl -s -X POST \
+              "https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query" \
+              -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "{\"query\": $(python3 -c "import json; print(json.dumps(open('$file').read()))")}"
+          }
+
+          run_sql_string() {
+            local sql="$1"
+            curl -s -X POST \
+              "https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query" \
+              -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "{\"query\": $(python3 -c "import json,sys; print(json.dumps(sys.argv[1]))" "$sql")}"
+          }
 
           # Ensure tracking table exists
-          echo "CREATE TABLE IF NOT EXISTS _migrations (filename TEXT PRIMARY KEY, run_at TIMESTAMPTZ DEFAULT NOW());" \
-            | supabase db execute --stdin --linked
+          echo "Creating _migrations table if needed..."
+          run_sql_string "CREATE TABLE IF NOT EXISTS _migrations (filename TEXT PRIMARY KEY, run_at TIMESTAMPTZ DEFAULT NOW());"
 
           # Get already-run filenames
-          DONE=$(echo "SELECT filename FROM _migrations;" | supabase db execute --stdin --linked 2>/dev/null || echo "")
+          DONE=$(run_sql_string "SELECT filename FROM _migrations;")
           echo "Already run: $DONE"
 
           # Run each pending .sql file in order
           for f in $(ls migrations/*.sql | sort); do
             filename=$(basename "$f")
-            if echo "$DONE" | grep -q "$filename"; then
+            if echo "$DONE" | grep -q "\"$filename\""; then
               echo "⏭  Already ran: $filename"
             else
               echo "▶  Running: $filename"
-              supabase db execute --file "$f" --linked
-              echo "INSERT INTO _migrations (filename) VALUES ('$filename') ON CONFLICT DO NOTHING;" \
-                | supabase db execute --stdin --linked
+              run_sql_file "$f"
+              run_sql_string "INSERT INTO _migrations (filename) VALUES ('$filename') ON CONFLICT DO NOTHING;"
               echo "✅ Done: $filename"
             fi
           done
