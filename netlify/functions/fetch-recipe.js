@@ -270,6 +270,22 @@ exports.handler = async (event) => {
     if (!result.ingredients.length) result = { ...result, ...parsePrintPage(html) };
     if (!result.ingredients.length) result = { ...result, ...parseGeneric(html) };
 
+    // Debug info to help diagnose parse failures
+    const debug = result.ingredients.length === 0 ? {
+      htmlLength: html.length,
+      hasLdJson: html.includes("ld+json"),
+      hasWPRM: html.includes("wprm-recipe"),
+      hasTasty: html.includes("tasty-recipes"),
+      hasIngredientWord: html.toLowerCase().includes("ingredient"),
+      hasUL: html.includes("<ul"),
+      hasOL: html.includes("<ol"),
+      // Snippet around "ingredient" keyword
+      snippet: (() => {
+        const idx = html.toLowerCase().indexOf("ingredient");
+        return idx > -1 ? html.slice(Math.max(0,idx-50), idx+300).replace(/<[^>]+>/g," ").replace(/\s+/g," ") : "not found";
+      })(),
+    } : null;
+
     return {
       statusCode: 200,
       headers,
@@ -280,6 +296,7 @@ exports.handler = async (event) => {
         source: guessSource(url),
         servings: result.servings || 4,
         success: result.ingredients.length > 0,
+        debug,
       }),
     };
   } catch (e) {
