@@ -707,9 +707,11 @@ function fridgeDropdownFilter(q) {
 function fridgeAddIngredient(ing) {
   fridgeSelected.add(ing);
   document.getElementById("fridge-search").value = "";
-  document.getElementById("fridge-dropdown").style.display = "none";
   renderFridgeChips();
   if (fridgeSelected.size > 0) runFridgeMatch();
+  // Keep dropdown open so user can keep adding ingredients
+  fridgeDropdownFilter("");
+  document.getElementById("fridge-search").focus();
 }
 
 function renderFridgeChips() {
