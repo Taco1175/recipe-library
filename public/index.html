@@ -461,7 +461,13 @@ const BASE = [
   {id:67,name:"Honey Mustard Pan Roasted Brussels Sprouts",category:"Side",protein:"None",method:"Stovetop",source:"SISU Fitness",url:"https://sisufitness.com/eat-more-food-high-volume-recipes/",cost:"$3-5"},
   {id:68,name:"Crock Pot Salsa Chicken",category:"Lunch/Dinner",protein:"Chicken",method:"Slow Cooker",source:"Budget Bytes",url:"https://www.budgetbytes.com/crock-pot-salsa-chicken/",cost:"$7-10"},
   {id:69,name:"Crockpot Swedish Meatballs",category:"Lunch/Dinner",protein:"Beef (Frozen Meatballs)",method:"Slow Cooker",source:"Cooking in the Midwest",url:"https://cookinginthemidwest.com/blog/crockpot-swedish-meatballs/",cost:"$11-14"},
-  {id:70,name:"Crockpot Chicken Parmesan Soup",category:"Lunch/Dinner",protein:"Chicken",method:"Slow Cooker",source:"Eating on a Dime",url:"https://www.eatingonadime.com/crock-pot-creamy-chicken-parmesan-soup/",cost:"$12-15"}
+  {id:70,name:"Crockpot Chicken Parmesan Soup",category:"Lunch/Dinner",protein:"Chicken",method:"Slow Cooker",source:"Eating on a Dime",url:"https://www.eatingonadime.com/crock-pot-creamy-chicken-parmesan-soup/",cost:"$12-15"},
+  {id:71,name:"Slow Cooker Breakfast Casserole",category:"Breakfast",protein:"Eggs",method:"Slow Cooker",source:"Hungry Hobby",url:"https://hungryhobby.net/slow-cooker-breakfast-casserole/",cost:"$6-9"},
+  {id:72,name:"Veggie-Loaded Egg Scramble (Awaken)",category:"Breakfast",protein:"Eggs",method:"Stovetop",source:"Awaken180",url:"https://awaken180weightloss.com/4-low-calorie-high-volume-breakfasts-you-can-make-in-5-minutes/",cost:"$4-6"},
+  {id:73,name:"Protein Yogurt Bowl (Awaken)",category:"Breakfast",protein:"Protein Powder",method:"No Cook",source:"Awaken180",url:"https://awaken180weightloss.com/4-low-calorie-high-volume-breakfasts-you-can-make-in-5-minutes/",cost:"$3-5"},
+  {id:74,name:"Cauliflower Egg Fried Rice Bowl (Awaken)",category:"Breakfast",protein:"Eggs",method:"Stovetop",source:"Awaken180",url:"https://awaken180weightloss.com/4-low-calorie-high-volume-breakfasts-you-can-make-in-5-minutes/",cost:"$4-6"},
+  {id:75,name:"Savory Egg Muffin Veggie Bake (Awaken)",category:"Breakfast",protein:"Eggs",method:"Oven",source:"Awaken180",url:"https://awaken180weightloss.com/4-low-calorie-high-volume-breakfasts-you-can-make-in-5-minutes/",cost:"$4-6"},
+  {id:76,name:"Slow Cooker Chocolate Caramel Pecan Clusters",category:"Dessert",protein:"None",method:"Slow Cooker",source:"Food Dolls",url:"https://www.fooddolls.com/caramel-pecan-clusters/",cost:"$8-12"}
 ];
 
 const CC={"Breakfast":{bg:"#FFF3E0",text:"#E65100",dot:"#FF9800"},"Lunch/Dinner":{bg:"#E8F5E9",text:"#1B5E20",dot:"#4CAF50"},"Salad":{bg:"#E3F2FD",text:"#0D47A1",dot:"#2196F3"},"Side":{bg:"#F3E5F5",text:"#4A148C",dot:"#9C27B0"},"Dessert":{bg:"#FCE4EC",text:"#880E4F",dot:"#E91E63"}};
@@ -627,7 +633,7 @@ async function saveNew() {
   const name = document.getElementById("new-name").value.trim();
   const url = document.getElementById("new-url").value.trim();
   if (!name) return addMsg("Please enter a recipe name.", "error");
-  const nid = Math.max(...recipes.map(r=>r.id)) + 1;
+  const nid = Math.max(...BASE.map(r=>r.id), ...recipes.map(r=>r.id)) + 1;
   const nr = { id:nid, name, category:document.getElementById("new-cat").value, protein:document.getElementById("new-protein").value||"Other", method:document.getElementById("new-method").value||"Stovetop", source:document.getElementById("new-source").value||"Unknown", url, cost:document.getElementById("new-cost").value||"TBD" };
   recipes.push(nr);
   await api("extra-recipes","POST",nr);
