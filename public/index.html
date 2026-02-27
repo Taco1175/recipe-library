@@ -288,7 +288,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
         <!-- Searchable dropdown trigger -->
         <div style="position:relative;flex:1;min-width:220px;" id="fridge-dropdown-wrap">
           <input id="fridge-search" type="text" placeholder="Search ingredients to add..."
-            oninput="fridgeDropdownFilter(this.value)" onfocus="showFridgeDropdown()" onblur="setTimeout(()=>{document.getElementById('fridge-dropdown').style.display='none'},200)"
+            oninput="fridgeDropdownFilter(this.value)" onfocus="showFridgeDropdown()" onblur="setTimeout(()=>{document.getElementById('fridge-dropdown').style.display='none'},200)" onkeydown="fridgeKeyNav(event)"
             autocomplete="off"
             style="width:100%;background:#12151f;border:1px solid #2a2f3e;border-radius:8px;padding:9px 14px;color:#E8E4DC;font-size:13px;outline:none;font-family:Georgia,serif;">
           <div id="fridge-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#1a1f2e;border:1px solid #2a2f3e;border-radius:8px;max-height:220px;overflow-y:auto;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.4);">
@@ -694,14 +694,46 @@ function fridgeDropdownFilter(q) {
   const lower = q.toLowerCase();
   const filtered = all.filter(i => !fridgeSelected.has(i) && i.toLowerCase().includes(lower)).slice(0, 50);
   if (!filtered.length) { dd.innerHTML = `<div style="padding:10px 14px;color:#555;font-size:13px">No matches</div>`; return; }
+  window._fridgeDdItems = filtered;
+  window._fridgeDdIndex = -1;
   dd.innerHTML = filtered.map((ing, idx) => `
-    <div onmousedown="event.preventDefault();fridgeAddIngredient(_fridgeDdItems[${idx}])"
+    <div id="fdd-${idx}" onmousedown="event.preventDefault();fridgeAddIngredient(_fridgeDdItems[${idx}])"
       style="padding:9px 14px;font-size:13px;color:#c8d0e0;cursor:pointer;border-bottom:1px solid #12151f"
-      onmouseover="this.style.background='#1e2330'" onmouseout="this.style.background='transparent'">
+      onmouseover="fridgeSetIndex(${idx})" onmouseout="">
       ${esc(ing)}
     </div>`).join("");
-  window._fridgeDdItems = filtered;
   dd.style.display = "block";
+}
+
+function fridgeSetIndex(idx) {
+  const items = document.getElementById("fridge-dropdown").querySelectorAll("[id^='fdd-']");
+  items.forEach((el, i) => el.style.background = i === idx ? "#2a3550" : "transparent");
+  window._fridgeDdIndex = idx;
+}
+
+function fridgeKeyNav(e) {
+  const dd = document.getElementById("fridge-dropdown");
+  if (dd.style.display === "none") { if (e.key === "ArrowDown") showFridgeDropdown(); return; }
+  const items = window._fridgeDdItems || [];
+  if (!items.length) return;
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    const next = Math.min((window._fridgeDdIndex ?? -1) + 1, items.length - 1);
+    fridgeSetIndex(next);
+    document.getElementById("fdd-" + next)?.scrollIntoView({ block: "nearest" });
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    const prev = Math.max((window._fridgeDdIndex ?? 0) - 1, 0);
+    fridgeSetIndex(prev);
+    document.getElementById("fdd-" + prev)?.scrollIntoView({ block: "nearest" });
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+    const idx = window._fridgeDdIndex ?? -1;
+    if (idx >= 0 && items[idx]) fridgeAddIngredient(items[idx]);
+  } else if (e.key === "Escape") {
+    dd.style.display = "none";
+    window._fridgeDdIndex = -1;
+  }
 }
 
 function fridgeAddIngredient(ing) {
