@@ -54,6 +54,14 @@ function parseJsonLd(html) {
         }).filter(i => i.length > 3);
       }
 
+      // Servings
+      const yieldRaw = data.recipeYield;
+      if (yieldRaw) {
+        const yieldStr = Array.isArray(yieldRaw) ? yieldRaw[0] : yieldRaw;
+        const num = parseInt(String(yieldStr).match(/\d+/)?.[0]);
+        if (num) result.servings = num;
+      }
+
       if (result.ingredients.length) return result;
     } catch (e) {}
   }
@@ -189,6 +197,7 @@ exports.handler = async (event) => {
         ingredients: result.ingredients,
         steps: result.steps,
         source: guessSource(url),
+        servings: result.servings || 4,
         success: result.ingredients.length > 0,
       }),
     };

@@ -326,6 +326,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
         <div class="field"><label>Method</label><input type="text" id="new-method" placeholder="e.g. Slow Cooker"></div>
         <div class="field"><label>Source</label><input type="text" id="new-source" placeholder="e.g. Kay Nutrition"></div>
         <div class="field"><label>Est. Aldi Cost</label><input type="text" id="new-cost" placeholder="e.g. $10-13"></div>
+        <div class="field"><label>Servings</label><input type="number" id="new-servings" placeholder="e.g. 4" min="1" max="24" value="4"></div>
       </div>
       <div id="add-msg" style="display:none" class="add-msg"></div>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
@@ -356,7 +357,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
 
     <div class="table">
       <div class="thead">
-        <div></div><div>Recipe</div><div>Category</div><div>Method</div><div>Source</div><div>Cost</div><div id="match-col-header"></div><div></div>
+        <div></div><div>Recipe</div><div>Category</div><div>Method</div><div>Source</div><div>Cost</div><div>Servings</div><div id="match-col-header"></div><div></div>
       </div>
       <div id="rows"></div>
     </div>
@@ -480,6 +481,22 @@ const MI={"Slow Cooker":"🥘","Oven":"🔥","Stovetop":"🍳","Air Fryer":"💨
 let recipes = [...BASE];
 let details = {};
 let checked = new Set();
+let servingsMap = {};  // recipe id -> current servings (for scaling)
+
+function getDefaultServings(id) {
+  if (details[id]?.servings) return details[id].servings;
+  return 4;
+}
+function getServings(id) {
+  if (servingsMap[id] === undefined) servingsMap[id] = getDefaultServings(id);
+  return servingsMap[id];
+}
+function changeServings(e, id, delta) {
+  e.stopPropagation();
+  const cur = getServings(id);
+  servingsMap[id] = Math.max(1, cur + delta);
+  render();
+}
 let fCat="", fProt="", fMeth="", sort="category", q="";
 let matchScores = {}; // id -> {score, match, note}
 let matchActive = false;
@@ -590,6 +607,11 @@ function render() {
     <div class="meta">${MI[r.method]||"🍴"} ${r.method}</div>
     <div class="meta">${r.source}</div>
     <div class="cost">${r.cost}</div>
+    <div style="display:flex;align-items:center;gap:5px;justify-content:center">
+      <button onclick="changeServings(event,${r.id},-1)" style="background:#1e2330;border:1px solid #2a2f3e;color:#aaa;border-radius:4px;width:20px;height:20px;cursor:pointer;font-size:13px;line-height:1;padding:0">−</button>
+      <span style="font-size:13px;color:#c8d0e0;font-family:monospace;min-width:18px;text-align:center">${getServings(r.id)}</span>
+      <button onclick="changeServings(event,${r.id},+1)" style="background:#1e2330;border:1px solid #2a2f3e;color:#aaa;border-radius:4px;width:20px;height:20px;cursor:pointer;font-size:13px;line-height:1;padding:0">+</button>
+    </div>
     ${matchCol}
     <div><a href="${r.url}" target="_blank" class="link-btn" onclick="event.stopPropagation()">↗</a></div>
   </div>
@@ -650,9 +672,8 @@ async function autoFetchRecipe(url) {
     const data = await res.json();
     if (data.error) { addMsg("⚠️ Could not auto-fetch: " + data.error, "error"); return; }
 
-    // Auto-fill form fields if empty
-    if (data.name && !document.getElementById("new-name").value)
-      document.getElementById("new-name").value = data.name;
+    // Auto-fill form fields (name always, others only if empty)
+    if (data.name) document.getElementById("new-name").value = data.name;
     if (data.source && !document.getElementById("new-source").value)
       document.getElementById("new-source").value = data.source;
     if (data.protein && !document.getElementById("new-protein").value)
@@ -661,10 +682,12 @@ async function autoFetchRecipe(url) {
       document.getElementById("new-method").value = data.method;
     if (data.cost && !document.getElementById("new-cost").value)
       document.getElementById("new-cost").value = data.cost;
+    if (data.servings && !document.getElementById("new-servings").value)
+      document.getElementById("new-servings").value = data.servings;
 
     // Store details for saving
     if (data.ingredients?.length) {
-      pendingDetails = { ingredients: data.ingredients, steps: data.steps || [] };
+      pendingDetails = { ingredients: data.ingredients, steps: data.steps || [], servings: data.servings || 4 };
       addMsg(`✅ Auto-filled! Found ${data.ingredients.length} ingredients, ${data.steps?.length || 0} steps. Review and save.`, "success");
     } else {
       addMsg("⚠️ Fetched but couldn't find ingredients. Fill in manually.", "error");
@@ -682,9 +705,11 @@ async function saveNew() {
   const nr = { id:nid, name, category:document.getElementById("new-cat").value, protein:document.getElementById("new-protein").value||"Other", method:document.getElementById("new-method").value||"Stovetop", source:document.getElementById("new-source").value||"Unknown", url, cost:document.getElementById("new-cost").value||"TBD" };
   recipes.push(nr);
   await api("extra-recipes","POST",nr);
+  const servings = parseInt(document.getElementById("new-servings").value) || 4;
+  nr.servings = servings;
   if (pendingDetails) {
-    await api("recipe-details","POST",{ recipe_id:nid, ingredients:pendingDetails.ingredients, steps:pendingDetails.steps });
-    details[nid] = pendingDetails;
+    await api("recipe-details","POST",{ recipe_id:nid, ingredients:pendingDetails.ingredients, steps:pendingDetails.steps, servings: pendingDetails.servings || servings });
+    details[nid] = { ...pendingDetails, servings: pendingDetails.servings || servings };
     pendingDetails = null;
   }
   buildSelects();
@@ -944,12 +969,42 @@ async function openGrocery() {
   const recipeNames = {};
   sel.forEach(r => recipeNames[r.id] = r.name);
 
-  // Merge structured rows by (ingredient_key, unit)
+  // Build servings multipliers (current / default)
+  const servingsMult = {};
+  sel.forEach(r => {
+    const def = getDefaultServings(r.id);
+    const cur = getServings(r.id);
+    servingsMult[r.id] = def > 0 ? cur / def : 1;
+  });
+
+  // Build cart header HTML
+  const cartHeaderHTML = `
+    <div style="margin-bottom:16px;padding:12px 16px;background:#12151f;border:1px solid #2a2f3e;border-radius:10px">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#556;font-family:monospace;margin-bottom:8px">Cart</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${sel.map(r => {
+          const sv = getServings(r.id);
+          const costStr = r.cost && r.cost !== 'TBD' ? r.cost : '';
+          return `<div style="display:flex;align-items:center;gap:6px;background:#1a1f2e;border:1px solid #2a2f3e;border-radius:8px;padding:6px 10px">
+            <span style="font-size:13px;color:#E8E4DC">${esc(r.name)}</span>
+            <span style="display:flex;align-items:center;gap:3px;background:#1e2330;border:1px solid #3a4060;border-radius:4px;padding:2px 6px">
+              <button onmousedown="event.preventDefault();adjustCartServings(${r.id},-1)" style="background:none;border:none;color:#aaa;cursor:pointer;font-size:13px;padding:0;line-height:1">−</button>
+              <span style="font-size:12px;color:#7eb8f7;font-family:monospace;min-width:16px;text-align:center">${sv}</span>
+              <button onmousedown="event.preventDefault();adjustCartServings(${r.id},+1)" style="background:none;border:none;color:#aaa;cursor:pointer;font-size:13px;padding:0;line-height:1">+</button>
+            </span>
+            ${costStr ? `<span style="font-size:11px;color:#6aaa6a;font-family:monospace">${esc(costStr)}</span>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+
+  // Merge structured rows by (ingredient_key, unit) with servings scaling
   const merged = {};
   structuredRows.forEach(row => {
     const ingKey = row.ingredient.trim().toLowerCase();
     const unit = normalizeUnit(row.measurement);
     const key = `${ingKey}|||${unit}`;
+    const mult = servingsMult[row.recipe_id] || 1;
     if (!merged[key]) {
       merged[key] = {
         ingredient: row.ingredient.trim(),
@@ -961,7 +1016,7 @@ async function openGrocery() {
         sortKey: ingKey,
       };
     }
-    if (row.amount) { merged[key].amount += parseFloat(row.amount); merged[key].hasAmount = true; }
+    if (row.amount) { merged[key].amount += parseFloat(row.amount) * mult; merged[key].hasAmount = true; }
     const rname = recipeNames[row.recipe_id];
     if (rname && !merged[key].recipes.includes(rname)) merged[key].recipes.push(rname);
   });
@@ -984,6 +1039,7 @@ async function openGrocery() {
       return { ...item, text, checked: true };
     });
 
+  body.innerHTML = cartHeaderHTML;
   renderGroceryList(groceryItems);
   updateGroceryCount();
 
@@ -1000,6 +1056,12 @@ async function openGrocery() {
       <strong style="color:#aaa">⚠ No ingredient data for:</strong> ${noDataRecipes.map(r => esc(r.name)).join(", ")}
     </div>`;
   }
+}
+
+function adjustCartServings(id, delta) {
+  servingsMap[id] = Math.max(1, getServings(id) + delta);
+  render();
+  openGrocery(); // re-render grocery list with new servings
 }
 
 function groceryRowHTML(item, i) {
