@@ -384,9 +384,12 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
     <h2>🛒 Grocery List</h2>
     <p class="subtitle" id="g-subtitle"></p>
 
+    <!-- Cart summary header - always visible at top -->
+    <div id="g-cart-header" style="margin-bottom:12px;"></div>
+
     <!-- Search bar -->
     <input id="g-search" type="text" placeholder="Search ingredients..." oninput="filterGrocery(this.value)"
-      style="width:100%;background:#12151f;border:1px solid #2a2f3e;border-radius:8px;padding:9px 14px;color:#E8E4DC;font-size:13px;outline:none;margin-bottom:12px;font-family:Georgia,serif;">
+      style="width:100%;background:#12151f;border:1px solid #2a2f3e;border-radius:8px;padding:9px 14px;color:#E8E4DC;font-size:13px;outline:none;margin-bottom:8px;font-family:Georgia,serif;">
 
     <!-- Select all / none -->
     <div style="display:flex;gap:10px;margin-bottom:10px;font-size:12px;font-family:monospace;">
@@ -394,9 +397,6 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
       <span onclick="selectAllGrocery(false)" style="color:#6e8efb;cursor:pointer;text-decoration:underline">Deselect all</span>
       <span id="g-selected-count" style="color:#666;margin-left:auto"></span>
     </div>
-
-    <!-- Cart summary header -->
-    <div id="g-cart-header" style="margin-bottom:12px;"></div>
 
     <!-- Ingredient list -->
     <div id="g-body" style="overflow-y:auto;flex:1;min-height:0;"></div>
