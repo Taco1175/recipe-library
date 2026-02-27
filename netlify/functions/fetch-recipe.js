@@ -262,11 +262,10 @@ exports.handler = async (event) => {
 
   try {
     // Normalize URL: strip /print/NNNNN/ suffixes (cookieandkate, etc.)
-    url = url.replace(/\/print\/\d+\/?$/, "/").replace(/\/print\/?$/, "/");
-    // Also strip common print/amp query params
-    url = url.replace(/[?&](print|amp|format)=[^&]*/g, "").replace(/\?$/, "");
+    let fetchUrl2 = url.replace(/[/]print[/]\d+[/]?$/, "/").replace(/[/]print[/]?$/, "/");
+    fetchUrl2 = fetchUrl2.replace(/[?&](print|amp|format)=[^&]*/g, "").replace(/[?]$/, "");
 
-    const html = await fetchUrl(url);
+    const html = await fetchUrl(fetchUrl2);
 
     // Try parsers in order of reliability
     let result = parseJsonLd(html);
