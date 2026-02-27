@@ -307,7 +307,10 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
       <h2>➕ Add New Recipe</h2>
       <div class="add-grid">
         <div class="field full url-row">
-          <div class="field"><label>Recipe URL</label><input type="url" id="new-url" placeholder="https://..."></div>
+          <div class="field"><label>Recipe URL</label>
+          <input type="url" id="new-url" placeholder="Paste URL and tab away to auto-fill..."
+            onblur="autoFetchRecipe(this.value)" autocomplete="off">
+        </div>
         </div>
         <div class="field"><label>Recipe Name</label><input type="text" id="new-name" placeholder="Auto-filled"></div>
         <div class="field"><label>Category</label>
@@ -629,6 +632,48 @@ async function delDetails(id) {
 }
 
 // ── Add recipe ──
+let _lastFetchedUrl = "";
+
+async function autoFetchRecipe(url) {
+  url = url.trim();
+  if (!url || !url.startsWith("http") || url === _lastFetchedUrl) return;
+  _lastFetchedUrl = url;
+
+  addMsg("🔍 Fetching recipe details...", "loading");
+
+  try {
+    const res = await fetch("/.netlify/functions/fetch-recipe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    const data = await res.json();
+    if (data.error) { addMsg("⚠️ Could not auto-fetch: " + data.error, "error"); return; }
+
+    // Auto-fill form fields if empty
+    if (data.name && !document.getElementById("new-name").value)
+      document.getElementById("new-name").value = data.name;
+    if (data.source && !document.getElementById("new-source").value)
+      document.getElementById("new-source").value = data.source;
+    if (data.protein && !document.getElementById("new-protein").value)
+      document.getElementById("new-protein").value = data.protein;
+    if (data.method && !document.getElementById("new-method").value)
+      document.getElementById("new-method").value = data.method;
+    if (data.cost && !document.getElementById("new-cost").value)
+      document.getElementById("new-cost").value = data.cost;
+
+    // Store details for saving
+    if (data.ingredients?.length) {
+      pendingDetails = { ingredients: data.ingredients, steps: data.steps || [] };
+      addMsg(`✅ Auto-filled! Found ${data.ingredients.length} ingredients, ${data.steps?.length || 0} steps. Review and save.`, "success");
+    } else {
+      addMsg("⚠️ Fetched but couldn't find ingredients. Fill in manually.", "error");
+    }
+  } catch (e) {
+    addMsg("⚠️ Fetch failed: " + e.message, "error");
+  }
+}
+
 async function saveNew() {
   const name = document.getElementById("new-name").value.trim();
   const url = document.getElementById("new-url").value.trim();
