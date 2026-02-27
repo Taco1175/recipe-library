@@ -126,28 +126,93 @@ function parseTasty(html) {
   return result;
 }
 
-// Last resort: generic <ul>/<ol> near keywords
+// Heuristic: find the largest <ul> that looks like ingredients
 function parseGeneric(html) {
   const result = { name: null, ingredients: [], steps: [] };
 
   const h1 = html.match(/<h1[^>]*>([^<]+)<\/h1>/);
   if (h1) result.name = h1[1].trim();
 
-  const ingM = html.match(/ingredient[^<]{0,100}<ul[^>]*>([\s\S]*?)<\/ul>/i);
-  if (ingM) {
-    [...ingM[1].matchAll(/<li[^>]*>([\s\S]*?)<\/li>/g)].forEach(m => {
+  // Strategy 1: look for heading containing "ingredient" then grab next <ul>
+  const ingHeadingM = html.match(/(?:ingredient)[^<]{0,200}?<ul[^>]*>([\s\S]*?)<\/ul>/i);
+  if (ingHeadingM) {
+    [...ingHeadingM[1].matchAll(/<li[^>]*>([\s\S]*?)<\/li>/g)].forEach(m => {
       const t = m[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
       if (t.length > 2) result.ingredients.push(t);
     });
   }
 
-  const stpM = html.match(/(?:instruction|direction)[^<]{0,100}<ol[^>]*>([\s\S]*?)<\/ol>/i);
+  // Strategy 2: if no match yet, find ALL <ul>s and pick the one whose items
+  // look most like ingredients (contain measurement words)
+  if (!result.ingredients.length) {
+    const MEAS = /\b(\d+[\s\u00BC-\u00BE\u2150-\u2189]?|cup|tsp|tbsp|teaspoon|tablespoon|pound|lb|oz|ounce|gram|kg|ml|clove|bunch|pinch|slice|can|bag|package)\b/i;
+    const allUls = [...html.matchAll(/<ul[^>]*>([\s\S]*?)<\/ul>/g)];
+    let best = null, bestScore = 0;
+    for (const ul of allUls) {
+      const items = [...ul[1].matchAll(/<li[^>]*>([\s\S]*?)<\/li>/g)]
+        .map(m => m[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim())
+        .filter(t => t.length > 2);
+      const score = items.filter(t => MEAS.test(t)).length;
+      if (score > bestScore && items.length >= 3) { best = items; bestScore = score; }
+    }
+    if (best) result.ingredients = best;
+  }
+
+  // Steps: heading "instruction|direction|method|step" then next <ol>
+  const stpM = html.match(/(?:instruction|direction|method|how to)[^<]{0,300}?<ol[^>]*>([\s\S]*?)<\/ol>/i);
   if (stpM) {
     [...stpM[1].matchAll(/<li[^>]*>([\s\S]*?)<\/li>/g)].forEach(m => {
       const t = m[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
       if (t.length > 5) result.steps.push(t);
     });
   }
+
+  // Fallback steps: largest <ol> on the page
+  if (!result.steps.length) {
+    const allOls = [...html.matchAll(/<ol[^>]*>([\s\S]*?)<\/ol>/g)];
+    let best = null;
+    for (const ol of allOls) {
+      const items = [...ol[1].matchAll(/<li[^>]*>([\s\S]*?)<\/li>/g)]
+        .map(m => m[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim())
+        .filter(t => t.length > 10);
+      if (!best || items.length > best.length) best = items;
+    }
+    if (best && best.length >= 2) result.steps = best;
+  }
+
+  return result;
+}
+
+// Print pages (cookieandkate, etc.): clean markdown-like structure with ### headings
+function parsePrintPage(html) {
+  const result = { name: null, ingredients: [], steps: [] };
+
+  // Name from <h1> or <h2>
+  const h = html.match(/<h[12][^>]*>([^<]+)<\/h[12]>/);
+  if (h) result.name = h[1].trim();
+
+  // Strip all tags to get plain text, then parse sections
+  const plain = html.replace(/<[^>]+>/g, "\n").replace(/&amp;/g,"&").replace(/&nbsp;/g," ").replace(/&#\d+;/g,"").replace(/\n{3,}/g,"\n\n");
+
+  const ingSection = plain.match(/ingredient[^\n]*\n([\s\S]*?)(?:\n\n|\nInstruction|\nDirection|\nMethod|\nNote)/i);
+  if (ingSection) {
+    ingSection[1].split("\n")
+      .map(l => l.replace(/^[\*\-\u2022]\s*/, "").trim())
+      .filter(l => l.length > 2)
+      .forEach(l => result.ingredients.push(l));
+  }
+
+  const stpSection = plain.match(/(?:instruction|direction|method)[^\n]*\n([\s\S]*?)(?:\n\nNote|\n\nNutrition|$)/i);
+  if (stpSection) {
+    stpSection[1].split("\n")
+      .map(l => l.replace(/^\d+[\.\)]\s*/, "").trim())
+      .filter(l => l.length > 10)
+      .forEach(l => result.steps.push(l));
+  }
+
+  // Servings from "yield" or "serves" or "serving"
+  const yieldM = plain.match(/(?:yield|serves?|serving)[^\n:]*[:\s]+(\d+)/i);
+  if (yieldM) result.servings = parseInt(yieldM[1]);
 
   return result;
 }
@@ -173,6 +238,15 @@ function guessSource(url) {
       "halfbakedharvest.com": "Half Baked Harvest",
       "skinnytaste.com": "Skinnytaste",
       "pinchofyum.com": "Pinch of Yum",
+      "cookieandkate.com": "Cookie and Kate",
+      "minimalistbaker.com": "Minimalist Baker",
+      "ohsheglows.com": "Oh She Glows",
+      "smittenkitchen.com": "Smitten Kitchen",
+      "seriouseats.com": "Serious Eats",
+      "thekitchn.com": "The Kitchn",
+      "delish.com": "Delish",
+      "simplyrecipes.com": "Simply Recipes",
+      "recipetineats.com": "RecipeTin Eats",
     };
     return map[host] || host.split(".")[0].replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
   } catch (e) { return "Unknown"; }
@@ -193,6 +267,7 @@ exports.handler = async (event) => {
     let result = parseJsonLd(html);
     if (!result.ingredients.length) result = { ...result, ...parseWPRM(html) };
     if (!result.ingredients.length) result = { ...result, ...parseTasty(html) };
+    if (!result.ingredients.length) result = { ...result, ...parsePrintPage(html) };
     if (!result.ingredients.length) result = { ...result, ...parseGeneric(html) };
 
     return {
