@@ -904,6 +904,8 @@ function clearMatch() {
 
 // ── Grocery List ──
 let groceryItems = [];
+let _cachedStructuredRows = [];
+let archivedRecipes = new Set(); // ids removed from main list
 
 const COST_DB = {
   // Proteins
@@ -998,8 +1000,34 @@ function evalFraction(str) {
   return b ? parseInt(a) / parseInt(b) : parseFloat(a);
 }
 
+function buildCartHeaderHTML(sel) {
+  return `<div style="margin-bottom:16px;padding:12px 16px;background:#12151f;border:1px solid #2a2f3e;border-radius:10px">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#556;font-family:monospace;margin-bottom:8px">🛒 In your cart</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
+      ${sel.map(r => {
+        const sv = getServings(r.id);
+        const def = getDefaultServings(r.id);
+        const costStr = r.cost && r.cost !== 'TBD' ? r.cost : '';
+        return `<div style="display:flex;align-items:center;gap:6px;background:#1a1f2e;border:1px solid #2a2f3e;border-radius:8px;padding:6px 10px">
+          <span style="font-size:13px;color:#E8E4DC">${esc(r.name)}</span>
+          <span style="display:flex;align-items:center;gap:3px;background:#1e2330;border:1px solid #3a4060;border-radius:4px;padding:2px 6px">
+            <button onmousedown="event.preventDefault();event.stopPropagation();adjustCartServings(${r.id},-1)" style="background:none;border:none;color:#aaa;cursor:pointer;font-size:14px;padding:0 2px;line-height:1">−</button>
+            <span style="font-size:12px;color:#7eb8f7;font-family:monospace;min-width:20px;text-align:center">${sv}<span style="color:#445;font-size:10px"> /${def}</span></span>
+            <button onmousedown="event.preventDefault();event.stopPropagation();adjustCartServings(${r.id},+1)" style="background:none;border:none;color:#aaa;cursor:pointer;font-size:14px;padding:0 2px;line-height:1">+</button>
+          </span>
+          ${costStr ? `<span style="font-size:11px;color:#6aaa6a;font-family:monospace">${esc(costStr)}</span>` : ''}
+          <button onmousedown="event.preventDefault();event.stopPropagation();removeFromCart(${r.id})"
+            title="Remove from cart"
+            style="background:none;border:none;color:#664;cursor:pointer;font-size:15px;padding:0 2px;line-height:1;margin-left:2px;opacity:0.6" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">✕</button>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
 async function openGrocery() {
   if (!checked.size) return;
+  archivedRecipes.clear();
   document.getElementById("grocery-modal").classList.add("show");
   const body = document.getElementById("g-body");
   body.innerHTML = `<div style="padding:24px;text-align:center;color:#556;font-family:monospace">Loading ingredients...</div>`;
@@ -1013,7 +1041,8 @@ async function openGrocery() {
   try {
     const res = await api("structured-ingredients", "POST", { recipe_ids: sel.map(r => r.id) });
     if (Array.isArray(res)) structuredRows = res;
-  } catch(e) { console.error("structured-ingredients fetch failed", e); }
+    _cachedStructuredRows = structuredRows;
+  } catch(e) { console.error("structured-ingredients fetch failed", e); structuredRows = _cachedStructuredRows; }
 
   const structuredIds = new Set(structuredRows.map(r => r.recipe_id));
   const fallbackRecipes = sel.filter(r => !structuredIds.has(r.id) && details[r.id]);
@@ -1034,25 +1063,7 @@ async function openGrocery() {
   });
 
   // Build cart header HTML
-  const cartHeaderHTML = `
-    <div style="margin-bottom:16px;padding:12px 16px;background:#12151f;border:1px solid #2a2f3e;border-radius:10px">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#556;font-family:monospace;margin-bottom:8px">Cart</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px">
-        ${sel.map(r => {
-          const sv = getServings(r.id);
-          const costStr = r.cost && r.cost !== 'TBD' ? r.cost : '';
-          return `<div style="display:flex;align-items:center;gap:6px;background:#1a1f2e;border:1px solid #2a2f3e;border-radius:8px;padding:6px 10px">
-            <span style="font-size:13px;color:#E8E4DC">${esc(r.name)}</span>
-            <span style="display:flex;align-items:center;gap:3px;background:#1e2330;border:1px solid #3a4060;border-radius:4px;padding:2px 6px">
-              <button onmousedown="event.preventDefault();adjustCartServings(${r.id},-1)" style="background:none;border:none;color:#aaa;cursor:pointer;font-size:13px;padding:0;line-height:1">−</button>
-              <span style="font-size:12px;color:#7eb8f7;font-family:monospace;min-width:16px;text-align:center">${sv}</span>
-              <button onmousedown="event.preventDefault();adjustCartServings(${r.id},+1)" style="background:none;border:none;color:#aaa;cursor:pointer;font-size:13px;padding:0;line-height:1">+</button>
-            </span>
-            ${costStr ? `<span style="font-size:11px;color:#6aaa6a;font-family:monospace">${esc(costStr)}</span>` : ''}
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`;
+  const cartHeaderHTML = buildCartHeaderHTML(sel);
 
   // Merge structured rows by (ingredient_key, unit) with servings scaling
   const merged = {};
@@ -1130,7 +1141,109 @@ async function openGrocery() {
 
 function adjustCartServings(id, delta) {
   servingsMap[id] = Math.max(1, getServings(id) + delta);
-  openGrocery(); // re-render grocery list with new servings
+  rerenderGrocery();
+}
+
+function removeFromCart(id) {
+  if (!confirm(`Remove "${recipes.find(r=>r.id===id)?.name}" from the grocery list?`)) return;
+  archivedRecipes.add(id);
+  checked.delete(id);
+  rerenderGrocery();
+  if (checked.size === 0) closeGrocery();
+}
+
+function rerenderGrocery() {
+  // Re-render using cached data - no DB fetch needed
+  const sel = recipes.filter(r => checked.has(r.id));
+  if (!sel.length) { closeGrocery(); return; }
+
+  const structuredRows = _cachedStructuredRows.filter(r => checked.has(r.recipe_id));
+  const structuredIds = new Set(structuredRows.map(r => r.recipe_id));
+  const fallbackRecipes = sel.filter(r => !structuredIds.has(r.id) && details[r.id]);
+  const noDataRecipes = sel.filter(r => !structuredIds.has(r.id) && !details[r.id]);
+  const recipeNames = {};
+  sel.forEach(r => recipeNames[r.id] = r.name);
+
+  const servingsMult = {};
+  const costMult = {};
+  sel.forEach(r => {
+    const def = getDefaultServings(r.id);
+    const cur = getServings(r.id);
+    const ratio = def > 0 ? cur / def : 1;
+    servingsMult[r.id] = ratio;
+    costMult[r.id] = ratio > 1 ? 1 + (ratio - 1) * 0.75 : ratio > 0 ? 1 - (1 - ratio) * 0.75 : 1;
+  });
+
+  // Rebuild cart header
+  const cartHeaderHTML = buildCartHeaderHTML(sel);
+  document.getElementById("g-cart-header").innerHTML = cartHeaderHTML;
+
+  // Rebuild merged ingredients
+  const merged = {};
+  structuredRows.forEach(row => {
+    const ingKey = row.ingredient.trim().toLowerCase();
+    const unit = normalizeUnit(row.measurement);
+    const key = `${ingKey}|||${unit}`;
+    const mult = servingsMult[row.recipe_id] || 1;
+    if (!merged[key]) merged[key] = { ingredient: row.ingredient.trim(), measurement: unit || null, amount: 0, hasAmount: false, recipes: [], cost: estimateCost(row.ingredient), sortKey: ingKey };
+    if (row.amount) { merged[key].amount += parseFloat(row.amount) * mult; merged[key].hasAmount = true; }
+    const rname = recipeNames[row.recipe_id];
+    if (rname && !merged[key].recipes.includes(rname)) merged[key].recipes.push(rname);
+  });
+  fallbackRecipes.forEach(r => {
+    const mult = servingsMult[r.id] || 1;
+    (details[r.id].ingredients || []).forEach(ing => {
+      const key = `__text__${ing.trim().toLowerCase()}`;
+      let scaledIng = mult !== 1 ? scaleIngredientText(ing.trim(), mult) : ing.trim();
+      if (!merged[key]) merged[key] = { ingredient: scaledIng, measurement: null, amount: 0, hasAmount: false, recipes: [], cost: estimateCost(ing), sortKey: ing.trim().toLowerCase(), needsReview: mult !== 1 };
+      if (!merged[key].recipes.includes(r.name)) merged[key].recipes.push(r.name);
+    });
+  });
+
+  groceryItems = Object.values(merged)
+    .sort((a,b) => a.sortKey.localeCompare(b.sortKey))
+    .map(item => {
+      const amtStr = item.hasAmount ? `${formatAmount(item.amount)}${item.measurement ? ' ' + item.measurement : ''}` : '';
+      const text = amtStr ? `${amtStr} ${item.ingredient}` : item.ingredient;
+      return { ...item, text, checked: true };
+    });
+
+  renderGroceryList(groceryItems);
+  updateGroceryCount();
+
+  const totalCost = groceryItems.reduce((s, i) => s + (i.cost || 0), 0);
+  const body = document.getElementById("g-body");
+  if (totalCost > 0) {
+    body.innerHTML += `<div style="margin-top:14px;padding:10px 14px;background:#0f1f0f;border:1px solid #2a4a2a;border-radius:8px;font-size:12px;color:#6aaa6a;font-family:monospace">
+      💰 Estimated total: <strong style="font-size:14px">~$${totalCost.toFixed(0)}</strong> <span style="color:#3a6a3a">(rough estimate, prices vary)</span>
+    </div>`;
+  }
+
+  // Archived section
+  if (archivedRecipes.size) {
+    const archHTML = `<details style="margin-top:14px">
+      <summary style="font-size:11px;color:#445;font-family:monospace;cursor:pointer;user-select:none;padding:6px 0">
+        📦 Archived (${archivedRecipes.size}) — click to expand
+      </summary>
+      <div style="margin-top:8px;opacity:0.5;font-size:12px;color:#8a8f9e;font-family:monospace">
+        ${[...archivedRecipes].map(id => {
+          const r = recipes.find(x=>x.id===id);
+          return r ? `<div style="padding:4px 0;display:flex;align-items:center;gap:8px">
+            <span>${esc(r.name)}</span>
+            <button onmousedown="event.preventDefault();archivedRecipes.delete(${id});checked.add(${id});rerenderGrocery()"
+              style="background:none;border:1px solid #2a3f5e;color:#6e8efb;border-radius:4px;font-size:10px;cursor:pointer;padding:1px 6px">restore</button>
+          </div>` : '';
+        }).join('')}
+      </div>
+    </details>`;
+    body.innerHTML += archHTML;
+  }
+
+  if (noDataRecipes.length) {
+    body.innerHTML += `<div style="margin-top:10px;padding:10px;background:#1a1f2e;border:1px solid var(--border);border-radius:8px;font-size:12px;color:#8a8f9e">
+      <strong style="color:#aaa">⚠ No ingredient data for:</strong> ${noDataRecipes.map(r => esc(r.name)).join(", ")}
+    </div>`;
+  }
 }
 
 function groceryRowHTML(item, i) {
