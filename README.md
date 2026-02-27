@@ -6,51 +6,67 @@ Personal meal planning app with grocery list generation, fridge matching, and re
 
 ---
 
-## Running Locally
+## Branch Strategy
 
-Local dev uses the **Netlify CLI**, which runs your serverless functions locally — no deployments needed, no credit usage.
+| Branch | Purpose |
+|--------|---------|
+| `develop` | All new changes go here — test locally |
+| `main` | Production only — merge when ready to go live |
 
-### 1. Install Netlify CLI (once)
+All changes are pushed to `develop`. Merge to `main` when you're happy to deploy.
+
+---
+
+## Local Dev Setup (one time)
+
+### 1. Install Netlify CLI
 
 ```bash
 npm install -g netlify-cli
 ```
 
-### 2. Set up environment variables
+### 2. Clone and switch to develop
 
 ```bash
-cp .env.example .env
+git clone https://github.com/Taco1175/recipe-library.git
+cd recipe-library
+git checkout develop
 ```
 
-Open `.env` and fill in your Supabase URL and anon key (Supabase Dashboard → Project Settings → API).
+### 3. Link to your Netlify site
 
-**Or** pull them directly from Netlify after linking (step 3):
+```bash
+netlify link
+# Choose "Use current git remote"
+```
+
+### 4. Pull environment variables
 
 ```bash
 netlify env:pull .env
 ```
 
-### 3. Link to your Netlify site (once)
-
-```bash
-netlify link
-```
-
-Choose "Use current git remote" — it'll detect `cowpushing-meals.netlify.app` automatically.
-
-### 4. Start the dev server
+### 5. Start the dev server
 
 ```bash
 netlify dev
+# Opens at http://localhost:8888
 ```
-
-Opens at **http://localhost:8888** with full functions + hot reload. No deployments, no credits used.
 
 ---
 
-## Deploying to Production
+## Daily Workflow
 
-Pushes to `main` auto-deploy via GitHub. No manual deploys needed.
+```bash
+# Pull latest changes from develop
+git pull origin develop
+
+# Start local server
+netlify dev
+
+# When ready to go live, merge develop → main on GitHub
+# This auto-deploys to Netlify — no manual deploy needed
+```
 
 ---
 
@@ -74,6 +90,6 @@ netlify.toml              # Build + functions config
 ## Tech Stack
 
 - **Frontend:** Vanilla JS, single HTML file
-- **Backend:** Netlify Functions (Node.js)  
+- **Backend:** Netlify Functions (Node.js)
 - **Database:** Supabase (Postgres)
-- **Hosting:** Netlify (auto-deploy from GitHub)
+- **Hosting:** Netlify (auto-deploy from main branch only)
