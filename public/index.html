@@ -514,9 +514,30 @@ function getServings(id) {
 }
 function changeServings(e, id, delta) {
   e.stopPropagation();
-  const cur = getServings(id);
-  servingsMap[id] = Math.max(1, cur + delta);
-  render();
+  servingsMap[id] = Math.max(1, getServings(id) + delta);
+  const sv = getServings(id);
+
+  // Update the servings counter in the row without re-rendering everything
+  const wrap = document.getElementById("wrap-" + id);
+  if (wrap) {
+    const counter = wrap.querySelector(".srv-count-" + id);
+    if (counter) counter.textContent = sv;
+  }
+
+  // Re-render ingredient list in the open detail panel
+  const dp = document.getElementById("dp-" + id);
+  if (dp && dp.parentElement.classList.contains("open") && details[id]) {
+    const ingList = dp.querySelector(".ing-list");
+    if (ingList) {
+      const def = getDefaultServings(id);
+      const mult = def > 0 ? sv / def : 1;
+      ingList.innerHTML = details[id].ingredients.map(ing => {
+        const scaled = mult !== 1 ? scaleIngredientText(ing, mult) : ing;
+        const changed = scaled !== ing;
+        return `<li${changed ? ' style="color:#a8d8a8"' : ""}>${esc(scaled)}</li>`;
+      }).join("");
+    }
+  }
 }
 let fCat="", fProt="", fMeth="", sort="category", sortDir=1, q="";
 
@@ -645,7 +666,7 @@ function render() {
     <div class="cost">${r.cost}</div>
     <div style="display:flex;align-items:center;gap:5px;justify-content:center">
       <button onclick="changeServings(event,${r.id},-1)" style="background:#1e2330;border:1px solid #2a2f3e;color:#aaa;border-radius:4px;width:20px;height:20px;cursor:pointer;font-size:13px;line-height:1;padding:0">−</button>
-      <span style="font-size:13px;color:#c8d0e0;font-family:monospace;min-width:18px;text-align:center">${getServings(r.id)}</span>
+      <span class="srv-count-${r.id}" style="font-size:13px;color:#c8d0e0;font-family:monospace;min-width:18px;text-align:center">${getServings(r.id)}</span>
       <button onclick="changeServings(event,${r.id},+1)" style="background:#1e2330;border:1px solid #2a2f3e;color:#aaa;border-radius:4px;width:20px;height:20px;cursor:pointer;font-size:13px;line-height:1;padding:0">+</button>
     </div>
     <div style="pointer-events:all;display:flex;align-items:center;justify-content:center">
@@ -715,8 +736,19 @@ function unarchiveRecipe(id) {
 
 function detailHTML(r) {
   const d = details[r.id];
+  const sv = getServings(r.id);
+  const def = getDefaultServings(r.id);
+  const mult = def > 0 ? sv / def : 1;
+  const scaledNote = mult !== 1 ? `<span style="font-size:10px;color:#6a9a6a;font-family:monospace;margin-left:6px">(scaled for ${sv})</span>` : "";
   return `<div class="detail-inner">
-    <div class="detail-section"><h3>Ingredients</h3><ul class="ing-list">${d.ingredients.map(i=>`<li>${esc(i)}</li>`).join("")}</ul></div>
+    <div class="detail-section">
+      <h3>Ingredients ${scaledNote}</h3>
+      <ul class="ing-list">${d.ingredients.map(ing => {
+        const scaled = mult !== 1 ? scaleIngredientText(ing, mult) : ing;
+        const changed = scaled !== ing;
+        return `<li${changed ? ' style="color:#a8d8a8"' : ""}>${esc(scaled)}</li>`;
+      }).join("")}</ul>
+    </div>
     <div class="detail-section"><h3>Instructions</h3><ol class="steps-list">${d.steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol></div>
   </div>`;
 }
