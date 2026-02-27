@@ -122,7 +122,7 @@ select.flt {
 /* ── TABLE ── */
 .table { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
 .thead {
-  display: grid; grid-template-columns: 28px minmax(0,1fr) 90px 110px 110px 54px 80px 30px;
+  display: grid; grid-template-columns: 28px minmax(0,1fr) 90px 110px 110px 54px 44px 80px 30px;
   padding: 10px 14px; background: var(--bg3); border-bottom: 1px solid var(--border);
   font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
   color: var(--text3); font-family: monospace; gap: 8px; align-items: center;
@@ -130,7 +130,7 @@ select.flt {
 .trow-wrap { border-bottom: 1px solid var(--bg4); }
 .trow-wrap:last-child { border-bottom: none; }
 .trow {
-  display: grid; grid-template-columns: 28px minmax(0,1fr) 90px 110px 110px 54px 80px 30px;
+  display: grid; grid-template-columns: 28px minmax(0,1fr) 90px 110px 110px 54px 44px 80px 30px;
   padding: 11px 14px; align-items: center; gap: 8px; cursor: pointer;
   transition: background .15s;
 }
@@ -374,6 +374,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
         <div class="sort-hdr" onclick="setSort('method')"><span id="shdr-method">Method</span></div>
         <div class="sort-hdr" onclick="setSort('source')"><span id="shdr-source">Source</span></div>
         <div class="sort-hdr" onclick="setSort('cost')"><span id="shdr-cost">Cost</span></div>
+        <div id="match-col-header" class="sort-hdr" onclick="setSort('match')"><span id="shdr-match">Match</span></div>
         <div>Servings</div>
         <div></div>
       </div>
@@ -642,7 +643,8 @@ function render() {
   gb.style.display = checked.size > 0 ? "inline-flex" : "none";
   document.getElementById("grocery-count").textContent = checked.size;
 
-  // match col removed
+  // update match col header visibility
+  const mhdr = document.getElementById("match-col-header"); if (mhdr) mhdr.style.visibility = matchActive ? "visible" : "hidden";
   const activeList = list.filter(r => !archivedRecipes.has(r.id));
   const archivedList = recipes.filter(r => archivedRecipes.has(r.id));
 
@@ -664,6 +666,9 @@ function render() {
     <div class="meta">${MI[r.method]||"🍴"} ${r.method}</div>
     <div class="meta">${r.source}</div>
     <div class="cost">${r.cost}</div>
+    <div style="display:flex;align-items:center;justify-content:center">
+      ${matchActive ? (ms ? `<span class="match-badge ${ms.match==='full'?'match-full':'match-partial'}" title="${esc(ms.note)}">${ms.score}%</span>` : `<span style="font-size:11px;color:#334;font-family:monospace">—</span>`) : ""}
+    </div>
     <div style="display:flex;align-items:center;gap:5px;justify-content:center">
       <button onclick="changeServings(event,${r.id},-1)" style="background:#1e2330;border:1px solid #2a2f3e;color:#aaa;border-radius:4px;width:20px;height:20px;cursor:pointer;font-size:13px;line-height:1;padding:0">−</button>
       <span class="srv-count-${r.id}" style="font-size:13px;color:#c8d0e0;font-family:monospace;min-width:18px;text-align:center">${getServings(r.id)}</span>
