@@ -395,6 +395,9 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
       <span id="g-selected-count" style="color:#666;margin-left:auto"></span>
     </div>
 
+    <!-- Cart summary header -->
+    <div id="g-cart-header" style="margin-bottom:12px;"></div>
+
     <!-- Ingredient list -->
     <div id="g-body" style="overflow-y:auto;flex:1;min-height:0;"></div>
 
@@ -1106,7 +1109,7 @@ async function openGrocery() {
       return { ...item, text, checked: true };
     });
 
-  body.innerHTML = cartHeaderHTML;
+  document.getElementById("g-cart-header").innerHTML = cartHeaderHTML;
   renderGroceryList(groceryItems);
   updateGroceryCount();
 
@@ -1127,7 +1130,6 @@ async function openGrocery() {
 
 function adjustCartServings(id, delta) {
   servingsMap[id] = Math.max(1, getServings(id) + delta);
-  render();
   openGrocery(); // re-render grocery list with new servings
 }
 
