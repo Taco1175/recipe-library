@@ -616,18 +616,17 @@ function render() {
   document.getElementById("grocery-count").textContent = checked.size;
 
   // match col removed
-  if (!list.length) { document.getElementById("rows").innerHTML='<div class="empty">No recipes match.</div>'; return; }
-  document.getElementById("rows").innerHTML = list.map(r => {
+  const activeList = list.filter(r => !archivedRecipes.has(r.id));
+  const archivedList = recipes.filter(r => archivedRecipes.has(r.id));
+
+  if (!activeList.length && !archivedList.length) { document.getElementById("rows").innerHTML='<div class="empty">No recipes match.</div>'; return; }
+
+  function rowHTML(r, isArchived) {
     const c = CC[r.category]||{bg:"#333",text:"#ccc",dot:"#888"};
     const hd = !!details[r.id];
     const ms = matchScores[r.id];
-    const matchCol = matchActive
-      ? ms
-        ? `<div><span class="match-badge ${ms.match==='full'?'match-full':'match-partial'}" title="${esc(ms.note)}">${ms.score}%</span></div>`
-        : `<div><span style="font-size:11px;color:#444;font-family:monospace">—</span></div>`
-      : `<div></div>`;
     return `<div class="trow-wrap" id="wrap-${r.id}">
-  <div class="trow${hd?" has-details":""}" onclick="rowClick(event,${r.id})">
+  <div class="trow${hd?" has-details":""}" onclick="rowClick(event,${r.id})" style="${isArchived?"opacity:0.4;pointer-events:none;":""}">
     <div style="display:flex;align-items:center;justify-content:center"><input type="checkbox"${checked.has(r.id)?" checked":""} onclick="chk(event,${r.id})"></div>
     <div class="recipe-name">
       <span class="expand-icon">▶</span>
@@ -642,14 +641,64 @@ function render() {
       <span style="font-size:13px;color:#c8d0e0;font-family:monospace;min-width:18px;text-align:center">${getServings(r.id)}</span>
       <button onclick="changeServings(event,${r.id},+1)" style="background:#1e2330;border:1px solid #2a2f3e;color:#aaa;border-radius:4px;width:20px;height:20px;cursor:pointer;font-size:13px;line-height:1;padding:0">+</button>
     </div>
-    <div><a href="${r.url}" target="_blank" class="link-btn" onclick="event.stopPropagation()">↗</a></div>
+    <div style="pointer-events:all;display:flex;align-items:center;gap:4px">
+      <a href="${r.url}" target="_blank" class="link-btn" onclick="event.stopPropagation()" title="Open recipe">↗</a>
+      ${isArchived
+        ? `<button onclick="event.stopPropagation();unarchiveRecipe(${r.id})" title="Restore"
+            style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:#1e2330;border:1px solid #2a4a2a;color:#4a8a4a;font-size:13px;cursor:pointer"
+            onmouseover="this.style.background='#1a3a1a'" onmouseout="this.style.background='#1e2330'">↩</button>`
+        : `<button onclick="event.stopPropagation();archiveRecipe(${r.id})" title="Archive"
+            style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:#1e2330;border:1px solid #2a2f3e;color:#445;font-size:13px;cursor:pointer"
+            onmouseover="this.style.color='#cc6666';this.style.borderColor='#663333'" onmouseout="this.style.color='#445';this.style.borderColor='#2a2f3e'">🗄</button>`
+      }
+    </div>
   </div>
   <div class="detail-panel" id="dp-${r.id}">
     ${hd ? detailHTML(r) : fetchPromptHTML(r)}
     ${ms ? `<div style="font-size:12px;color:#9a9fae;margin-top:12px;padding:8px;background:#1a1f2e;border-radius:6px">🥦 <strong>Matched:</strong> ${esc(ms.note)}</div>` : ""}
   </div>
 </div>`;
-  }).join("");
+  }
+
+  let html = activeList.map(r => rowHTML(r, false)).join("");
+
+  if (archivedList.length) {
+    html += `<div style="border-top:2px solid #1e2330">
+      <div id="archived-toggle" onclick="toggleArchived()"
+        style="padding:11px 14px;cursor:pointer;font-size:11px;font-family:monospace;color:#445;display:flex;align-items:center;gap:8px;user-select:none"
+        onmouseover="this.style.color='#778'" onmouseout="this.style.color='#445'">
+        <span id="archived-arrow" style="font-size:9px;display:inline-block;transition:transform .2s">▶</span>
+        📦 Archived · ${archivedList.length} recipe${archivedList.length>1?"s":""}
+        <span style="color:#334;font-size:10px">click to expand</span>
+      </div>
+      <div id="archived-rows" style="display:none">
+        ${archivedList.map(r => rowHTML(r, true)).join("")}
+      </div>
+    </div>`;
+  }
+
+  document.getElementById("rows").innerHTML = html;
+}
+
+function toggleArchived() {
+  const rows = document.getElementById("archived-rows");
+  const arrow = document.getElementById("archived-arrow");
+  if (!rows) return;
+  const open = rows.style.display === "none";
+  rows.style.display = open ? "block" : "none";
+  arrow.style.transform = open ? "rotate(90deg)" : "";
+}
+
+function archiveRecipe(id) {
+  if (!confirm(`Archive "${recipes.find(r=>r.id===id)?.name}"?\nIt will be hidden but you can restore it anytime.`)) return;
+  checked.delete(id);
+  archivedRecipes.add(id);
+  render();
+}
+
+function unarchiveRecipe(id) {
+  archivedRecipes.delete(id);
+  render();
 }
 
 function detailHTML(r) {
