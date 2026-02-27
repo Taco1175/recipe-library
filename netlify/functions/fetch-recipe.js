@@ -261,6 +261,11 @@ exports.handler = async (event) => {
   if (!url) return { statusCode: 400, headers, body: JSON.stringify({ error: "Missing url" }) };
 
   try {
+    // Normalize URL: strip /print/NNNNN/ suffixes (cookieandkate, etc.)
+    url = url.replace(/\/print\/\d+\/?$/, "/").replace(/\/print\/?$/, "/");
+    // Also strip common print/amp query params
+    url = url.replace(/[?&](print|amp|format)=[^&]*/g, "").replace(/\?$/, "");
+
     const html = await fetchUrl(url);
 
     // Try parsers in order of reliability
