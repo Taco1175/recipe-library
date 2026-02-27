@@ -643,13 +643,7 @@ function render() {
   gb.style.display = checked.size > 0 ? "inline-flex" : "none";
   document.getElementById("grocery-count").textContent = checked.size;
 
-  // Show/hide match column
-  const mhdr = document.getElementById("match-col-header");
-  if (mhdr) mhdr.style.opacity = matchActive ? "1" : "0";
-  // Show/hide all match cells
-  document.querySelectorAll(".match-cell").forEach(el => {
-    el.style.display = matchActive ? "flex" : "none";
-  });
+  // Match column always visible
   const activeList = list.filter(r => !archivedRecipes.has(r.id));
   const archivedList = recipes.filter(r => archivedRecipes.has(r.id));
 
@@ -671,8 +665,8 @@ function render() {
     <div class="meta">${MI[r.method]||"🍴"} ${r.method}</div>
     <div class="meta">${r.source}</div>
     <div class="cost">${r.cost}</div>
-    <div class="match-cell" style="display:none;align-items:center;justify-content:center">
-      ${ms ? `<span class="match-badge ${ms.match==='full'?'match-full':'match-partial'}" title="${esc(ms.note)}">${ms.score}%</span>` : `<span style="font-size:11px;color:#445;font-family:monospace">—</span>`}
+    <div style="display:flex;align-items:center;justify-content:center">
+      ${ms ? `<span class="match-badge ${ms.match==='full'?'match-full':'match-partial'}" title="${esc(ms.note)}">${ms.score}%</span>` : (matchActive ? `<span style="font-size:11px;color:#333;font-family:monospace">—</span>` : "")}
     </div>
     <div style="display:flex;align-items:center;gap:5px;justify-content:center">
       <button onclick="changeServings(event,${r.id},-1)" style="background:#1e2330;border:1px solid #2a2f3e;color:#aaa;border-radius:4px;width:20px;height:20px;cursor:pointer;font-size:13px;line-height:1;padding:0">−</button>
