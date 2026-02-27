@@ -612,7 +612,7 @@ function render() {
   gb.style.display = checked.size > 0 ? "inline-flex" : "none";
   document.getElementById("grocery-count").textContent = checked.size;
 
-  document.getElementById("match-col-header").textContent = matchActive ? "Match" : "";
+  // match col removed
   if (!list.length) { document.getElementById("rows").innerHTML='<div class="empty">No recipes match.</div>'; return; }
   document.getElementById("rows").innerHTML = list.map(r => {
     const c = CC[r.category]||{bg:"#333",text:"#ccc",dot:"#888"};
