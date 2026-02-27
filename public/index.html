@@ -755,96 +755,211 @@ document.addEventListener("click", e => {
   }
 });
 
-// ── Grocery list ──
 // ── Grocery List ──
-let groceryItems = []; // [{id, amount, measurement, ingredient, notes, recipes:[]}]
+let groceryItems = [];
 
-function openGrocery() {
+const COST_DB = {
+  // Proteins
+  "chicken breast": 4.00, "chicken thigh": 3.50, "chicken wing": 5.00, "chicken": 3.50,
+  "ground turkey": 5.00, "ground beef": 6.00, "turkey": 5.00, "beef": 7.00,
+  "pork shoulder": 4.00, "pork butt": 4.00, "pork": 5.00,
+  "shrimp": 8.00, "tuna": 2.50, "chorizo": 4.00, "sausage": 4.50, "bacon": 5.00,
+  "frozen meatballs": 7.00, "meatballs": 7.00,
+  // Dairy & Eggs
+  "eggs": 4.00, "egg whites": 4.00, "cheddar cheese": 3.50, "mozzarella": 3.50,
+  "parmesan": 4.00, "ricotta": 4.00, "feta": 3.50, "mexican cheese": 3.50,
+  "heavy cream": 3.00, "sour cream": 2.00, "butter": 3.00, "cream cheese": 3.00,
+  "yogurt": 3.00,
+  // Produce
+  "onion": 1.00, "garlic": 1.50, "bell pepper": 1.50, "spinach": 3.00,
+  "avocado": 1.50, "tomato": 2.00, "jalapeno": 0.50, "jalapeño": 0.50,
+  "lime": 1.00, "lemon": 1.00, "cilantro": 1.00, "parsley": 1.00, "basil": 2.00,
+  "green onion": 1.00, "mushroom": 3.00, "broccoli": 2.50, "cauliflower": 3.00,
+  "zucchini": 1.50, "sweet potato": 2.00, "potato": 2.00, "brussels sprouts": 3.00,
+  // Pantry/Canned
+  "salsa verde": 3.50, "salsa": 3.00, "enchilada sauce": 2.50, "pesto": 4.00,
+  "marinara": 3.00, "tomato sauce": 1.50, "crushed tomatoes": 2.00, "diced tomatoes": 1.50,
+  "chicken broth": 2.50, "beef broth": 2.50, "vegetable broth": 2.00,
+  "black beans": 1.50, "pinto beans": 1.50, "chickpeas": 1.50,
+  "cream of mushroom soup": 2.00, "bread crumbs": 2.00,
+  // Oils, Sauces
+  "avocado oil": 6.00, "olive oil": 5.00, "coconut aminos": 5.00, "soy sauce": 2.50,
+  "honey": 4.00, "rice vinegar": 2.50, "ketchup": 2.50, "bbq sauce": 3.00,
+  "hot sauce": 2.00, "sriracha": 3.00, "peanut butter": 3.50, "cornstarch": 1.50,
+  "oat flour": 3.00,
+  // Grains & Carbs
+  "pasta": 2.50, "rotini": 2.50, "egg noodles": 2.50, "chickpea pasta": 4.00,
+  "cassava tortillas": 5.00, "corn tortillas": 3.00, "flour tortillas": 3.50, "tortillas": 3.50,
+  "rice": 2.50, "cauliflower rice": 3.50, "tater tots": 3.50, "rolls": 3.00,
+};
+
+function estimateCost(ingredient) {
+  if (!ingredient) return null;
+  const lower = ingredient.toLowerCase();
+  for (const [key, cost] of Object.entries(COST_DB)) {
+    if (lower.includes(key)) return cost;
+  }
+  return null;
+}
+
+function normalizeUnit(meas) {
+  if (!meas) return '';
+  const m = meas.toLowerCase();
+  if (['tablespoon','tablespoons'].includes(m)) return 'tbsp';
+  if (['teaspoon','teaspoons'].includes(m)) return 'tsp';
+  if (['pound','pounds','lbs'].includes(m)) return 'lb';
+  if (['ounce','ounces'].includes(m)) return 'oz';
+  return m;
+}
+
+function formatAmount(amount) {
+  if (!amount || amount === 0) return '';
+  const whole = Math.floor(amount);
+  const frac = amount - whole;
+  let fracStr = '';
+  if (Math.abs(frac - 0.5) < 0.02) fracStr = '½';
+  else if (Math.abs(frac - 0.25) < 0.02) fracStr = '¼';
+  else if (Math.abs(frac - 0.75) < 0.02) fracStr = '¾';
+  else if (Math.abs(frac - (1/3)) < 0.02) fracStr = '⅓';
+  else if (Math.abs(frac - (2/3)) < 0.02) fracStr = '⅔';
+  else if (frac > 0.02) fracStr = Math.round(frac * 8) / 8 + '';
+  if (whole > 0 && fracStr) return `${whole} ${fracStr}`;
+  if (whole > 0) return `${whole}`;
+  return fracStr || '';
+}
+
+async function openGrocery() {
   if (!checked.size) return;
   document.getElementById("grocery-modal").classList.add("show");
-  const sel = recipes.filter(r => checked.has(r.id));
-  const withD = sel.filter(r => details[r.id]);
-  const noD = sel.filter(r => !details[r.id]);
-  document.getElementById("g-subtitle").textContent =
-    `${sel.length} recipe${sel.length > 1 ? "s" : ""} · ${withD.length} with ingredient details`;
+  const body = document.getElementById("g-body");
+  body.innerHTML = `<div style="padding:24px;text-align:center;color:#556;font-family:monospace">Loading ingredients...</div>`;
   document.getElementById("g-search").value = "";
 
-  // Build deduplicated ingredient list from details (text array format)
-  const merged = {}; // key = ingredient string → {text, recipes:[]}
-  withD.forEach(r => {
+  const sel = recipes.filter(r => checked.has(r.id));
+  document.getElementById("g-subtitle").textContent = `${sel.length} recipe${sel.length > 1 ? "s" : ""}`;
+
+  // Fetch structured ingredients from DB
+  let structuredRows = [];
+  try {
+    const res = await api("structured-ingredients", "POST", { recipe_ids: sel.map(r => r.id) });
+    if (Array.isArray(res)) structuredRows = res;
+  } catch(e) { console.error("structured-ingredients fetch failed", e); }
+
+  const structuredIds = new Set(structuredRows.map(r => r.recipe_id));
+  const fallbackRecipes = sel.filter(r => !structuredIds.has(r.id) && details[r.id]);
+  const noDataRecipes = sel.filter(r => !structuredIds.has(r.id) && !details[r.id]);
+  const recipeNames = {};
+  sel.forEach(r => recipeNames[r.id] = r.name);
+
+  // Merge structured rows by (ingredient_key, unit)
+  const merged = {};
+  structuredRows.forEach(row => {
+    const ingKey = row.ingredient.trim().toLowerCase();
+    const unit = normalizeUnit(row.measurement);
+    const key = `${ingKey}|||${unit}`;
+    if (!merged[key]) {
+      merged[key] = {
+        ingredient: row.ingredient.trim(),
+        measurement: unit || null,
+        amount: 0,
+        hasAmount: false,
+        recipes: [],
+        cost: estimateCost(row.ingredient),
+        sortKey: ingKey,
+      };
+    }
+    if (row.amount) { merged[key].amount += parseFloat(row.amount); merged[key].hasAmount = true; }
+    const rname = recipeNames[row.recipe_id];
+    if (rname && !merged[key].recipes.includes(rname)) merged[key].recipes.push(rname);
+  });
+
+  // Fallback: use text ingredients for recipes without structured data
+  fallbackRecipes.forEach(r => {
     (details[r.id].ingredients || []).forEach(ing => {
-      const key = ing.trim().toLowerCase();
-      if (!merged[key]) merged[key] = { text: ing.trim(), recipes: [], checked: true };
+      const key = `__text__${ing.trim().toLowerCase()}`;
+      if (!merged[key]) merged[key] = { ingredient: ing.trim(), measurement: null, amount: 0, hasAmount: false, recipes: [], cost: estimateCost(ing), sortKey: ing.trim().toLowerCase() };
       if (!merged[key].recipes.includes(r.name)) merged[key].recipes.push(r.name);
     });
   });
 
-  groceryItems = Object.values(merged).sort((a, b) => a.text.localeCompare(b.text));
-  renderGroceryList(groceryItems);
+  // Build display items sorted alphabetically
+  groceryItems = Object.values(merged)
+    .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
+    .map(item => {
+      const amtStr = item.hasAmount ? `${formatAmount(item.amount)}${item.measurement ? ' ' + item.measurement : ''}` : '';
+      const text = amtStr ? `${amtStr} ${item.ingredient}` : item.ingredient;
+      return { ...item, text, checked: true };
+    });
 
-  if (noD.length) {
-    const body = document.getElementById("g-body");
-    body.innerHTML += `<div style="margin-top:14px;padding:10px;background:#1a1f2e;border:1px solid var(--border);border-radius:8px;font-size:12px;color:#8a8f9e">
-      <strong style="color:#aaa">⚠ No details for:</strong> ${noD.map(r => esc(r.name)).join(", ")}
+  renderGroceryList(groceryItems);
+  updateGroceryCount();
+
+  // Cost summary banner
+  const totalCost = groceryItems.reduce((s, i) => s + (i.cost || 0), 0);
+  if (totalCost > 0) {
+    body.innerHTML += `<div style="margin-top:14px;padding:10px 14px;background:#0f1f0f;border:1px solid #2a4a2a;border-radius:8px;font-size:12px;color:#6aaa6a;font-family:monospace">
+      💰 Estimated total: <strong style="font-size:14px">~$${totalCost.toFixed(0)}</strong> <span style="color:#3a6a3a">(rough estimate, prices vary)</span>
     </div>`;
   }
-  updateGroceryCount();
+
+  if (noDataRecipes.length) {
+    body.innerHTML += `<div style="margin-top:10px;padding:10px;background:#1a1f2e;border:1px solid var(--border);border-radius:8px;font-size:12px;color:#8a8f9e">
+      <strong style="color:#aaa">⚠ No ingredient data for:</strong> ${noDataRecipes.map(r => esc(r.name)).join(", ")}
+    </div>`;
+  }
+}
+
+function groceryRowHTML(item, i) {
+  const costStr = item.cost ? `<span style="color:#3a7a3a;font-size:11px;font-family:monospace;margin-left:6px">~$${item.cost.toFixed(2)}</span>` : '';
+  const recipesStr = item.recipes.length ? `<span style="font-size:11px;color:#445;font-family:monospace;margin-left:6px">${item.recipes.map(esc).join(", ")}</span>` : '';
+  return `<label style="display:flex;align-items:flex-start;gap:10px;padding:9px 6px;border-bottom:1px solid #1e2330;cursor:pointer;"
+         onmouseover="this.style.background='#1e2330'" onmouseout="this.style.background='transparent'">
+    <input type="checkbox" ${item.checked ? "checked" : ""}
+      onchange="groceryItems[${i}].checked=this.checked;updateGroceryCount()"
+      style="margin-top:3px;accent-color:#6e8efb;flex-shrink:0;width:15px;height:15px;cursor:pointer;">
+    <div style="flex:1;min-width:0">
+      <span style="font-size:13px;color:#E8E4DC;font-weight:500">${esc(item.text)}</span>
+      ${costStr}${recipesStr}
+    </div>
+  </label>`;
 }
 
 function renderGroceryList(items) {
   const body = document.getElementById("g-body");
   if (!items.length) { body.innerHTML = `<p style="color:#8a8f9e;font-size:13px;padding:12px 0">No ingredients found.</p>`; return; }
-  body.innerHTML = items.map((item, i) => `
-    <label style="display:flex;align-items:flex-start;gap:10px;padding:8px 6px;border-bottom:1px solid #1e2330;cursor:pointer;border-radius:4px;" 
-           onmouseover="this.style.background='#1e2330'" onmouseout="this.style.background='transparent'">
-      <input type="checkbox" data-idx="${i}" ${item.checked ? "checked" : ""}
-        onchange="groceryItems[${i}].checked=this.checked;updateGroceryCount()"
-        style="margin-top:3px;accent-color:#6e8efb;flex-shrink:0;width:15px;height:15px;cursor:pointer;">
-      <div style="flex:1;min-width:0">
-        <span style="font-size:13px;color:#E8E4DC">${esc(item.text)}</span>
-        <span style="font-size:11px;color:#445;font-family:monospace;margin-left:8px">${item.recipes.map(esc).join(", ")}</span>
-      </div>
-    </label>`).join("");
+  body.innerHTML = items.map((item, i) => groceryRowHTML(item, i)).join("");
 }
 
 function filterGrocery(q) {
   const lower = q.toLowerCase();
-  const filtered = groceryItems.filter(item => item.text.toLowerCase().includes(lower));
-  // Render filtered but preserve checkbox state via groceryItems array
   const body = document.getElementById("g-body");
+  const filtered = groceryItems.filter(item =>
+    item.text.toLowerCase().includes(lower) || item.recipes.some(r => r.toLowerCase().includes(lower))
+  );
   if (!filtered.length) { body.innerHTML = `<p style="color:#8a8f9e;font-size:13px;padding:12px 0">No matches.</p>`; return; }
-  body.innerHTML = filtered.map(item => {
-    const i = groceryItems.indexOf(item);
-    return `
-    <label style="display:flex;align-items:flex-start;gap:10px;padding:8px 6px;border-bottom:1px solid #1e2330;cursor:pointer;border-radius:4px;"
-           onmouseover="this.style.background='#1e2330'" onmouseout="this.style.background='transparent'">
-      <input type="checkbox" data-idx="${i}" ${item.checked ? "checked" : ""}
-        onchange="groceryItems[${i}].checked=this.checked;updateGroceryCount()"
-        style="margin-top:3px;accent-color:#6e8efb;flex-shrink:0;width:15px;height:15px;cursor:pointer;">
-      <div style="flex:1;min-width:0">
-        <span style="font-size:13px;color:#E8E4DC">${esc(item.text)}</span>
-        <span style="font-size:11px;color:#445;font-family:monospace;margin-left:8px">${item.recipes.map(esc).join(", ")}</span>
-      </div>
-    </label>`;
-  }).join("");
+  body.innerHTML = filtered.map(item => groceryRowHTML(item, groceryItems.indexOf(item))).join("");
 }
 
 function selectAllGrocery(val) {
   groceryItems.forEach(item => item.checked = val);
-  filterGrocery(document.getElementById("g-search").value);
+  renderGroceryList(groceryItems);
   updateGroceryCount();
 }
 
 function updateGroceryCount() {
-  const n = groceryItems.filter(i => i.checked).length;
-  document.getElementById("g-selected-count").textContent = `${n} of ${groceryItems.length} selected`;
+  const checkedItems = groceryItems.filter(i => i.checked);
+  const cost = checkedItems.reduce((s, i) => s + (i.cost || 0), 0);
+  document.getElementById("g-selected-count").textContent =
+    `${checkedItems.length} of ${groceryItems.length} · ~$${cost.toFixed(0)} est.`;
 }
 
 function closeGrocery() { document.getElementById("grocery-modal").classList.remove("show"); }
 
 function copyCheckedGrocery() {
-  const lines = groceryItems.filter(i => i.checked).map(i => `☐ ${i.text}`);
-  const text = "🛒 GROCERY LIST\n\n" + lines.join("\n");
+  const checkedItems = groceryItems.filter(i => i.checked);
+  const lines = checkedItems.map(i => `☐ ${i.text}`);
+  const totalCost = checkedItems.reduce((s, i) => s + (i.cost || 0), 0);
+  const text = `🛒 GROCERY LIST\n\n${lines.join("\n")}\n\n💰 Estimated total: ~$${totalCost.toFixed(0)}`;
   navigator.clipboard.writeText(text).then(() => {
     const b = event.target; b.textContent = "✅ Copied!";
     setTimeout(() => b.textContent = "📋 Copy checked", 2000);
