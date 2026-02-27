@@ -23,12 +23,12 @@ UPDATE recipes SET url = 'https://flexibledietinglifestyle.com/472-cal-freezer-b
 UPDATE recipes SET url = 'https://kaynutrition.com/meal-prep-breakfast-burritos/' WHERE id = 2;
 
 -- PART 2: New recipes
-INSERT INTO recipes (id, name, category, protein, method, source, url, cost) VALUES
-(71, 'Slow Cooker Breakfast Casserole', 'Breakfast', 'Eggs', 'Slow Cooker', 'Hungry Hobby', 'https://hungryhobby.net/slow-cooker-breakfast-casserole/', '$6-9'),
-(72, 'Veggie-Loaded Egg Scramble', 'Breakfast', 'Eggs', 'Stovetop', 'Awaken180', '', '$3-5'),
-(73, 'Protein Yogurt Bowl', 'Breakfast', 'Protein Powder', 'No Cook', 'Awaken180', '', '$2-4'),
-(74, 'Cauliflower Egg Fried Rice Breakfast Bowl', 'Breakfast', 'Eggs', 'Stovetop', 'Awaken180', '', '$3-5'),
-(75, 'Savory Egg Muffin Veggie Bake', 'Breakfast', 'Eggs', 'Oven', 'Awaken180', '', '$3-5')
+INSERT INTO recipes (id, name, category, protein, method) VALUES
+(71, 'Slow Cooker Breakfast Casserole', 'Breakfast', 'Eggs', 'Slow Cooker'),
+(72, 'Veggie-Loaded Egg Scramble', 'Breakfast', 'Eggs', 'Stovetop'),
+(73, 'Protein Yogurt Bowl', 'Breakfast', 'Protein Powder', 'No Cook'),
+(74, 'Cauliflower Egg Fried Rice Breakfast Bowl', 'Breakfast', 'Eggs', 'Stovetop'),
+(75, 'Savory Egg Muffin Veggie Bake', 'Breakfast', 'Eggs', 'Oven')
 ON CONFLICT (id) DO NOTHING;
 
 -- PART 3: recipe_details for all recipes
