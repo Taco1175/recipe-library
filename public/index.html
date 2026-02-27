@@ -24,29 +24,8 @@
 body { background: var(--bg); color: var(--text); font-family: Georgia, serif; min-height: 100vh; }
 a { color: var(--accent); }
 
-/* ── LOGIN ── */
-#login-screen {
-  min-height: 100vh; display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #0a0d14 0%, #0F1117 100%);
-  padding: 20px;
-}
-.login-box {
-  background: var(--bg2); border: 1px solid var(--border); border-radius: 16px;
-  padding: 40px 36px; width: 100%; max-width: 380px; text-align: center;
-}
-.login-box h1 { font-size: 28px; margin-bottom: 6px; }
-.login-box p { color: var(--text2); font-size: 14px; margin-bottom: 28px; }
-.login-box input {
-  width: 100%; background: var(--bg3); border: 1px solid var(--border);
-  border-radius: 10px; padding: 14px 16px; color: var(--text); font-size: 16px;
-  outline: none; text-align: center; letter-spacing: 4px; margin-bottom: 14px;
-  font-family: monospace; transition: border-color .2s;
-}
-.login-box input:focus { border-color: var(--accent); }
-.login-error { color: var(--red); font-size: 13px; margin-top: 8px; font-family: monospace; min-height: 20px; }
-
 /* ── APP ── */
-#app { display: none; }
+#app { display: block; }
 
 /* ── HEADER ── */
 .header {
@@ -282,17 +261,6 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="login-screen">
-  <div class="login-box">
-    <h1>🍽 Recipe Library</h1>
-    <p>Enter your password to continue</p>
-    <input type="password" id="pw-input" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
-    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:13px" onclick="doLogin()" id="login-btn">Unlock</button>
-    <div class="login-error" id="login-error"></div>
-  </div>
-</div>
-
 <!-- APP -->
 <div id="app">
   <div class="header">
@@ -328,11 +296,10 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
 
     <!-- Add panel -->
     <div class="add-panel" id="add-panel">
-      <h2>➕ Add New Recipe from URL</h2>
+      <h2>➕ Add New Recipe</h2>
       <div class="add-grid">
         <div class="field full url-row">
-          <div class="field"><label>Recipe URL *</label><input type="url" id="new-url" placeholder="https://..."></div>
-          <button class="btn btn-primary" id="fetch-btn" onclick="fetchAndAdd()">✨ Fetch</button>
+          <div class="field"><label>Recipe URL</label><input type="url" id="new-url" placeholder="https://..."></div>
         </div>
         <div class="field"><label>Recipe Name</label><input type="text" id="new-name" placeholder="Auto-filled"></div>
         <div class="field"><label>Category</label>
@@ -479,7 +446,6 @@ const CC={"Breakfast":{bg:"#FFF3E0",text:"#E65100",dot:"#FF9800"},"Lunch/Dinner"
 const MI={"Slow Cooker":"🥘","Oven":"🔥","Stovetop":"🍳","Air Fryer":"💨","No Cook":"🥗","Microwave":"📡","Stovetop / Air Fryer":"🍳","Stovetop / Oven":"🍳","Oven / Stovetop":"🔥","Slow Cooker / Stovetop":"🥘"};
 
 // ── State ──
-let token = sessionStorage.getItem("rl_token") || "";
 let recipes = [...BASE];
 let details = {};
 let checked = new Set();
@@ -488,42 +454,15 @@ let matchScores = {}; // id -> {score, match, note}
 let matchActive = false;
 let pendingDetails = null;
 
-// ── Auth ──
-async function doLogin() {
-  const pw = document.getElementById("pw-input").value;
-  const btn = document.getElementById("login-btn");
-  const err = document.getElementById("login-error");
-  btn.disabled = true; btn.textContent = "Checking…";
-  try {
-    const res = await fetch("/.netlify/functions/auth", {
-      method: "POST", headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ password: pw })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Wrong password");
-    token = data.token;
-    sessionStorage.setItem("rl_token", token);
-    showApp();
-  } catch(e) {
-    err.textContent = e.message;
-    btn.disabled = false; btn.textContent = "Unlock";
-  }
-}
-
 function api(path, method="GET", body=null) {
   return fetch(`/.netlify/functions/${path}`, {
     method,
-    headers: { "Content-Type":"application/json", "Authorization": `Bearer ${token}` },
+    headers: { "Content-Type":"application/json" },
     body: body ? JSON.stringify(body) : undefined
-  }).then(async r => {
-    if (r.status === 401) { sessionStorage.removeItem("rl_token"); location.reload(); }
-    return r.json();
-  });
+  }).then(r => r.json());
 }
 
 async function showApp() {
-  document.getElementById("login-screen").style.display = "none";
-  document.getElementById("app").style.display = "block";
   await loadData();
   buildSelects();
   render();
@@ -609,7 +548,6 @@ function render() {
       <span class="expand-icon">▶</span>
       <span class="recipe-name-text">${esc(r.name)}</span>
       ${matchBadge}
-      ${!hd?'<span class="no-details-hint">+fetch</span>':''}
     </div>
     <div><span class="badge" style="background:${c.bg};color:${c.text}"><span class="dot" style="background:${c.dot}"></span>${r.category}</span></div>
     <div class="meta">${MI[r.method]||"🍴"} ${r.method}</div>
@@ -635,10 +573,7 @@ function detailHTML(r) {
 }
 
 function fetchPromptHTML(r) {
-  return `<div style="padding:16px 0">
-    <p style="font-size:13px;color:#8a8f9e;margin-bottom:10px">No details saved yet. Click to have AI fetch ingredients &amp; steps from the recipe URL.</p>
-    <button class="btn btn-primary" onclick="fetchDetails(${r.id})">✨ Fetch Ingredients &amp; Steps</button>
-  </div>`;
+  return `<div style="padding:16px 0"><p style="font-size:13px;color:#8a8f9e">No details available yet.</p></div>`;
 }
 
 function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
@@ -652,29 +587,6 @@ function clearAll(){fCat="";fProt="";fMeth="";q="";matchActive=false;matchScores
 function toggleFridge(){document.getElementById("fridge-bar").classList.toggle("show");}
 function toggleAdd(){document.getElementById("add-panel").classList.toggle("show");}
 
-// ── Fetch details ──
-async function fetchDetails(id) {
-  const r = recipes.find(x=>x.id===id);
-  const dp = document.getElementById("dp-"+id);
-  dp.innerHTML = `<div class="detail-loading"><div class="spinner"></div>Fetching from ${esc(r.source)}…</div>`;
-  try {
-    const data = await api("fetch-recipe", "POST", { url: r.url, mode: "details" });
-    if (data.error) throw new Error(data.error);
-    // Save to DB
-    await api("recipe-details", "POST", { recipe_id: id, ingredients: data.ingredients, steps: data.steps });
-    details[id] = { ingredients: data.ingredients, steps: data.steps };
-    const wrap = document.getElementById("wrap-"+id);
-    wrap.querySelector(".trow").classList.add("has-details");
-    const nm = wrap.querySelector(".recipe-name");
-    const nameText = nm.querySelector(".recipe-name-text")?.textContent || r.name;
-    nm.innerHTML = `<span class="expand-icon" style="transform:rotate(90deg)">▶</span><span class="recipe-name-text">${esc(r.name)}</span>`;
-    dp.innerHTML = detailHTML(r);
-    wrap.classList.add("open");
-  } catch(err) {
-    dp.innerHTML = `<div style="padding:12px 0;color:#e07070;font-size:13px">⚠ ${esc(err.message)} <button class="btn btn-outline" style="margin-left:8px;font-size:11px" onclick="fetchDetails(${id})">Retry</button></div>`;
-  }
-}
-
 async function delDetails(id) {
   if (!confirm("Remove saved details?")) return;
   await api(`recipe-details?id=${id}`, "DELETE");
@@ -683,28 +595,10 @@ async function delDetails(id) {
 }
 
 // ── Add recipe ──
-async function fetchAndAdd() {
-  const url = document.getElementById("new-url").value.trim();
-  if (!url) return addMsg("Please enter a URL first.", "error");
-  setFB(true); addMsg("✨ AI is reading the recipe page…", "loading");
-  try {
-    const data = await api("fetch-recipe", "POST", { url, mode: "full" });
-    if (data.error) throw new Error(data.error);
-    document.getElementById("new-name").value = data.name||"";
-    document.getElementById("new-source").value = data.source||"";
-    document.getElementById("new-protein").value = data.protein||"";
-    document.getElementById("new-method").value = data.method||"";
-    document.getElementById("new-cost").value = data.cost||"";
-    pendingDetails = { ingredients: data.ingredients||[], steps: data.steps||[] };
-    addMsg("✅ Done! Review the fields and click Save.", "success");
-  } catch(err) { addMsg("⚠ "+err.message, "error"); }
-  setFB(false);
-}
-
 async function saveNew() {
   const name = document.getElementById("new-name").value.trim();
   const url = document.getElementById("new-url").value.trim();
-  if (!name||!url) return addMsg("Fetch a URL first to fill fields.", "error");
+  if (!name) return addMsg("Please enter a recipe name.", "error");
   const nid = Math.max(...recipes.map(r=>r.id)) + 1;
   const nr = { id:nid, name, category:document.getElementById("new-cat").value, protein:document.getElementById("new-protein").value||"Other", method:document.getElementById("new-method").value||"Stovetop", source:document.getElementById("new-source").value||"Unknown", url, cost:document.getElementById("new-cost").value||"TBD" };
   recipes.push(nr);
@@ -723,7 +617,6 @@ async function saveNew() {
 }
 
 function addMsg(txt,type){const el=document.getElementById("add-msg");el.style.display="flex";el.className="add-msg "+type;el.innerHTML=type==="loading"?`<div class="spinner"></div>${txt}`:txt;}
-function setFB(on){const b=document.getElementById("fetch-btn");b.disabled=on;b.textContent=on?"Fetching…":"✨ Fetch";}
 
 // ── Ingredient matcher ──
 async function matchIngredients() {
@@ -802,10 +695,7 @@ function copyList(){
 }
 
 // ── Boot ──
-if (token) {
-  // Try to use saved token
-  showApp().catch(()=>{ token=""; sessionStorage.removeItem("rl_token"); });
-}
+showApp();
 </script>
 </body>
 </html>
