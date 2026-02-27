@@ -1,0 +1,45 @@
+name: Run Supabase Migrations
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'migrations/**.sql'
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run new migrations
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          # Install psql client
+          sudo apt-get install -y postgresql-client
+
+          # Extract DB connection string from Supabase URL
+          # e.g. https://abcdefgh.supabase.co -> postgresql://postgres:SERVICE_KEY@db.abcdefgh.supabase.co:5432/postgres
+          PROJECT_REF=$(echo "$SUPABASE_URL" | sed 's|https://||' | sed 's|\.supabase\.co||')
+          DB_URL="postgresql://postgres.${PROJECT_REF}:${SUPABASE_SERVICE_KEY}@aws-0-us-east-1.pooler.supabase.com:6543/postgres"
+
+          # Get list of already-run migrations from DB (creates table if not exists)
+          psql "$DB_URL" -c "CREATE TABLE IF NOT EXISTS _migrations (filename TEXT PRIMARY KEY, run_at TIMESTAMPTZ DEFAULT NOW());"
+
+          # Run each SQL file in migrations/ that hasn't been run yet
+          for f in $(ls migrations/*.sql | sort); do
+            filename=$(basename "$f")
+            already_run=$(psql "$DB_URL" -t -c "SELECT COUNT(*) FROM _migrations WHERE filename='$filename';" | tr -d ' ')
+            if [ "$already_run" = "0" ]; then
+              echo "▶ Running migration: $filename"
+              psql "$DB_URL" -f "$f"
+              psql "$DB_URL" -c "INSERT INTO _migrations (filename) VALUES ('$filename');"
+              echo "✅ Done: $filename"
+            else
+              echo "⏭ Already ran: $filename"
+            fi
+          done
