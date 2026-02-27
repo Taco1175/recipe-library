@@ -122,7 +122,7 @@ select.flt {
 /* ── TABLE ── */
 .table { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
 .thead {
-  display: grid; grid-template-columns: 28px 1fr 90px 100px 100px 50px 48px 30px;
+  display: grid; grid-template-columns: 28px minmax(0,1fr) 90px 110px 110px 54px 80px 30px;
   padding: 10px 14px; background: var(--bg3); border-bottom: 1px solid var(--border);
   font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
   color: var(--text3); font-family: monospace; gap: 8px; align-items: center;
@@ -130,7 +130,7 @@ select.flt {
 .trow-wrap { border-bottom: 1px solid var(--bg4); }
 .trow-wrap:last-child { border-bottom: none; }
 .trow {
-  display: grid; grid-template-columns: 28px 1fr 90px 100px 100px 50px 48px 30px;
+  display: grid; grid-template-columns: 28px minmax(0,1fr) 90px 110px 110px 54px 80px 30px;
   padding: 11px 14px; align-items: center; gap: 8px; cursor: pointer;
   transition: background .15s;
 }
@@ -145,6 +145,11 @@ select.flt {
 .badge .dot { width: 4px; height: 4px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
 .meta { font-size: 11px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cost { font-size: 11px; color: #7bcf8e; font-family: monospace; font-weight: 600; }
+.sort-hdr { cursor: pointer; user-select: none; white-space: nowrap; }
+.sort-hdr:hover span { color: #c8d0e0; }
+.sort-hdr span.active { color: #6e8efb; }
+.sort-hdr span.active::after { content: " ↓"; }
+.sort-hdr span.active.asc::after { content: " ↑"; }
 .link-btn {
   display: inline-flex; align-items: center; justify-content: center;
   width: 26px; height: 26px; border-radius: 6px; background: #1e2a3a;
@@ -357,7 +362,14 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
 
     <div class="table">
       <div class="thead">
-        <div></div><div>Recipe</div><div>Category</div><div>Method</div><div>Source</div><div>Cost</div><div>Servings</div><div id="match-col-header"></div><div></div>
+        <div></div>
+        <div class="sort-hdr" onclick="setSort('name')"><span id="shdr-name">Recipe</span></div>
+        <div class="sort-hdr" onclick="setSort('category')"><span id="shdr-category">Category</span></div>
+        <div class="sort-hdr" onclick="setSort('method')"><span id="shdr-method">Method</span></div>
+        <div class="sort-hdr" onclick="setSort('source')"><span id="shdr-source">Source</span></div>
+        <div class="sort-hdr" onclick="setSort('cost')"><span id="shdr-cost">Cost</span></div>
+        <div>Servings</div>
+        <div></div>
       </div>
       <div id="rows"></div>
     </div>
@@ -497,7 +509,20 @@ function changeServings(e, id, delta) {
   servingsMap[id] = Math.max(1, cur + delta);
   render();
 }
-let fCat="", fProt="", fMeth="", sort="category", q="";
+let fCat="", fProt="", fMeth="", sort="category", sortDir=1, q="";
+
+function setSort(col) {
+  if (sort === col) sortDir *= -1;
+  else { sort = col; sortDir = 1; }
+  document.getElementById("sortBy").value = sort;
+  // Update header indicators
+  ["name","category","method","source","cost"].forEach(c => {
+    const el = document.getElementById("shdr-" + c);
+    if (!el) return;
+    el.className = sort === c ? (sortDir === 1 ? "active" : "active asc") : "";
+  });
+  render();
+}
 let matchScores = {}; // id -> {score, match, note}
 let matchActive = false;
 let pendingDetails = null;
@@ -545,13 +570,15 @@ function getFiltered() {
       && (!matchActive || matchScores[r.id]);
   });
   list.sort((a,b) => {
+    let v = 0;
     if (sort==="match") return (matchScores[b.id]?.score||0) - (matchScores[a.id]?.score||0);
-    if (sort==="category") return a.category.localeCompare(b.category)||a.name.localeCompare(b.name);
-    if (sort==="name") return a.name.localeCompare(b.name);
-    if (sort==="protein") return a.protein.localeCompare(b.protein);
-    if (sort==="method") return a.method.localeCompare(b.method);
-    if (sort==="cost") return parseInt(a.cost||0)-parseInt(b.cost||0);
-    return 0;
+    if (sort==="category") v = a.category.localeCompare(b.category)||a.name.localeCompare(b.name);
+    else if (sort==="name") v = a.name.localeCompare(b.name);
+    else if (sort==="protein") v = a.protein.localeCompare(b.protein);
+    else if (sort==="method") v = a.method.localeCompare(b.method);
+    else if (sort==="source") v = a.source.localeCompare(b.source);
+    else if (sort==="cost") v = parseInt(a.cost||0)-parseInt(b.cost||0);
+    return v * sortDir;
   });
   return list;
 }
@@ -612,7 +639,6 @@ function render() {
       <span style="font-size:13px;color:#c8d0e0;font-family:monospace;min-width:18px;text-align:center">${getServings(r.id)}</span>
       <button onclick="changeServings(event,${r.id},+1)" style="background:#1e2330;border:1px solid #2a2f3e;color:#aaa;border-radius:4px;width:20px;height:20px;cursor:pointer;font-size:13px;line-height:1;padding:0">+</button>
     </div>
-    ${matchCol}
     <div><a href="${r.url}" target="_blank" class="link-btn" onclick="event.stopPropagation()">↗</a></div>
   </div>
   <div class="detail-panel" id="dp-${r.id}">
