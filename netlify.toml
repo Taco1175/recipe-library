@@ -2,6 +2,13 @@
   publish = "public"
   functions = "netlify/functions"
 
+# Only auto-deploy from main — develop stays local
+[context.production]
+  branch = "main"
+
+[context.develop]
+  branch = "develop"
+
 [[headers]]
   for = "/*"
   [headers.values]
