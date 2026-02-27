@@ -782,46 +782,144 @@ async function delDetails(id) {
 // ── Add recipe ──
 let _lastFetchedUrl = "";
 
+// Parse recipe HTML client-side (same logic as server but runs in browser)
+function parseRecipeHTML(html, url) {
+  const result = { name: null, ingredients: [], steps: [], servings: null };
+
+  // Strip /print/NNNNN/ from URL before using
+  const cleanUrl = url.replace(/\/print\/\d+\/?$/, "/").replace(/\/print\/?$/, "/");
+
+  // 1. JSON-LD
+  const scripts = [...html.matchAll(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi)];
+  for (const s of scripts) {
+    try {
+      let data = JSON.parse(s[1].trim());
+      if (data["@graph"]) data = data["@graph"].find(i => i["@type"] === "Recipe") || {};
+      if (Array.isArray(data)) data = data.find(i => i["@type"] === "Recipe") || {};
+      if (data["@type"] !== "Recipe") continue;
+      if (data.name) result.name = data.name.trim();
+      if (Array.isArray(data.recipeIngredient))
+        result.ingredients = data.recipeIngredient.map(i => i.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim()).filter(Boolean);
+      if (Array.isArray(data.recipeInstructions))
+        result.steps = data.recipeInstructions.map(s => {
+          if (typeof s === "string") return s.replace(/<[^>]+>/g, "").trim();
+          return (s.text || s.name || "").replace(/<[^>]+>/g, "").trim();
+        }).filter(s => s.length > 3);
+      const yieldRaw = data.recipeYield;
+      if (yieldRaw) {
+        const num = parseInt(String(Array.isArray(yieldRaw) ? yieldRaw[0] : yieldRaw).match(/\d+/)?.[0]);
+        if (num) result.servings = num;
+      }
+      if (result.ingredients.length) return result;
+    } catch(e) {}
+  }
+
+  // 2. WPRM
+  if (!result.ingredients.length) {
+    const ingBlocks = [...html.matchAll(/class="wprm-recipe-ingredient "[^>]*>([\s\S]*?)<\/li>/g)];
+    ingBlocks.forEach(m => {
+      const amt   = (m[1].match(/wprm-recipe-ingredient-amount[^>]*>([^<]+)/) || [])[1] || "";
+      const unit  = (m[1].match(/wprm-recipe-ingredient-unit[^>]*>([^<]+)/)   || [])[1] || "";
+      const name  = (m[1].match(/wprm-recipe-ingredient-name[^>]*>([^<]+)/)   || [])[1] || "";
+      const full  = [amt, unit, name].filter(Boolean).join(" ").trim();
+      if (full) result.ingredients.push(full);
+    });
+  }
+
+  // 3. Generic: find largest ingredient-like <ul>
+  if (!result.ingredients.length) {
+    const MEAS = /(\d+|cup|tsp|tbsp|teaspoon|tablespoon|pound|lb|oz|ounce|gram|clove|bunch|pinch|can)/i;
+    const allUls = [...html.matchAll(/<ul[^>]*>([\s\S]*?)<\/ul>/g)];
+    let best = null, bestScore = 0;
+    for (const ul of allUls) {
+      const items = [...ul[1].matchAll(/<li[^>]*>([\s\S]*?)<\/li>/g)]
+        .map(m => m[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()).filter(t => t.length > 2);
+      const score = items.filter(t => MEAS.test(t)).length;
+      if (score > bestScore && items.length >= 3) { best = items; bestScore = score; }
+    }
+    if (best) result.ingredients = best;
+  }
+
+  // 4. Steps: first <ol> with enough items
+  if (!result.steps.length) {
+    const allOls = [...html.matchAll(/<ol[^>]*>([\s\S]*?)<\/ol>/g)];
+    let best = null;
+    for (const ol of allOls) {
+      const items = [...ol[1].matchAll(/<li[^>]*>([\s\S]*?)<\/li>/g)]
+        .map(m => m[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()).filter(t => t.length > 10);
+      if (!best || items.length > best.length) best = items;
+    }
+    if (best && best.length >= 2) result.steps = best;
+  }
+
+  // Name fallback
+  if (!result.name) {
+    const h1 = html.match(/<h1[^>]*>([^<]+)<\/h1>/);
+    if (h1) result.name = h1[1].trim();
+  }
+
+  return result;
+}
+
+function guessSourceFromUrl(url) {
+  try {
+    const host = new URL(url).hostname.replace("www.", "");
+    const map = {
+      "hungryhobby.net": "Hungry Hobby", "kaynutrition.com": "Kay Nutrition",
+      "budgetbytes.com": "Budget Bytes", "eatingonadime.com": "Eating on a Dime",
+      "cleananddelicious.com": "Clean & Delicious", "tasteofhome.com": "Taste of Home",
+      "cookieandkate.com": "Cookie and Kate", "minimalistbaker.com": "Minimalist Baker",
+      "skinnytaste.com": "Skinnytaste", "pinchofyum.com": "Pinch of Yum",
+      "halfbakedharvest.com": "Half Baked Harvest", "allrecipes.com": "AllRecipes",
+      "food52.com": "Food52", "simplyrecipes.com": "Simply Recipes",
+      "recipetineats.com": "RecipeTin Eats", "delish.com": "Delish",
+      "seriouseats.com": "Serious Eats", "thekitchn.com": "The Kitchn",
+      "sisufitness.com": "SISU Fitness", "awaken180weightloss.com": "Awaken180",
+      "flexibledietinglifestyle.com": "Flexible Dieting Lifestyle",
+      "eatingbirdfood.com": "Eating Bird Food",
+    };
+    return map[host] || host.split(".")[0].replace(/-/g, " ").replace(/\w/g, c => c.toUpperCase());
+  } catch(e) { return ""; }
+}
+
 async function autoFetchRecipe(url) {
   url = url.trim();
   if (!url || !url.startsWith("http")) return;
-  if (url === _lastFetchedUrl && pendingDetails) return; // already fetched this URL
+  if (url === _lastFetchedUrl && pendingDetails) return;
   _lastFetchedUrl = url;
 
   addMsg("🔍 Fetching recipe details...", "loading");
 
-  try {
-    const res = await fetch("/.netlify/functions/fetch-recipe", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url }),
-    });
-    const data = await res.json();
-    if (data.error) { addMsg("⚠️ Could not auto-fetch: " + data.error, "error"); return; }
+  // Normalize URL - strip print suffixes
+  const fetchUrl = url.replace(/\/print\/\d+\/?$/, "/").replace(/\/print\/?$/, "/");
 
-    // Auto-fill form fields (name always, others only if empty)
+  // Auto-fill source immediately from URL
+  const srcField = document.getElementById("new-source");
+  if (!srcField.value) srcField.value = guessSourceFromUrl(url);
+
+  try {
+    // Fetch via allorigins CORS proxy — uses your browser's real headers, bypasses bot blocks
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(fetchUrl)}`;
+    const res = await fetch(proxyUrl);
+    const json = await res.json();
+    const html = json.contents;
+
+    if (!html || html.length < 1000) {
+      addMsg("⚠️ Could not load page. Try copying ingredients manually.", "error");
+      return;
+    }
+
+    const data = parseRecipeHTML(html, fetchUrl);
+
     if (data.name) document.getElementById("new-name").value = data.name;
-    if (data.source && !document.getElementById("new-source").value)
-      document.getElementById("new-source").value = data.source;
-    if (data.protein && !document.getElementById("new-protein").value)
-      document.getElementById("new-protein").value = data.protein;
-    if (data.method && !document.getElementById("new-method").value)
-      document.getElementById("new-method").value = data.method;
-    if (data.cost && !document.getElementById("new-cost").value)
-      document.getElementById("new-cost").value = data.cost;
     if (data.servings && !document.getElementById("new-servings").value)
       document.getElementById("new-servings").value = data.servings;
 
-    // Store details for saving
-    if (data.ingredients?.length) {
+    if (data.ingredients.length) {
       pendingDetails = { ingredients: data.ingredients, steps: data.steps || [], servings: data.servings || 4 };
-      addMsg(`✅ Auto-filled! Found ${data.ingredients.length} ingredients, ${data.steps?.length || 0} steps. Review and save.`, "success");
+      addMsg(`✅ Auto-filled! Found ${data.ingredients.length} ingredients, ${data.steps.length} steps.`, "success");
     } else {
-      let dbg = "";
-      if (data.debug) {
-        dbg = ` (HTML: ${data.debug.htmlLength}b, hasIngredient: ${data.debug.hasIngredientWord}, hasUL: ${data.debug.hasUL})`;
-      }
-      addMsg("⚠️ Fetched but couldn't find ingredients. Fill in manually." + dbg, "error");
+      addMsg(`⚠️ Page loaded (${html.length} chars) but couldn't find ingredients. Fill in manually.`, "error");
     }
   } catch (e) {
     addMsg("⚠️ Fetch failed: " + e.message, "error");
