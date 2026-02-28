@@ -274,6 +274,32 @@ exports.handler = async (event) => {
     if (!result.ingredients.length) result = { ...result, ...parsePrintPage(html) };
     if (!result.ingredients.length) result = { ...result, ...parseGeneric(html) };
 
+    // Fallback: hit justtherecipe.app API
+    if (!result.ingredients.length) {
+      try {
+        const jtrRes = await fetch("https://justtherecipe.com/extractRecipeAtUrl?url=" + encodeURIComponent(url), {
+          headers: { "User-Agent": "Mozilla/5.0" }
+        });
+        if (jtrRes.ok) {
+          const jtr = await jtrRes.json();
+          if (jtr.ingredients?.length) {
+            result.ingredients = jtr.ingredients.map(i => {
+              if (typeof i === "string") return i;
+              return [i.quantity, i.unit, i.name, i.comment].filter(Boolean).join(" ").trim();
+            }).filter(Boolean);
+          }
+          if (jtr.instructions?.length && !result.steps.length) {
+            result.steps = jtr.instructions.map(s => typeof s === "string" ? s : s.text || "").filter(Boolean);
+          }
+          if (jtr.name && !result.name) result.name = jtr.name;
+          if (jtr.yields && !result.servings) {
+            const num = parseInt(String(jtr.yields).match(/\d+/)?.[0]);
+            if (num) result.servings = num;
+          }
+        }
+      } catch(e) { /* justtherecipe failed, continue with empty */ }
+    }
+
     // Debug info to help diagnose parse failures
     const debug = result.ingredients.length === 0 ? {
       htmlLength: html.length,
