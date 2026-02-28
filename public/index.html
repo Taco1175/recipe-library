@@ -768,11 +768,10 @@ async function loadData() {
       api("extra-recipes"),  // now points to full recipes table
       api("recipe-details")
     ]);
-    if (Array.isArray(recipesRes) && recipesRes.length) {
-      recipes = recipesRes;  // replace BASE entirely with DB data
-      archivedRecipes.clear();
-      recipes.forEach(r => { if (r.archived) archivedRecipes.add(r.id); });
-    }
+    // Always replace with DB data, even if empty
+    recipes = Array.isArray(recipesRes) ? recipesRes : [];
+    archivedRecipes.clear();
+    recipes.forEach(r => { if (r.archived) archivedRecipes.add(r.id); });
     if (Array.isArray(detailsRes)) {
       detailsRes.forEach(d => { details[d.recipe_id] = { ingredients: d.ingredients, steps: d.steps }; });
     }
