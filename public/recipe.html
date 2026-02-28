@@ -333,6 +333,17 @@
 <script src="/auth.js"></script>
 </head>
 <body>
+<!-- AUTH GUARD -->
+<script>
+// Auth guard — redirect to login if no valid session
+(function() {
+  const token = localStorage.getItem("sb-access-token");
+  const expiry = parseInt(localStorage.getItem("sb-token-expiry") || "0");
+  if (!token || Date.now() > expiry) {
+    location.href = "/login.html?next=" + encodeURIComponent(location.pathname);
+  }
+})();
+</script>
 
 <div class="topbar">
   <button class="back-btn" onclick="history.back()">← Back</button>

@@ -149,6 +149,17 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
 <script src="/auth.js"></script>
 </head>
 <body>
+<!-- AUTH GUARD -->
+<script>
+// Auth guard — redirect to login if no valid session
+(function() {
+  const token = localStorage.getItem("sb-access-token");
+  const expiry = parseInt(localStorage.getItem("sb-token-expiry") || "0");
+  if (!token || Date.now() > expiry) {
+    location.href = "/login.html?next=" + encodeURIComponent(location.pathname);
+  }
+})();
+</script>
 
 <div class="topbar">
   <button class="back-btn" onclick="location.href='/'">← Back</button>
@@ -393,6 +404,13 @@ async function fetchCalendarEvents() {
 let cartIds = new Set();
 
 async function init() {
+  // Load config first so Auth has Supabase URL
+  try {
+    const cfg = await fetch(`${API}/config`).then(r => r.json());
+    window.__SUPABASE_URL__ = cfg.supabaseUrl;
+    window.__SUPABASE_ANON_KEY__ = cfg.supabaseAnonKey;
+    window.__GOOGLE_CLIENT_ID__ = cfg.googleClientId;
+  } catch(e) {}
   const ok = await Auth.require();
   if (!ok) return;
   try {

@@ -351,20 +351,32 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
 </style>
 </head>
 <body>
+<!-- AUTH GUARD -->
+<script>
+// Auth guard — redirect to login if no valid session
+(function() {
+  const token = localStorage.getItem("sb-access-token");
+  const expiry = parseInt(localStorage.getItem("sb-token-expiry") || "0");
+  if (!token || Date.now() > expiry) {
+    location.href = "/login.html?next=" + encodeURIComponent(location.pathname);
+  }
+})();
+</script>
 
 <!-- APP -->
+<script src="/auth.js"></script>
 <script>
-// Bootstrap: load config then init auth
+// Bootstrap: load config FIRST, then init app
 (async () => {
   try {
     const cfg = await fetch("/.netlify/functions/config").then(r => r.json());
     window.__SUPABASE_URL__ = cfg.supabaseUrl;
     window.__SUPABASE_ANON_KEY__ = cfg.supabaseAnonKey;
     window.__GOOGLE_CLIENT_ID__ = cfg.googleClientId;
-  } catch(e) {}
+  } catch(e) { console.error("Config load failed", e); }
+  await showApp();
 })();
 </script>
-<script src="/auth.js"></script>
 <div id="app">
   <div class="header">
     <div class="header-inner">
@@ -1943,7 +1955,6 @@ function copyCheckedGrocery() {
 }
 
 // ── Boot ──
-showApp();
 </script>
 </body>
 </html>

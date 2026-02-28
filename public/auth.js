@@ -3,8 +3,8 @@
 // Then call: await Auth.require() at page load to guard the page
 
 const Auth = (() => {
-  const SUPABASE_URL = window.__SUPABASE_URL__ || "";
-  const SUPABASE_ANON_KEY = window.__SUPABASE_ANON_KEY__ || "";
+  function SUPABASE_URL() { return window.__SUPABASE_URL__ || ""; }
+  function SUPABASE_ANON_KEY() { return window.__SUPABASE_ANON_KEY__ || ""; }
 
   function getSession() {
     return {
@@ -30,9 +30,9 @@ const Auth = (() => {
     const { refreshToken } = getSession();
     if (!refreshToken) return false;
     try {
-      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+      const res = await fetch(`${SUPABASE_URL()}/auth/v1/token?grant_type=refresh_token`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY },
+        headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY() },
         body: JSON.stringify({ refresh_token: refreshToken }),
       });
       const data = await res.json();
@@ -73,9 +73,9 @@ const Auth = (() => {
   async function signOut() {
     const token = await getToken();
     if (token) {
-      fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+      fetch(`${SUPABASE_URL()}/auth/v1/logout`, {
         method: "POST",
-        headers: { "Authorization": `Bearer ${token}`, "apikey": SUPABASE_ANON_KEY }
+        headers: { "Authorization": `Bearer ${token}`, "apikey": SUPABASE_ANON_KEY() }
       }).catch(() => {});
     }
     clearSession();

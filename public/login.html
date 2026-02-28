@@ -261,13 +261,14 @@ body {
 let SUPABASE_URL = "";
 let SUPABASE_ANON_KEY = "";
 
-// Load config from server
 async function loadConfig() {
-  const cfg = await fetch("/.netlify/functions/config").then(r => r.json());
-  SUPABASE_URL = cfg.supabaseUrl;
-  SUPABASE_ANON_KEY = cfg.supabaseAnonKey;
-  window.__SUPABASE_URL__ = SUPABASE_URL;
-  window.__SUPABASE_ANON_KEY__ = SUPABASE_ANON_KEY;
+  try {
+    const cfg = await fetch("/.netlify/functions/config").then(r => r.json());
+    SUPABASE_URL = cfg.supabaseUrl || "";
+    SUPABASE_ANON_KEY = cfg.supabaseAnonKey || "";
+    window.__SUPABASE_URL__ = SUPABASE_URL;
+    window.__SUPABASE_ANON_KEY__ = SUPABASE_ANON_KEY;
+  } catch(e) { console.error("Config load failed", e); }
 }
 
 async function supabaseAuth(endpoint, body) {
@@ -340,8 +341,8 @@ async function signUp() {
 }
 
 async function signInWithGoogle() {
-  const redirectTo = encodeURIComponent(location.origin + "/");
-  location.href = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${redirectTo}&response_type=code`;
+  const redirectTo = encodeURIComponent(location.origin + "/login.html");
+  location.href = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${redirectTo}`;
 }
 
 async function resetPassword() {
