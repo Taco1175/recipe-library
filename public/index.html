@@ -752,21 +752,17 @@ function toggleArchived() {
   arrow.style.transform = open ? "rotate(90deg)" : "";
 }
 
-function saveArchived() {
-  localStorage.setItem("archived-recipes", JSON.stringify([...archivedRecipes]));
-}
-
 function archiveRecipe(id) {
   if (!confirm(`Archive "${recipes.find(r=>r.id===id)?.name}"?\nIt will be hidden but you can restore it anytime.`)) return;
   checked.delete(id);
   archivedRecipes.add(id);
-  saveArchived();
+  api("extra-recipes", "POST", { id, archived: true }).catch(() => {});
   render();
 }
 
 function unarchiveRecipe(id) {
   archivedRecipes.delete(id);
-  saveArchived();
+  api("extra-recipes", "POST", { id, archived: false }).catch(() => {});
   render();
 }
 
@@ -1207,9 +1203,7 @@ function clearMatch() {
 // ── Grocery List ──
 let groceryItems = [];
 let _cachedStructuredRows = [];
-let archivedRecipes = new Set(
-  JSON.parse(localStorage.getItem("archived-recipes") || "[]")
-); // persisted across refreshes
+let archivedRecipes = new Set(); // persisted across refreshes
 
 const COST_DB = {
   // Proteins
@@ -1351,6 +1345,7 @@ function buildCartHeaderHTML(sel) {
 async function openGrocery() {
   if (!checked.size) return;
   archivedRecipes.clear();
+  recipes.forEach(r => { if (r.archived) archivedRecipes.add(r.id); });
   document.getElementById("grocery-modal").classList.add("show");
   const body = document.getElementById("g-body");
   body.innerHTML = `<div style="padding:24px;text-align:center;color:#556;font-family:monospace">Loading ingredients...</div>`;
