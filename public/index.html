@@ -805,6 +805,15 @@ let _lastFetchedUrl = "";
 function parseRecipeHTML(html, url) {
   const result = { name: null, ingredients: [], steps: [], servings: null };
 
+
+  // Decode HTML entities in ingredient/step strings
+  function decodeEntities(s) {
+    return s.replace(/&frac12;/g,"½").replace(/&frac14;/g,"¼").replace(/&frac34;/g,"¾")
+            .replace(/&frac13;/g,"⅓").replace(/&frac23;/g,"⅔").replace(/&amp;/g,"&")
+            .replace(/&nbsp;/g," ").replace(/&#(\d+);/g,(_,n)=>String.fromCharCode(n))
+            .replace(/&#x([0-9a-f]+);/gi,(_,h)=>String.fromCharCode(parseInt(h,16)));
+  }
+
   // Strip /print/NNNNN/ from URL before using
   const cleanUrl = url.replace(/\/print\/\d+\/?$/, "/").replace(/\/print\/?$/, "/");
 
@@ -818,7 +827,7 @@ function parseRecipeHTML(html, url) {
       if (data["@type"] !== "Recipe") continue;
       if (data.name) result.name = data.name.trim();
       if (Array.isArray(data.recipeIngredient))
-        result.ingredients = data.recipeIngredient.map(i => i.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim()).filter(Boolean);
+        result.ingredients = data.recipeIngredient.map(i => decodeEntities(i.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim())).filter(Boolean);
       if (Array.isArray(data.recipeInstructions))
         result.steps = data.recipeInstructions.map(s => {
           if (typeof s === "string") return s.replace(/<[^>]+>/g, "").trim();
@@ -861,7 +870,7 @@ function parseRecipeHTML(html, url) {
       const name  = (m[1].match(/wprm-recipe-ingredient-name[^>]*>([^<\(]+)/) || [])[1] || "";
       const notes = (m[1].match(/wprm-recipe-ingredient-notes[^>]*>([^<]+)/)  || [])[1] || "";
       const full  = [amt, unit, name.trim(), notes ? `(${notes.trim()})` : ""].filter(Boolean).join(" ").trim();
-      if (full) result.ingredients.push(full);
+      if (full) result.ingredients.push(decodeEntities(full));
     });
   }
 
@@ -902,8 +911,8 @@ function parseRecipeHTML(html, url) {
       if (/^(note|nutrition|gluten|copyright|powered)/i.test(line)) { inIng = false; inStep = false; continue; }
       if (inIng) {
         const c = line.replace(/^[*\-\xB7\d]+[.)]?\s*/, "").trim();
-        if (c.length > 2) result.ingredients.push(c);
-      } else if (inStep) {
+        if (c.length > 2) result.ingredients.push(decodeEntities(c));
+      } else if (inStep && !result.steps.length) {
         const c = line.replace(/^\d+[.)\s]+/, "").trim();
         if (c.length > 10) result.steps.push(c);
       }
@@ -971,10 +980,9 @@ async function autoFetchRecipe(url) {
 
   try {
     // Fetch via allorigins CORS proxy — uses your browser's real headers, bypasses bot blocks
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(fetchUrl)}`;
+    const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(fetchUrl)}`;
     const res = await fetch(proxyUrl);
-    const json = await res.json();
-    const html = json.contents;
+    const html = await res.text();
 
     if (!html || html.length < 1000) {
       addMsg("⚠️ Could not load page. Try copying ingredients manually.", "error");
