@@ -122,7 +122,7 @@ select.flt {
 /* ── TABLE ── */
 .table { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
 .thead {
-  display: grid; grid-template-columns: 28px minmax(0,1fr) 90px 110px 110px 54px 44px 80px 30px;
+  display: grid; grid-template-columns: 28px minmax(0,1fr) 90px 110px 54px 44px 80px 30px;
   padding: 10px 14px; background: var(--bg3); border-bottom: 1px solid var(--border);
   font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
   color: var(--text3); font-family: monospace; gap: 8px; align-items: center;
@@ -130,7 +130,7 @@ select.flt {
 .trow-wrap { border-bottom: 1px solid var(--bg4); }
 .trow-wrap:last-child { border-bottom: none; }
 .trow {
-  display: grid; grid-template-columns: 28px minmax(0,1fr) 90px 110px 110px 54px 44px 80px 30px;
+  display: grid; grid-template-columns: 28px minmax(0,1fr) 90px 110px 54px 44px 80px 30px;
   padding: 11px 14px; align-items: center; gap: 8px; cursor: pointer;
   transition: background .15s;
 }
@@ -390,7 +390,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
         <div class="sort-hdr" onclick="setSort('name')"><span id="shdr-name">Recipe</span></div>
         <div class="sort-hdr" onclick="setSort('category')"><span id="shdr-category">Category</span></div>
         <div class="sort-hdr" onclick="setSort('method')"><span id="shdr-method">Method</span></div>
-        <div class="sort-hdr" onclick="setSort('source')"><span id="shdr-source">Source</span></div>
+
         <div class="sort-hdr" onclick="setSort('cost')"><span id="shdr-cost">Cost</span></div>
         <div id="match-col-header" class="sort-hdr" onclick="setSort('match')"><span id="shdr-match">Match</span></div>
         <div>Servings</div>
@@ -678,11 +678,11 @@ function render() {
       <span class="expand-icon">▶</span>
       <span class="recipe-name-text">${esc(r.name)}</span>
       ${r.url ? `<a href="${r.url}" target="_blank" class="link-btn" onclick="event.stopPropagation()" title="Open recipe" style="flex-shrink:0;width:22px;height:22px;font-size:10px;margin-left:4px">↗</a>` : ""}
-      <div class="recipe-mobile-meta">${r.category} · ${MI[r.method]||"🍴"} ${r.method}</div>
+      <div class="recipe-mobile-meta" style="display:none">${r.category} · ${MI[r.method]||"🍴"} ${r.method}</div>
     </div>
     <div><span class="badge" style="background:${c.bg};color:${c.text}"><span class="dot" style="background:${c.dot}"></span>${r.category}</span></div>
     <div class="meta">${MI[r.method]||"🍴"} ${r.method}</div>
-    <div class="meta">${r.source}</div>
+
     <div class="cost">${r.cost}</div>
     <div style="display:flex;align-items:center;justify-content:center">
       ${ms ? `<span class="match-badge ${ms.match==='full'?'match-full':'match-partial'}" title="${esc(ms.note)}">${ms.score}%</span>` : (matchActive ? `<span style="font-size:11px;color:#333;font-family:monospace">—</span>` : "")}
