@@ -387,6 +387,9 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
           <button class="btn btn-outline" style="font-size:12px" onclick="location.href='planner.html'">📅 Plan Week</button>
           <button class="btn btn-outline" style="font-size:12px" onclick="toggleAdd()">＋ Add</button>
           <button id="backfill-btn" class="backfill-btn" onclick="backfillImages()">🖼 Backfill Images</button>
+          <button onclick="openShareModal()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text2);font-size:12px;cursor:pointer;font-family:monospace;display:flex;align-items:center;gap:5px">
+            👥 Share
+          </button>
           <div id="user-menu" style="position:relative;display:inline-flex;align-items:center">
             <button onclick="toggleUserMenu()" style="background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:4px 12px 4px 6px;display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--text2);font-size:12px;font-family:monospace">
               <span style="width:24px;height:24px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff" id="user-avatar">?</span>
@@ -1979,6 +1982,130 @@ function copyCheckedGrocery() {
 }
 
 // ── Boot ──
+
+// ── Sharing ──
+async function openShareModal() {
+  document.getElementById("share-modal").style.display = "flex";
+  await loadShares();
+}
+
+function closeShareModal() {
+  document.getElementById("share-modal").style.display = "none";
+  document.getElementById("share-msg").textContent = "";
+  document.getElementById("share-email").value = "";
+}
+
+async function loadShares() {
+  const list = document.getElementById("share-list");
+  list.innerHTML = '<div style="font-size:13px;color:var(--text3)">Loading...</div>';
+  try {
+    const shares = await api("library-shares");
+    if (!Array.isArray(shares) || shares.length === 0) {
+      list.innerHTML = '<div style="font-size:13px;color:var(--text3)">No one has access yet.</div>';
+      return;
+    }
+    list.innerHTML = shares.map(s => `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;flex-shrink:0">
+          ${s.shared_with_email[0].toUpperCase()}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.shared_with_email}</div>
+          <div style="font-size:11px;color:var(--text3);font-family:monospace">${s.shared_with_id ? '\u2713 Account linked' : '\u23f3 Pending sign up'}</div>
+        </div>
+        <select onchange="updateSharePerm('${s.id}', this.value)"
+          style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--text2);font-size:12px;outline:none;cursor:pointer">
+          <option value="view" ${s.permission === 'view' ? 'selected' : ''}>View only</option>
+          <option value="edit" ${s.permission === 'edit' ? 'selected' : ''}>Can edit</option>
+        </select>
+        <button onclick="revokeShare('${s.id}')"
+          style="background:none;border:1px solid #4a2020;color:#f87171;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">
+          Revoke
+        </button>
+      </div>
+    `).join('');
+  } catch(e) {
+    list.innerHTML = '<div style="font-size:13px;color:#f87171">Failed to load shares.</div>';
+  }
+}
+
+async function inviteUser() {
+  const email = document.getElementById("share-email").value.trim();
+  const permission = document.getElementById("share-perm").value;
+  const msg = document.getElementById("share-msg");
+  const btn = document.getElementById("share-invite-btn");
+  if (!email) { msg.style.color = "#f87171"; msg.textContent = "Please enter an email."; return; }
+  btn.disabled = true; btn.textContent = "Inviting...";
+  msg.textContent = "";
+  try {
+    const res = await api("library-shares", "POST", { email, permission });
+    if (res.error) {
+      msg.style.color = "#f87171"; msg.textContent = res.error;
+    } else {
+      msg.style.color = "#7bcf8e";
+      msg.textContent = res.userFound
+        ? "\u2713 " + email + " now has " + permission + " access."
+        : "\u2713 Invited! They'll get access when they sign up.";
+      document.getElementById("share-email").value = "";
+      await loadShares();
+    }
+  } catch(e) {
+    msg.style.color = "#f87171"; msg.textContent = "Something went wrong.";
+  }
+  btn.disabled = false; btn.textContent = "Invite";
+}
+
+async function updateSharePerm(id, permission) {
+  await api("library-shares", "PATCH", { id, permission });
+}
+
+async function revokeShare(id) {
+  if (!confirm("Remove this person's access?")) return;
+  await api("library-shares?id=" + id, "DELETE");
+  await loadShares();
+}
+
+document.getElementById("share-modal").addEventListener("click", function(e) {
+  if (e.target === document.getElementById("share-modal")) closeShareModal();
+});
+
 </script>
+
+<!-- Share Modal -->
+<div id="share-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:32px;width:100%;max-width:480px;margin:16px;box-shadow:0 24px 64px rgba(0,0,0,0.5)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+      <h2 style="font-family:'Playfair Display',serif;font-size:22px;color:var(--text)">👥 Share Library</h2>
+      <button onclick="closeShareModal()" style="background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;line-height:1">×</button>
+    </div>
+
+    <p style="font-size:13px;color:var(--text2);margin-bottom:20px">Invite someone to view or edit your entire recipe library.</p>
+
+    <!-- Invite form -->
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <input id="share-email" type="email" placeholder="their@email.com"
+        style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif"
+        onkeydown="if(event.key==='Enter') inviteUser()">
+      <select id="share-perm"
+        style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 10px;color:var(--text);font-size:13px;outline:none;cursor:pointer">
+        <option value="view">View only</option>
+        <option value="edit">Can edit</option>
+      </select>
+      <button onclick="inviteUser()" id="share-invite-btn"
+        style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap">
+        Invite
+      </button>
+    </div>
+    <div id="share-msg" style="font-size:12px;font-family:monospace;min-height:18px;margin-bottom:16px"></div>
+
+    <!-- Current shares -->
+    <div style="border-top:1px solid var(--border);padding-top:16px">
+      <p style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:12px">People with access</p>
+      <div id="share-list" style="display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:13px;color:var(--text3)">Loading...</div>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
