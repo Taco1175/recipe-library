@@ -349,6 +349,7 @@ async function resetPassword() {
   const email = document.getElementById("reset-email").value.trim();
   if (!email) return showMsg("reset-msg", "Please enter your email.", "error");
 
+  if (!SUPABASE_URL) await loadConfig();
   const res = await fetch(`${SUPABASE_URL}/auth/v1/recover`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY },

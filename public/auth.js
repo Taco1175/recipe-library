@@ -1,104 +1,99 @@
-// Shared auth module — include on every page
-// Usage: <script src="/auth.js"></script>
-// Then call: await Auth.require() at page load to guard the page
-
+// Shared Supabase auth helper — included on every page
 const Auth = (() => {
-  function SUPABASE_URL() { return window.__SUPABASE_URL__ || ""; }
-  function SUPABASE_ANON_KEY() { return window.__SUPABASE_ANON_KEY__ || ""; }
+  const API = "/.netlify/functions";
+  let _url = "", _key = "", _token = null, _user = null;
 
-  function getSession() {
-    return {
-      accessToken: localStorage.getItem("sb-access-token"),
-      refreshToken: localStorage.getItem("sb-refresh-token"),
-      expiry: parseInt(localStorage.getItem("sb-token-expiry") || "0"),
-      user: JSON.parse(localStorage.getItem("sb-user") || "null"),
-    };
+  async function init() {
+    if (!_url) {
+      try {
+        const cfg = await fetch(`${API}/config`).then(r => r.json());
+        _url = cfg.supabaseUrl;
+        _key = cfg.supabaseAnonKey;
+      } catch(e) { console.error("Auth config failed", e); return false; }
+    }
+
+    // Handle OAuth hash callback
+    if (location.hash.includes("access_token")) {
+      const params = new URLSearchParams(location.hash.slice(1));
+      const session = {
+        access_token: params.get("access_token"),
+        refresh_token: params.get("refresh_token"),
+        expires_in: parseInt(params.get("expires_in") || "3600"),
+      };
+      try {
+        const res = await fetch(`${_url}/auth/v1/user`, {
+          headers: { "Authorization": `Bearer ${session.access_token}`, "apikey": _key }
+        });
+        session.user = await res.json();
+      } catch(e) {}
+      _save(session);
+      history.replaceState({}, "", location.pathname);
+      return true;
+    }
+
+    // Restore from localStorage
+    const token = localStorage.getItem("sb-access-token");
+    const expiry = parseInt(localStorage.getItem("sb-token-expiry") || "0");
+    const refresh = localStorage.getItem("sb-refresh-token");
+
+    if (token && Date.now() < expiry - 60000) {
+      _token = token;
+      try { _user = JSON.parse(localStorage.getItem("sb-user") || "null"); } catch(e) {}
+      return true;
+    }
+
+    if (refresh) return await _refresh(refresh);
+    return false;
   }
 
-  function saveSession(data) {
-    localStorage.setItem("sb-access-token", data.access_token || "");
-    localStorage.setItem("sb-refresh-token", data.refresh_token || "");
-    localStorage.setItem("sb-token-expiry", Date.now() + ((data.expires_in || 3600) * 1000));
-    if (data.user) localStorage.setItem("sb-user", JSON.stringify(data.user));
-  }
-
-  function clearSession() {
-    ["sb-access-token","sb-refresh-token","sb-token-expiry","sb-user"].forEach(k => localStorage.removeItem(k));
-  }
-
-  async function refreshToken() {
-    const { refreshToken } = getSession();
-    if (!refreshToken) return false;
+  async function _refresh(refreshToken) {
     try {
-      const res = await fetch(`${SUPABASE_URL()}/auth/v1/token?grant_type=refresh_token`, {
+      const res = await fetch(`${_url}/auth/v1/token?grant_type=refresh_token`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY() },
+        headers: { "Content-Type": "application/json", "apikey": _key },
         body: JSON.stringify({ refresh_token: refreshToken }),
       });
       const data = await res.json();
-      if (data.access_token) { saveSession(data); return true; }
-      return false;
+      if (data.error || !data.access_token) return false;
+      _save(data);
+      return true;
     } catch(e) { return false; }
   }
 
-  async function getToken() {
-    const session = getSession();
-    if (!session.accessToken) return null;
-    // Refresh if expiring within 2 minutes
-    if (Date.now() > session.expiry - 120000) {
-      const ok = await refreshToken();
-      if (!ok) { clearSession(); return null; }
-    }
-    return localStorage.getItem("sb-access-token");
+  function _save(data) {
+    _token = data.access_token;
+    _user = data.user || null;
+    localStorage.setItem("sb-access-token", data.access_token);
+    localStorage.setItem("sb-refresh-token", data.refresh_token || "");
+    localStorage.setItem("sb-token-expiry", Date.now() + ((data.expires_in || 3600) * 1000));
+    localStorage.setItem("sb-user", JSON.stringify(_user));
   }
 
-  // Returns fetch headers with auth token for API calls
-  async function headers() {
-    const token = await getToken();
-    if (!token) return null;
-    return { "Content-Type": "application/json", "Authorization": `Bearer ${token}` };
+  function signOut() {
+    localStorage.removeItem("sb-access-token");
+    localStorage.removeItem("sb-refresh-token");
+    localStorage.removeItem("sb-token-expiry");
+    localStorage.removeItem("sb-user");
+    _token = null; _user = null;
+    location.href = "/login.html";
   }
 
-  // Redirect to login if not authenticated
-  async function require() {
-    const token = await getToken();
-    if (!token) {
-      const next = encodeURIComponent(location.pathname + location.search);
-      location.href = `/login.html?next=${next}`;
+  function getToken() { return _token; }
+  function getUser() { return _user; }
+  function getUrl() { return _url; }
+  function getKey() { return _key; }
+
+  async function requireAuth() {
+    const ok = await init();
+    if (!ok) {
+      location.href = `/login.html?next=${encodeURIComponent(location.pathname)}`;
       return false;
     }
     return true;
   }
 
-  async function signOut() {
-    const token = await getToken();
-    if (token) {
-      fetch(`${SUPABASE_URL()}/auth/v1/logout`, {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${token}`, "apikey": SUPABASE_ANON_KEY() }
-      }).catch(() => {});
-    }
-    clearSession();
-    location.href = "/login.html";
-  }
+  // Alias so pages can call Auth.require()
+  async function require() { return requireAuth(); }
 
-  function getUser() {
-    return JSON.parse(localStorage.getItem("sb-user") || "null");
-  }
-
-  // Handle OAuth callback hash on any page
-  function handleCallback() {
-    const hash = location.hash;
-    if (!hash.includes("access_token")) return false;
-    const params = new URLSearchParams(hash.slice(1));
-    saveSession({
-      access_token: params.get("access_token"),
-      refresh_token: params.get("refresh_token"),
-      expires_in: parseInt(params.get("expires_in") || "3600"),
-    });
-    history.replaceState({}, "", location.pathname);
-    return true;
-  }
-
-  return { require, signOut, getToken, headers, getUser, saveSession, handleCallback };
+  return { init, require, requireAuth, signOut, getToken, getUser, getUrl, getKey };
 })();

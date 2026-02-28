@@ -349,6 +349,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
   --text2: #b0b5c4;
 }
 </style>
+<script src="/auth.js"></script>
 </head>
 <body>
 <!-- AUTH GUARD -->
@@ -364,7 +365,6 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
 </script>
 
 <!-- APP -->
-<script src="/auth.js"></script>
 <script>
 // Bootstrap: load config FIRST, then init app
 (async () => {
@@ -387,6 +387,16 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
           <button class="btn btn-outline" style="font-size:12px" onclick="location.href='planner.html'">📅 Plan Week</button>
           <button class="btn btn-outline" style="font-size:12px" onclick="toggleAdd()">＋ Add</button>
           <button id="backfill-btn" class="backfill-btn" onclick="backfillImages()">🖼 Backfill Images</button>
+          <div id="user-menu" style="position:relative;display:inline-flex;align-items:center">
+            <button onclick="toggleUserMenu()" style="background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:4px 12px 4px 6px;display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--text2);font-size:12px;font-family:monospace">
+              <span style="width:24px;height:24px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff" id="user-avatar">?</span>
+              <span id="user-email-short"></span>
+            </button>
+            <div id="user-dropdown" style="display:none;position:absolute;top:36px;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:8px;min-width:180px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,0.4)">
+              <div id="user-email-full" style="font-size:11px;color:var(--text3);font-family:monospace;padding:4px 8px 8px;border-bottom:1px solid var(--border);margin-bottom:6px"></div>
+              <button onclick="Auth.signOut()" style="width:100%;text-align:left;background:none;border:none;color:var(--red);font-size:13px;padding:6px 8px;border-radius:6px;cursor:pointer;font-family:DM Sans,sans-serif">Sign out</button>
+            </div>
+          </div>
           <button class="btn btn-success" id="grocery-btn" onclick="openGrocery()" style="display:none">
             🛒 <span class="grocery-badge" id="grocery-count">0</span>
           </button>
@@ -736,11 +746,15 @@ async function showApp() {
   const ok = await Auth.require();
   if (!ok) return;
 
-  // Show user email
+  // Populate user menu
   const user = Auth.getUser();
   if (user?.email) {
-    const el = document.getElementById("user-email");
-    if (el) el.textContent = user.email;
+    const avatar = document.getElementById("user-avatar");
+    const short = document.getElementById("user-email-short");
+    const full = document.getElementById("user-email-full");
+    if (avatar) avatar.textContent = user.email[0].toUpperCase();
+    if (short) short.textContent = user.email.split("@")[0];
+    if (full) full.textContent = user.email;
   }
 
   await loadData();
@@ -1075,6 +1089,17 @@ function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").
 
 // ── Interactions ──
 function rowClick(e,id){if(e.target.type==="checkbox"||e.target.tagName==="A")return;document.getElementById("wrap-"+id)?.classList.toggle("open");}
+function toggleUserMenu() {
+  const dd = document.getElementById("user-dropdown");
+  dd.style.display = dd.style.display === "none" ? "block" : "none";
+}
+document.addEventListener("click", e => {
+  if (!e.target.closest("#user-menu")) {
+    const dd = document.getElementById("user-dropdown");
+    if (dd) dd.style.display = "none";
+  }
+});
+
 function chk(e,id){e.stopPropagation();e.target.checked?checked.add(id):checked.delete(id);document.getElementById("grocery-btn").style.display=checked.size>0?"inline-flex":"none";document.getElementById("grocery-count").textContent=checked.size;localStorage.setItem("recipe-cart",JSON.stringify([...checked]));}
 function onSearch(v){q=v;render();}
 function clearSearch(){document.getElementById("search").value="";q="";render();}
