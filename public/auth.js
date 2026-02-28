@@ -42,11 +42,17 @@ const Auth = (() => {
       return true;
     }
 
-    if (refresh) return await _refresh(refresh);
+    // Token expired or missing — try refresh
+    if (refresh) {
+      const ok = await _refresh(refresh);
+      if (ok) return true;
+    }
+
     return false;
   }
 
   async function _refresh(refreshToken) {
+    if (!_url) return false;
     try {
       const res = await fetch(`${_url}/auth/v1/token?grant_type=refresh_token`, {
         method: "POST",
@@ -54,7 +60,20 @@ const Auth = (() => {
         body: JSON.stringify({ refresh_token: refreshToken }),
       });
       const data = await res.json();
-      if (data.error || !data.access_token) return false;
+      if (data.error || !data.access_token) {
+        // Refresh token invalid — clear storage
+        localStorage.removeItem("sb-refresh-token");
+        return false;
+      }
+      // Fetch user info if not included
+      if (!data.user) {
+        try {
+          const ur = await fetch(`${_url}/auth/v1/user`, {
+            headers: { "Authorization": `Bearer ${data.access_token}`, "apikey": _key }
+          });
+          data.user = await ur.json();
+        } catch(e) {}
+      }
       _save(data);
       return true;
     } catch(e) { return false; }
