@@ -241,19 +241,32 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
 @media (max-width: 700px) {
   .header { padding: 14px 16px 12px; }
   .header h1 { font-size: 20px; }
-  .main { padding: 14px 16px; }
+  .main { padding: 14px 12px; }
   .thead { display: none; }
+
+  /* Mobile row: checkbox | name | archive button */
   .trow {
-    grid-template-columns: 28px 1fr 28px;
-    grid-template-rows: auto auto;
+    grid-template-columns: 28px 1fr 32px;
+    grid-template-rows: auto;
+    padding: 12px 10px;
+    gap: 0;
   }
+  /* Hide: category, method, source, cost, match, servings controls */
   .trow > *:nth-child(3),
   .trow > *:nth-child(4),
   .trow > *:nth-child(5),
-  .trow > *:nth-child(6) { display: none; }
-  .trow > *:nth-child(7) { grid-column: 3; grid-row: 1; }
-  .recipe-name { font-size: 13px; }
-  .recipe-mobile-meta { grid-column: 2; font-size: 11px; color: var(--text2); }
+  .trow > *:nth-child(6),
+  .trow > *:nth-child(7),
+  .trow > *:nth-child(8) { display: none; }
+  /* Archive/restore button stays visible in col 3 */
+  .trow > *:nth-child(9) { grid-column: 3; grid-row: 1; display: flex; }
+
+  .recipe-name { font-size: 14px; color: #e8e4dc; flex-wrap: wrap; }
+  .recipe-mobile-meta { display: block; }
+  .recipe-name-text { color: #e8e4dc; }
+  .recipe-mobile-meta { display: none; font-size: 12px; color: #b0b5c4; margin-top: 3px; width: 100%; }
+  .meta { color: #b0b5c4; }
+
   .detail-panel { padding: 0 10px 16px 10px; }
   .detail-inner { grid-template-columns: 1fr; gap: 16px; }
   .add-grid { grid-template-columns: 1fr; }
@@ -261,6 +274,11 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
   .modal { padding: 20px 16px; }
   .topbar { gap: 6px; }
   .pills { gap: 5px; }
+}
+
+/* Boost text contrast globally */
+:root {
+  --text2: #b0b5c4;
 }
 </style>
 </head>
@@ -660,6 +678,7 @@ function render() {
       <span class="expand-icon">▶</span>
       <span class="recipe-name-text">${esc(r.name)}</span>
       ${r.url ? `<a href="${r.url}" target="_blank" class="link-btn" onclick="event.stopPropagation()" title="Open recipe" style="flex-shrink:0;width:22px;height:22px;font-size:10px;margin-left:4px">↗</a>` : ""}
+      <div class="recipe-mobile-meta">${r.category} · ${MI[r.method]||"🍴"} ${r.method}</div>
     </div>
     <div><span class="badge" style="background:${c.bg};color:${c.text}"><span class="dot" style="background:${c.dot}"></span>${r.category}</span></div>
     <div class="meta">${MI[r.method]||"🍴"} ${r.method}</div>
