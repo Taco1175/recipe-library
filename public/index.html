@@ -286,41 +286,62 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
 
 /* ── MOBILE ── */
 @media (max-width: 700px) {
-  .header { padding: 14px 16px 12px; }
-  .header h1 { font-size: 20px; }
-  .main { padding: 14px 12px; }
+  /* Header */
+  .header { padding: 12px 14px 10px; }
+  .header h1 { font-size: 18px; }
+  .header-top { flex-wrap: wrap; gap: 8px; }
+  .header-actions { flex-wrap: wrap; gap: 6px; }
+  .header-actions .btn { font-size: 11px !important; padding: 5px 8px; }
+  .backfill-btn { display: none; } /* hide on mobile */
+  .main { padding: 10px 10px; }
+  .pills { gap: 4px; }
+
+  /* Hide table header */
   .thead { display: none; }
 
-  /* Mobile row: checkbox | name | archive button */
+  /* Mobile row: checkbox | name+meta | archive */
   .trow {
     grid-template-columns: 28px 1fr 32px;
     grid-template-rows: auto;
-    padding: 12px 10px;
+    padding: 10px 10px;
     gap: 0;
+    align-items: center;
   }
-  /* Hide: category, method, source, cost, match, servings controls */
+  /* Hide all columns except checkbox(1), name(2), archive(9) */
   .trow > *:nth-child(3),
   .trow > *:nth-child(4),
   .trow > *:nth-child(5),
   .trow > *:nth-child(6),
   .trow > *:nth-child(7),
-  .trow > *:nth-child(8) { display: none; }
-  /* Archive/restore button stays visible in col 3 */
-  .trow > *:nth-child(9) { grid-column: 3; grid-row: 1; display: flex; }
+  .trow > *:nth-child(8) { display: none !important; }
+  .trow > *:nth-child(9) { grid-column: 3; grid-row: 1; display: flex; justify-content: center; }
 
-  .recipe-name { font-size: 14px; color: #e8e4dc; flex-wrap: wrap; }
-  .recipe-mobile-meta { display: block; }
-  .recipe-name-text { color: #e8e4dc; }
-  .recipe-mobile-meta { display: none; font-size: 12px; color: #b0b5c4; margin-top: 3px; width: 100%; }
-  .meta { color: #b0b5c4; }
+  /* Recipe name */
+  .recipe-name { font-size: 14px; flex-wrap: nowrap; gap: 4px; }
+  .recipe-name-text { color: #e8e4dc; font-size: 13px; }
+  .no-details-hint { display: none; }
 
+  /* Mobile meta subtitle */
+  .recipe-mobile-meta { display: block !important; font-size: 11px; color: #778; margin-top: 2px; }
+
+  /* Detail panel */
   .detail-panel { padding: 0 10px 16px 10px; }
   .detail-inner { grid-template-columns: 1fr; gap: 16px; }
+
+  /* Add form */
   .add-grid { grid-template-columns: 1fr; }
   .field.full { grid-column: 1; }
-  .modal { padding: 20px 16px; }
-  .topbar { gap: 6px; }
-  .pills { gap: 5px; }
+
+  /* Modals */
+  .modal { padding: 16px 14px; }
+  .recipe-modal { margin: 8px; max-height: calc(100vh - 16px); }
+  .recipe-modal-header { padding: 14px 16px 12px; flex-wrap: wrap; }
+  .recipe-modal-body { padding: 14px 16px; }
+
+  /* Topbar filters */
+  .topbar { gap: 6px; flex-wrap: wrap; }
+  .topbar .flt { font-size: 12px; padding: 7px 8px; }
+  .view-toggle button { width: 28px; height: 28px; font-size: 13px; }
 }
 
 /* Boost text contrast globally */

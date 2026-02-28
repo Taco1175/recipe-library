@@ -98,12 +98,20 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
 .toast.show { opacity: 1; }
 
 @media (max-width: 900px) {
-  .main { grid-template-columns: 1fr; }
-  .days-grid { grid-template-columns: repeat(4, 1fr); }
+  .main { grid-template-columns: 1fr; padding: 14px 14px 80px; }
+  .days-grid { grid-template-columns: repeat(4, 1fr); gap: 6px; }
   .picker { position: static; }
+  .topbar h1 { font-size: 16px; }
+  .gcal-btn { font-size: 12px; padding: 6px 10px; }
 }
 @media (max-width: 600px) {
-  .days-grid { grid-template-columns: repeat(2, 1fr); }
+  .days-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .week-nav { padding: 12px 14px 0; }
+  .week-label { font-size: 13px; min-width: 160px; }
+  .gcal-banner { padding: 12px 14px; flex-wrap: wrap; }
+  .cal-selector { padding: 0 14px; }
+  .topbar { padding: 10px 14px; }
+  .back-btn { font-size: 12px; }
 }
 
 /* Google auth banner */
