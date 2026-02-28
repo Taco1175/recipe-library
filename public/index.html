@@ -359,6 +359,18 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
         <div class="field"><label>Servings</label><input type="number" id="new-servings" placeholder="e.g. 4" min="1" max="24"></div>
       </div>
       <div id="add-msg" style="display:none" class="add-msg"></div>
+      <div id="fetch-preview" style="display:none;margin-top:12px;border:1px solid #2a2f3e;border-radius:8px;overflow:hidden">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+          <div style="padding:12px 14px;border-right:1px solid #2a2f3e">
+            <div style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#556;font-family:monospace;margin-bottom:8px">Ingredients</div>
+            <ul id="preview-ingredients" style="margin:0;padding:0 0 0 16px;font-size:12px;color:#b0b5c4;line-height:1.8"></ul>
+          </div>
+          <div style="padding:12px 14px">
+            <div style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#556;font-family:monospace;margin-bottom:8px">Steps</div>
+            <ol id="preview-steps" style="margin:0;padding:0 0 0 16px;font-size:12px;color:#b0b5c4;line-height:1.8"></ol>
+          </div>
+        </div>
+      </div>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
         <button class="btn btn-primary" onclick="saveNew()">Save Recipe</button>
         <button class="btn btn-outline" onclick="toggleAdd()">Cancel</button>
@@ -997,7 +1009,14 @@ async function autoFetchRecipe(url) {
 
     if (data.ingredients.length) {
       pendingDetails = { ingredients: data.ingredients, steps: data.steps || [], servings: data.servings || 4 };
-      addMsg(`✅ Auto-filled! Found ${data.ingredients.length} ingredients, ${data.steps.length} steps.`, "success");
+      addMsg(`✅ Found ${data.ingredients.length} ingredients, ${data.steps.length} steps. Review below then save.`, "success");
+      // Show preview
+      const prev = document.getElementById("fetch-preview");
+      const ingList = document.getElementById("preview-ingredients");
+      const stepList = document.getElementById("preview-steps");
+      ingList.innerHTML = data.ingredients.map(i => `<li>${i}</li>`).join("");
+      stepList.innerHTML = (data.steps||[]).map(s => `<li>${s}</li>`).join("");
+      prev.style.display = "block";
     } else {
       addMsg(`⚠️ Page loaded (${html.length} chars) but couldn't find ingredients. Fill in manually.`, "error");
     }
@@ -1025,6 +1044,9 @@ async function saveNew() {
   ["new-url","new-name","new-protein","new-method","new-source","new-cost"].forEach(id=>document.getElementById(id).value="");
   document.getElementById("add-panel").classList.remove("show");
   document.getElementById("add-msg").style.display = "none";
+  document.getElementById("fetch-preview").style.display = "none";
+  document.getElementById("preview-ingredients").innerHTML = "";
+  document.getElementById("preview-steps").innerHTML = "";
   render();
   setTimeout(()=>{const w=document.getElementById("wrap-"+nid);if(w){w.scrollIntoView({behavior:"smooth",block:"center"});w.classList.add("open");}},200);
 }
