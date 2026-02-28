@@ -339,6 +339,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
         <h1>🍽 My Recipe Library <span class="count-badge" id="total-badge"></span></h1>
         <div class="header-actions">
           <button class="btn btn-outline" style="font-size:12px" onclick="toggleFridge()">🥦 What's in my fridge?</button>
+          <button class="btn btn-outline" style="font-size:12px" onclick="location.href='planner.html'">📅 Plan Week</button>
           <button class="btn btn-outline" style="font-size:12px" onclick="toggleAdd()">＋ Add</button>
           <button id="backfill-btn" class="backfill-btn" onclick="backfillImages()">🖼 Backfill Images</button>
           <button class="btn btn-success" id="grocery-btn" onclick="openGrocery()" style="display:none">
@@ -478,7 +479,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
         <h2 id="rmodal-name"></h2>
         <div id="rmodal-meta" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>
         <div style="display:flex;gap:8px;margin-top:8px">
-          <a id="rmodal-reader" class="reader-btn" target="_blank">📖 Clean Reader View</a>
+          <a id="rmodal-reader" class="reader-btn" target="_blank">📖 Full Recipe View</a>
           <a id="rmodal-source" class="reader-btn" target="_blank" style="display:none">↗ Original</a>
         </div>
       </div>
@@ -818,7 +819,7 @@ function openRecipeModal(id) {
   const readerBtn = document.getElementById("rmodal-reader");
   const sourceBtn = document.getElementById("rmodal-source");
   if (r.url) {
-    readerBtn.href = "https://www.justtherecipe.com/?url=" + encodeURIComponent(r.url);
+    readerBtn.href = "/recipe.html?id=" + r.id;
     readerBtn.style.display = "inline-flex";
     sourceBtn.href = r.url; sourceBtn.style.display = "inline-flex";
   } else {
