@@ -531,7 +531,7 @@ const CC={"Breakfast":{bg:"#FFF3E0",text:"#E65100",dot:"#FF9800"},"Lunch/Dinner"
 const MI={"Slow Cooker":"🥘","Oven":"🔥","Stovetop":"🍳","Air Fryer":"💨","No Cook":"🥗","Microwave":"📡","Stovetop / Air Fryer":"🍳","Stovetop / Oven":"🍳","Oven / Stovetop":"🔥","Slow Cooker / Stovetop":"🥘"};
 
 // ── State ──
-let recipes = [...BASE];
+let recipes = [...BASE];  // replaced by DB data in loadData()
 let details = {};
 let checked = new Set();
 let servingsMap = {};  // recipe id -> current servings (for scaling)
@@ -605,12 +605,14 @@ async function showApp() {
 
 async function loadData() {
   try {
-    const [extraRes, detailsRes] = await Promise.all([
-      api("extra-recipes"),
+    const [recipesRes, detailsRes] = await Promise.all([
+      api("extra-recipes"),  // now points to full recipes table
       api("recipe-details")
     ]);
-    if (Array.isArray(extraRes)) {
-      extraRes.forEach(r => { if (!recipes.find(x=>x.id===r.id)) recipes.push(r); });
+    if (Array.isArray(recipesRes) && recipesRes.length) {
+      recipes = recipesRes;  // replace BASE entirely with DB data
+      archivedRecipes.clear();
+      recipes.forEach(r => { if (r.archived) archivedRecipes.add(r.id); });
     }
     if (Array.isArray(detailsRes)) {
       detailsRes.forEach(d => { details[d.recipe_id] = { ingredients: d.ingredients, steps: d.steps }; });
