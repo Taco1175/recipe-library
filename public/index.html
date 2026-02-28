@@ -1010,7 +1010,10 @@ function render() {
             onmouseover="this.style.background='#1a3a1a'" onmouseout="this.style.background='#1e2330'">↩</button>`
         : `<button onclick="event.stopPropagation();archiveRecipe(${r.id})" title="Archive"
             style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:transparent;border:none;color:#3a3a4a;font-size:16px;font-weight:700;cursor:pointer;line-height:1"
-            onmouseover="this.style.color='#cc4444'" onmouseout="this.style.color='#3a3a4a'">✕</button>`
+            onmouseover="this.style.color='#cc4444'" onmouseout="this.style.color='#3a3a4a'">✕</button>
+          <button onclick="event.stopPropagation();openEditModal(${r.id})" title="Edit recipe"
+            style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:transparent;border:none;color:#3a3a4a;font-size:13px;cursor:pointer"
+            onmouseover="this.style.color='#6e8efb'" onmouseout="this.style.color='#3a3a4a'">✏</button>`
       }
     </div>
   </div>
@@ -2069,6 +2072,181 @@ document.getElementById("share-modal").addEventListener("click", function(e) {
   if (e.target === document.getElementById("share-modal")) closeShareModal();
 });
 
+
+// ── Edit Recipe Modal ──
+let editingId = null;
+
+function openEditModal(id) {
+  const r = recipes.find(x => x.id === id);
+  if (!r) return;
+  editingId = id;
+
+  // Populate basic fields
+  document.getElementById("edit-name").value = r.name || "";
+  document.getElementById("edit-cat").value = r.category || "Lunch/Dinner";
+  document.getElementById("edit-protein").value = r.protein || "";
+  document.getElementById("edit-method").value = r.method || "";
+  document.getElementById("edit-source").value = r.source || "";
+  document.getElementById("edit-cost").value = r.cost || "";
+  document.getElementById("edit-url").value = r.url || "";
+  document.getElementById("edit-servings").value = getServings(id);
+  document.getElementById("edit-modal-subtitle").textContent = "ID #" + id;
+  document.getElementById("edit-msg").style.display = "none";
+
+  // Populate ingredients
+  const d = details[id] || {};
+  renderEditIngredients(d.ingredients || []);
+  renderEditSteps(d.steps || []);
+
+  document.getElementById("edit-modal").style.display = "flex";
+  document.body.style.overflow = "hidden";
+}
+
+function closeEditModal() {
+  document.getElementById("edit-modal").style.display = "none";
+  document.body.style.overflow = "";
+  editingId = null;
+}
+
+function renderEditIngredients(ings) {
+  const list = document.getElementById("edit-ingredients-list");
+  list.innerHTML = ings.map((ing, i) => `
+    <div style="display:flex;gap:6px;align-items:center" id="edit-ing-row-${i}">
+      <input value="${esc(ing)}" onchange="updateEditIngredient(${i}, this.value)"
+        style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif">
+      <button onclick="removeEditIngredient(${i})" style="background:none;border:none;color:#555;font-size:16px;cursor:pointer;line-height:1;padding:2px 6px" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='#555'">×</button>
+    </div>
+  `).join("");
+  list._data = [...ings];
+}
+
+function renderEditSteps(steps) {
+  const list = document.getElementById("edit-steps-list");
+  list.innerHTML = steps.map((step, i) => `
+    <div style="display:flex;gap:6px;align-items:flex-start" id="edit-step-row-${i}">
+      <span style="font-size:11px;color:var(--text3);font-family:monospace;padding-top:10px;min-width:18px;text-align:right">${i+1}.</span>
+      <textarea onchange="updateEditStep(${i}, this.value)" rows="2"
+        style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif;resize:vertical;line-height:1.5">${esc(step)}</textarea>
+      <button onclick="removeEditStep(${i})" style="background:none;border:none;color:#555;font-size:16px;cursor:pointer;line-height:1;padding:6px 6px 0" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='#555'">×</button>
+    </div>
+  `).join("");
+  list._data = [...steps];
+}
+
+function getEditIngredients() {
+  return Array.from(document.getElementById("edit-ingredients-list").querySelectorAll("input"))
+    .map(el => el.value.trim()).filter(Boolean);
+}
+
+function getEditSteps() {
+  return Array.from(document.getElementById("edit-steps-list").querySelectorAll("textarea"))
+    .map(el => el.value.trim()).filter(Boolean);
+}
+
+function updateEditIngredient(i, val) {
+  document.getElementById("edit-ingredients-list")._data[i] = val;
+}
+
+function updateEditStep(i, val) {
+  document.getElementById("edit-steps-list")._data[i] = val;
+}
+
+function removeEditIngredient(i) {
+  const ings = getEditIngredients();
+  ings.splice(i, 1);
+  renderEditIngredients(ings);
+}
+
+function removeEditStep(i) {
+  const steps = getEditSteps();
+  steps.splice(i, 1);
+  renderEditSteps(steps);
+}
+
+function addEditIngredient() {
+  const ings = getEditIngredients();
+  ings.push("");
+  renderEditIngredients(ings);
+  // Focus the new input
+  const inputs = document.getElementById("edit-ingredients-list").querySelectorAll("input");
+  inputs[inputs.length - 1]?.focus();
+}
+
+function addEditStep() {
+  const steps = getEditSteps();
+  steps.push("");
+  renderEditSteps(steps);
+  const tas = document.getElementById("edit-steps-list").querySelectorAll("textarea");
+  tas[tas.length - 1]?.focus();
+}
+
+function showEditMsg(text, type) {
+  const el = document.getElementById("edit-msg");
+  el.style.display = "block";
+  el.textContent = text;
+  el.style.background = type === "error" ? "#2a1515" : "#152a1e";
+  el.style.color = type === "error" ? "#f87171" : "#7bcf8e";
+  el.style.border = "1px solid " + (type === "error" ? "#4a2020" : "#2a5a3e");
+}
+
+async function saveEdit() {
+  if (!editingId) return;
+  const btn = document.getElementById("edit-save-btn");
+  btn.disabled = true; btn.textContent = "Saving...";
+
+  const name = document.getElementById("edit-name").value.trim();
+  if (!name) { showEditMsg("Recipe name is required.", "error"); btn.disabled = false; btn.textContent = "Save Changes"; return; }
+
+  const updatedRecipe = {
+    id: editingId,
+    name,
+    category: document.getElementById("edit-cat").value,
+    protein: document.getElementById("edit-protein").value.trim() || "Other",
+    method: document.getElementById("edit-method").value.trim() || "Stovetop",
+    source: document.getElementById("edit-source").value.trim(),
+    cost: document.getElementById("edit-cost").value.trim(),
+    url: document.getElementById("edit-url").value.trim(),
+  };
+
+  const ingredients = getEditIngredients();
+  const steps = getEditSteps();
+  const servings = parseInt(document.getElementById("edit-servings").value) || 4;
+
+  try {
+    // Save recipe metadata
+    await api("extra-recipes", "POST", updatedRecipe);
+
+    // Save details
+    await api("recipe-details", "POST", {
+      recipe_id: editingId,
+      ingredients,
+      steps,
+      servings,
+    });
+
+    // Update local state
+    const idx = recipes.findIndex(r => r.id === editingId);
+    if (idx !== -1) recipes[idx] = { ...recipes[idx], ...updatedRecipe };
+    details[editingId] = { ingredients, steps, servings };
+
+    showEditMsg("✓ Saved!", "success");
+    setTimeout(() => {
+      closeEditModal();
+      buildSelects();
+      render();
+    }, 600);
+  } catch(e) {
+    showEditMsg("Save failed. Please try again.", "error");
+  }
+
+  btn.disabled = false; btn.textContent = "Save Changes";
+}
+
+// Close on backdrop click
+document.getElementById("edit-modal").addEventListener("click", function(e) {
+  if (e.target === this) closeEditModal();
+});
+
 </script>
 
 <!-- Share Modal -->
@@ -2107,5 +2285,93 @@ document.getElementById("share-modal").addEventListener("click", function(e) {
     </div>
   </div>
 </div>
+
+<!-- Edit Recipe Modal -->
+<div id="edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:500;align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 16px">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;width:100%;max-width:680px;margin:auto;box-shadow:0 24px 64px rgba(0,0,0,0.5)">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:24px 28px 20px;border-bottom:1px solid var(--border)">
+      <div>
+        <h2 style="font-family:'Playfair Display',serif;font-size:22px;color:var(--text);margin:0 0 4px">✏ Edit Recipe</h2>
+        <p style="font-size:12px;color:var(--text3);font-family:monospace;margin:0" id="edit-modal-subtitle"></p>
+      </div>
+      <button onclick="closeEditModal()" style="background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;line-height:1;padding:4px">×</button>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:24px 28px;display:flex;flex-direction:column;gap:20px">
+
+      <!-- Basic Info -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div style="grid-column:1/-1">
+          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Recipe Name</label>
+          <input id="edit-name" type="text" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:14px;outline:none;font-family:'DM Sans',sans-serif">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Category</label>
+          <select id="edit-cat" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;cursor:pointer">
+            <option value="Breakfast">Breakfast</option>
+            <option value="Lunch/Dinner">Lunch/Dinner</option>
+            <option value="Salad">Salad</option>
+            <option value="Side">Side</option>
+            <option value="Dessert">Dessert</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Protein</label>
+          <input id="edit-protein" type="text" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Method</label>
+          <input id="edit-method" type="text" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Source</label>
+          <input id="edit-source" type="text" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Est. Cost</label>
+          <input id="edit-cost" type="text" placeholder="e.g. $10-13" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">URL</label>
+          <input id="edit-url" type="url" placeholder="https://..." style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Servings</label>
+          <input id="edit-servings" type="number" min="1" max="24" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif">
+        </div>
+      </div>
+
+      <!-- Ingredients -->
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase">Ingredients</label>
+          <button onclick="addEditIngredient()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:11px;padding:3px 10px;cursor:pointer;font-family:monospace">+ Add</button>
+        </div>
+        <div id="edit-ingredients-list" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto"></div>
+      </div>
+
+      <!-- Steps -->
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase">Steps</label>
+          <button onclick="addEditStep()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:11px;padding:3px 10px;cursor:pointer;font-family:monospace">+ Add</button>
+        </div>
+        <div id="edit-steps-list" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto"></div>
+      </div>
+
+      <!-- Message -->
+      <div id="edit-msg" style="display:none;font-size:13px;font-family:monospace;padding:8px 12px;border-radius:8px"></div>
+
+      <!-- Footer -->
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px;border-top:1px solid var(--border)">
+        <button onclick="closeEditModal()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:9px 18px;color:var(--text2);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif">Cancel</button>
+        <button onclick="saveEdit()" id="edit-save-btn" style="background:var(--accent);border:none;border-radius:8px;padding:9px 22px;color:#fff;font-size:13px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
