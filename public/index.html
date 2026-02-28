@@ -1012,7 +1012,7 @@ function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").
 
 // ── Interactions ──
 function rowClick(e,id){if(e.target.type==="checkbox"||e.target.tagName==="A")return;document.getElementById("wrap-"+id)?.classList.toggle("open");}
-function chk(e,id){e.stopPropagation();e.target.checked?checked.add(id):checked.delete(id);document.getElementById("grocery-btn").style.display=checked.size>0?"inline-flex":"none";document.getElementById("grocery-count").textContent=checked.size;}
+function chk(e,id){e.stopPropagation();e.target.checked?checked.add(id):checked.delete(id);document.getElementById("grocery-btn").style.display=checked.size>0?"inline-flex":"none";document.getElementById("grocery-count").textContent=checked.size;localStorage.setItem("recipe-cart",JSON.stringify([...checked]));}
 function onSearch(v){q=v;render();}
 function clearSearch(){document.getElementById("search").value="";q="";render();}
 function clearAll(){fCat="";fProt="";fMeth="";q="";matchActive=false;matchScores={};fridgeSelected.clear();renderFridgeChips();document.getElementById("search").value="";document.getElementById("filterProt").value="";document.getElementById("filterMeth").value="";document.getElementById("fridge-search").value="";document.getElementById("fridge-info").textContent="";render();}

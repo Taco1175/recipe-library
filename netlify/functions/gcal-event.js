@@ -1,29 +1,21 @@
-const { getAuthHeader } = require("./_auth-helper");
-
 exports.handler = async (event) => {
   const headers = { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" };
   if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers };
   if (event.httpMethod !== "POST") return { statusCode: 405, headers, body: "Method Not Allowed" };
 
+  const token = (event.headers["authorization"] || "").replace("Bearer ", "").trim();
+  if (!token) return { statusCode: 401, headers, body: JSON.stringify({ error: "Not authenticated" }) };
+
   try {
-    const { date, title, description } = JSON.parse(event.body || "{}");
+    const { date, title, description, calendarId } = JSON.parse(event.body || "{}");
     if (!date || !title) return { statusCode: 400, headers, body: JSON.stringify({ error: "Missing date or title" }) };
 
-    // Build Google Calendar API request
-    const authHeader = await getAuthHeader(event);
-    const calEvent = {
-      summary: title,
-      description: description || "",
-      start: { date },  // all-day event
-      end: { date },
-    };
+    const calId = calendarId || "primary";
+    const calEvent = { summary: title, description: description || "", start: { date }, end: { date } };
 
-    const res = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
+    const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events`, {
       method: "POST",
-      headers: {
-        "Authorization": authHeader,
-        "Content-Type": "application/json",
-      },
+      headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify(calEvent),
     });
 
@@ -34,7 +26,6 @@ exports.handler = async (event) => {
 
     const created = await res.json();
     return { statusCode: 200, headers, body: JSON.stringify({ success: true, id: created.id }) };
-
   } catch(e) {
     return { statusCode: 500, headers, body: JSON.stringify({ error: e.message }) };
   }
