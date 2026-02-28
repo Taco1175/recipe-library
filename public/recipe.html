@@ -321,6 +321,16 @@
     .ing-card { position: static; }
   }
 </style>
+<script>
+(async () => {
+  try {
+    const cfg = await fetch("/.netlify/functions/config").then(r => r.json());
+    window.__SUPABASE_URL__ = cfg.supabaseUrl;
+    window.__SUPABASE_ANON_KEY__ = cfg.supabaseAnonKey;
+  } catch(e) {}
+})();
+</script>
+<script src="/auth.js"></script>
 </head>
 <body>
 
@@ -340,7 +350,9 @@
 <script>
 const API = "/.netlify/functions";
 async function apiFetch(fn, method="GET", body=null) {
-  const opts = { method, headers: { "Content-Type": "application/json" } };
+  const hdrs = await Auth.headers();
+  if (!hdrs) { Auth.signOut(); throw new Error("Not authenticated"); }
+  const opts = { method, headers: hdrs };
   if (body) opts.body = JSON.stringify(body);
   const r = await fetch(`${API}/${fn}`, opts);
   return r.json();
@@ -408,6 +420,8 @@ function changeServings(delta) {
 function toggleIng(li) { li.classList.toggle("checked"); }
 
 async function init() {
+  const ok = await Auth.require();
+  if (!ok) return;
   const params = new URLSearchParams(location.search);
   const id = parseInt(params.get("id"));
   if (!id) { document.getElementById("app").innerHTML = '<div class="loading-state">No recipe ID provided.</div>'; return; }

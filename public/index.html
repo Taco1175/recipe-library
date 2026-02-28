@@ -353,6 +353,18 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
 <body>
 
 <!-- APP -->
+<script>
+// Bootstrap: load config then init auth
+(async () => {
+  try {
+    const cfg = await fetch("/.netlify/functions/config").then(r => r.json());
+    window.__SUPABASE_URL__ = cfg.supabaseUrl;
+    window.__SUPABASE_ANON_KEY__ = cfg.supabaseAnonKey;
+    window.__GOOGLE_CLIENT_ID__ = cfg.googleClientId;
+  } catch(e) {}
+})();
+</script>
+<script src="/auth.js"></script>
 <div id="app">
   <div class="header">
     <div class="header-inner">
@@ -366,6 +378,10 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
           <button class="btn btn-success" id="grocery-btn" onclick="openGrocery()" style="display:none">
             🛒 <span class="grocery-badge" id="grocery-count">0</span>
           </button>
+          <div id="user-menu" style="display:flex;align-items:center;gap:8px;margin-left:4px">
+            <span id="user-email" style="font-size:11px;color:var(--text3);font-family:monospace;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+            <button class="btn btn-outline" style="font-size:11px;padding:4px 8px" onclick="Auth.signOut()">Sign Out</button>
+          </div>
         </div>
       </div>
       <div class="pills" id="pills"></div>
@@ -692,15 +708,29 @@ let matchScores = {}; // id -> {score, match, note}
 let matchActive = false;
 let pendingDetails = null;
 
-function api(path, method="GET", body=null) {
-  return fetch(`/.netlify/functions/${path}`, {
+async function api(path, method="GET", body=null) {
+  const hdrs = await Auth.headers();
+  if (!hdrs) { Auth.signOut(); throw new Error("Not authenticated"); }
+  const r = await fetch(`/.netlify/functions/${path}`, {
     method,
-    headers: { "Content-Type":"application/json" },
+    headers: hdrs,
     body: body ? JSON.stringify(body) : undefined
-  }).then(r => r.json());
+  });
+  return r.json();
 }
 
 async function showApp() {
+  // Auth guard
+  const ok = await Auth.require();
+  if (!ok) return;
+
+  // Show user email
+  const user = Auth.getUser();
+  if (user?.email) {
+    const el = document.getElementById("user-email");
+    if (el) el.textContent = user.email;
+  }
+
   await loadData();
   buildSelects();
   render();

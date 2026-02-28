@@ -136,6 +136,17 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
 .cal-event { padding: 3px 6px; border-radius: 4px; font-size: 10px; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
 .cal-events-section { padding: 4px 6px 0; border-bottom: 1px solid var(--border); }
 </style>
+<script>
+(async () => {
+  try {
+    const cfg = await fetch("/.netlify/functions/config").then(r => r.json());
+    window.__SUPABASE_URL__ = cfg.supabaseUrl;
+    window.__SUPABASE_ANON_KEY__ = cfg.supabaseAnonKey;
+    window.__GOOGLE_CLIENT_ID__ = cfg.googleClientId;
+  } catch(e) {}
+})();
+</script>
+<script src="/auth.js"></script>
 </head>
 <body>
 
@@ -194,6 +205,14 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
 
 <script>
 const API = "/.netlify/functions";
+async function apiFetch(path, method="GET", body=null) {
+  const hdrs = await Auth.headers();
+  if (!hdrs) { Auth.signOut(); throw new Error("Not authenticated"); }
+  const opts = { method, headers: hdrs };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(`${API}/${path}`, opts);
+  return r.json();
+}
 const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const FULL_DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 const MI = {"Slow Cooker":"🥘","Oven":"🔥","Stovetop":"🍳","Air Fryer":"💨","No Cook":"🥗","Microwave":"📡","Stovetop / Air Fryer":"🍳","Stovetop / Oven":"🍳","Oven / Stovetop":"🔥","Slow Cooker / Stovetop":"🥘"};
@@ -374,8 +393,10 @@ async function fetchCalendarEvents() {
 let cartIds = new Set();
 
 async function init() {
+  const ok = await Auth.require();
+  if (!ok) return;
   try {
-    recipes = await fetch(`${API}/extra-recipes`).then(r => r.json());
+    recipes = await apiFetch("extra-recipes");
     // Load cart from localStorage (set by main page)
     try {
       const saved = localStorage.getItem("recipe-cart");

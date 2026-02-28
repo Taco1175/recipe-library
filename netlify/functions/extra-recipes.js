@@ -1,37 +1,41 @@
-const { supabase } = require("./_supabase-helper");
+const { supabase, getUserFromRequest, unauthorized, CORS } = require("./_supabase-helper");
 
 exports.handler = async (event) => {
-  const headers = { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" };
-  if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers };
+  if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers: CORS };
+
+  const auth = await getUserFromRequest(event);
+  if (!auth) return unauthorized();
+  const { user, token } = auth;
 
   if (event.httpMethod === "GET") {
-    const { ok, data } = await supabase("/recipes?select=*&order=id.asc");
-    if (!ok) return { statusCode: 500, headers, body: JSON.stringify({ error: "DB error" }) };
-    return { statusCode: 200, headers, body: JSON.stringify(data || []) };
+    const { ok, data } = await supabase("/recipes?select=*&order=id.asc", "GET", null, token);
+    if (!ok) return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: "DB error" }) };
+    return { statusCode: 200, headers: CORS, body: JSON.stringify(data || []) };
   }
 
   if (event.httpMethod === "POST") {
     const body = JSON.parse(event.body || "{}");
     const { id, ...fields } = body;
 
-    // Partial update (e.g. archived toggle)
+    // Partial update (archived toggle etc)
     if (id && Object.keys(fields).length > 0 && !fields.name) {
-      const { ok, data } = await supabase(`/recipes?id=eq.${id}`, "PATCH", fields);
-      if (!ok) return { statusCode: 500, headers, body: JSON.stringify({ error: "DB error", detail: data }) };
-      return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+      const { ok, data } = await supabase(`/recipes?id=eq.${id}&user_id=eq.${user.id}`, "PATCH", fields, token);
+      if (!ok) return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: "DB error", detail: data }) };
+      return { statusCode: 200, headers: CORS, body: JSON.stringify({ success: true }) };
     }
 
-    // Full upsert for new/updated recipes
-    const { ok, data } = await supabase("/recipes?on_conflict=id", "POST", body);
-    if (!ok) return { statusCode: 500, headers, body: JSON.stringify({ error: "DB error", detail: data }) };
-    return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+    // New recipe — inject user_id
+    const recipe = { ...body, user_id: user.id };
+    const { ok, data } = await supabase("/recipes?on_conflict=id", "POST", recipe, token);
+    if (!ok) return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: "DB error", detail: data }) };
+    return { statusCode: 200, headers: CORS, body: JSON.stringify(data?.[0] || { success: true }) };
   }
 
   if (event.httpMethod === "DELETE") {
     const id = event.queryStringParameters?.id;
-    await supabase(`/recipes?id=eq.${id}`, "DELETE");
-    return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
+    await supabase(`/recipes?id=eq.${id}&user_id=eq.${user.id}`, "DELETE", null, token);
+    return { statusCode: 200, headers: CORS, body: JSON.stringify({ success: true }) };
   }
 
-  return { statusCode: 405, headers, body: "Method Not Allowed" };
+  return { statusCode: 405, headers: CORS, body: "Method Not Allowed" };
 };
