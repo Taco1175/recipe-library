@@ -95,5 +95,15 @@ const Auth = (() => {
   // Alias so pages can call Auth.require()
   async function require() { return requireAuth(); }
 
-  return { init, require, requireAuth, signOut, getToken, getUser, getUrl, getKey };
+  // Returns headers object for API calls
+  async function headers() {
+    const ok = await init();
+    if (!ok) return null;
+    return {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${_token}`,
+    };
+  }
+
+  return { init, require, requireAuth, signOut, getToken, getUser, getUrl, getKey, headers };
 })();
