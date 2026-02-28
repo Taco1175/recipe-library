@@ -976,10 +976,8 @@ async function autoFetchRecipe(url) {
 
   addMsg("🔍 Fetching recipe details...", "loading");
 
-  // Normalize URL - strip print path suffixes and print query params
+  // Normalize URL - strip print query params but KEEP /print/NNNNN/ paths (they work fine)
   let fetchUrl = url
-    .replace(/[/]print[/]\d+[/]?$/, "/")
-    .replace(/[/]print[/]?$/, "/")
     .replace(/[?&]recipe_print=[^&]*/g, "")
     .replace(/[?&]print=[^&]*/g, "")
     .replace(/[?&]format=print[^&]*/g, "")
