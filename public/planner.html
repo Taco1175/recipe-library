@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan My Week</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0F1117;
+  --bg2: #1a1f2e;
+  --bg3: #1e2330;
+  --bg4: #2a2f3e;
+  --text: #E8E4DC;
+  --text2: #b0b5c4;
+  --text3: #667;
+  --accent: #6e8efb;
+  --green: #7bcf8e;
+  --border: #2a2f3e;
+  --red: #f87171;
+}
+body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+
+/* Topbar */
+.topbar { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 12px; }
+.back-btn { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px; }
+.back-btn:hover { background: var(--bg3); color: var(--text); }
+.topbar h1 { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--text); flex: 1; }
+.gcal-btn { display: inline-flex; align-items: center; gap: 8px; background: #4285f4; color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-family: 'DM Sans', sans-serif; cursor: pointer; font-weight: 500; transition: background 0.2s; }
+.gcal-btn:hover { background: #3367d6; }
+.gcal-btn:disabled { background: var(--bg4); color: var(--text3); cursor: not-allowed; }
+
+/* Week nav */
+.week-nav { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 20px 24px 0; }
+.week-nav button { background: var(--bg2); border: 1px solid var(--border); color: var(--text2); border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 13px; }
+.week-nav button:hover { border-color: var(--accent); color: var(--accent); }
+.week-label { font-size: 15px; color: var(--text); font-weight: 500; min-width: 200px; text-align: center; }
+
+/* Main layout */
+.main { max-width: 1100px; margin: 0 auto; padding: 20px 24px 80px; display: grid; grid-template-columns: 1fr 300px; gap: 20px; align-items: start; }
+
+/* Day columns */
+.days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+.day-col { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; min-height: 200px; }
+.day-col.today { border-color: var(--accent); }
+.day-header { padding: 10px 10px 8px; border-bottom: 1px solid var(--border); }
+.day-name { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); font-family: monospace; }
+.day-date { font-size: 18px; font-weight: 600; color: var(--text); line-height: 1.1; }
+.day-col.today .day-date { color: var(--accent); }
+
+.day-meals { padding: 6px; display: flex; flex-direction: column; gap: 5px; min-height: 100px; }
+.day-empty { font-size: 11px; color: var(--text3); text-align: center; padding: 20px 8px; font-family: monospace; }
+
+/* Meal chip */
+.meal-chip { background: var(--bg3); border: 1px solid var(--border); border-radius: 7px; padding: 7px 8px; position: relative; cursor: pointer; transition: border-color 0.15s; }
+.meal-chip:hover { border-color: var(--accent); }
+.meal-chip .chip-name { font-size: 11px; color: var(--text); font-weight: 500; line-height: 1.3; padding-right: 16px; }
+.meal-chip .chip-cat { font-size: 10px; color: var(--text3); font-family: monospace; margin-top: 2px; }
+.meal-chip .chip-remove { position: absolute; top: 4px; right: 4px; background: none; border: none; color: var(--text3); cursor: pointer; font-size: 12px; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border-radius: 3px; }
+.meal-chip .chip-remove:hover { background: var(--bg4); color: var(--red); }
+
+/* Add meal drop zone */
+.add-to-day { border: 1px dashed var(--border); border-radius: 7px; padding: 6px; text-align: center; font-size: 11px; color: var(--text3); cursor: pointer; margin: 0 6px 6px; transition: all 0.15s; }
+.add-to-day:hover { border-color: var(--accent); color: var(--accent); background: #1e2a4a22; }
+
+/* Recipe picker panel */
+.picker { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; position: sticky; top: 16px; }
+.picker-header { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.picker-header h3 { font-size: 14px; color: var(--text); margin-bottom: 8px; }
+.picker-search { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 7px 12px; color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; }
+.picker-search:focus { border-color: var(--accent); }
+.picker-recipes { max-height: 500px; overflow-y: auto; }
+.picker-recipe { padding: 10px 16px; border-bottom: 1px solid var(--bg3); cursor: pointer; transition: background 0.1s; display: flex; align-items: center; gap: 10px; }
+.picker-recipe:hover { background: var(--bg3); }
+.picker-recipe img { width: 36px; height: 28px; object-fit: cover; border-radius: 4px; flex-shrink: 0; background: var(--bg4); }
+.picker-recipe .pr-placeholder { width: 36px; height: 28px; border-radius: 4px; background: var(--bg4); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.picker-recipe .pr-name { font-size: 13px; color: var(--text); line-height: 1.3; }
+.picker-recipe .pr-cat { font-size: 11px; color: var(--text3); font-family: monospace; }
+.picker-empty { padding: 24px 16px; text-align: center; font-size: 13px; color: var(--text3); }
+.picker-section-label { padding: 8px 16px 4px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); font-family: monospace; background: var(--bg); border-bottom: 1px solid var(--border); }
+.picker-recipe.cart-item { background: #1e2a4a22; border-left: 2px solid var(--accent); }
+
+/* Day picker modal */
+.day-pick-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; }
+.day-pick-overlay.show { display: flex; }
+.day-pick-modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 24px; width: 340px; }
+.day-pick-modal h3 { font-size: 16px; margin-bottom: 6px; color: var(--text); }
+.day-pick-modal p { font-size: 13px; color: var(--text3); margin-bottom: 16px; }
+.day-pick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.day-pick-btn { background: var(--bg3); border: 1px solid var(--border); color: var(--text2); border-radius: 8px; padding: 10px 4px; cursor: pointer; font-size: 12px; text-align: center; transition: all 0.15s; font-family: 'DM Sans', sans-serif; }
+.day-pick-btn:hover { border-color: var(--accent); color: var(--accent); background: #1e2a4a; }
+.day-pick-cancel { margin-top: 12px; width: 100%; background: none; border: 1px solid var(--border); color: var(--text3); border-radius: 8px; padding: 8px; cursor: pointer; font-size: 13px; font-family: 'DM Sans', sans-serif; }
+.day-pick-cancel:hover { color: var(--text); border-color: var(--text3); }
+
+/* Success toast */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a3a2a; border: 1px solid var(--green); color: var(--green); padding: 10px 20px; border-radius: 8px; font-size: 13px; font-family: monospace; z-index: 300; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+.toast.show { opacity: 1; }
+
+@media (max-width: 900px) {
+  .main { grid-template-columns: 1fr; }
+  .days-grid { grid-template-columns: repeat(4, 1fr); }
+  .picker { position: static; }
+}
+@media (max-width: 600px) {
+  .days-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Google auth banner */
+.gcal-banner { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; margin: 16px 24px 0; display: flex; align-items: center; gap: 12px; }
+.gcal-banner.connected { border-color: var(--green); background: #0f2a1a; }
+.gcal-banner p { font-size: 13px; color: var(--text2); flex: 1; }
+.gcal-banner strong { color: var(--text); }
+.connect-btn { background: #fff; color: #333; border: none; border-radius: 6px; padding: 7px 14px; font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.connect-btn:hover { background: #f0f0f0; }
+.disconnect-btn { background: none; border: 1px solid #445; color: var(--text3); border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.disconnect-btn:hover { border-color: var(--red); color: var(--red); }
+
+/* Calendar selector */
+.cal-selector { padding: 0 24px; margin-top: 10px; display: none; }
+.cal-selector.show { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cal-selector label { font-size: 12px; color: var(--text3); font-family: monospace; }
+.cal-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 4px 12px; font-size: 12px; color: var(--text2); cursor: pointer; transition: all 0.15s; }
+.cal-chip.selected { border-color: var(--accent); color: var(--accent); background: #1e2a4a; }
+.cal-chip .cal-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* Cal events on day */
+.cal-event { padding: 3px 6px; border-radius: 4px; font-size: 10px; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+.cal-events-section { padding: 4px 6px 0; border-bottom: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" onclick="location.href='/'">← Back</button>
+  <h1>📅 Plan My Week</h1>
+  <button class="gcal-btn" id="gcal-btn" onclick="exportToGCal()">📆 Export to Google Calendar</button>
+</div>
+
+<!-- Google Calendar Auth Banner -->
+<div id="gcal-banner" class="gcal-banner">
+  <span style="font-size:24px">📆</span>
+  <p><strong>Connect Google Calendar</strong> to see your schedule alongside your meals.</p>
+  <button class="connect-btn" onclick="startGoogleAuth()">
+    <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+    Connect Google
+  </button>
+</div>
+
+<!-- Calendar selector (shows after auth) -->
+<div class="cal-selector" id="cal-selector">
+  <label>Show calendars:</label>
+  <div id="cal-chips"></div>
+</div>
+
+<div class="week-nav">
+  <button onclick="changeWeek(-1)">← Prev</button>
+  <span class="week-label" id="week-label"></span>
+  <button onclick="changeWeek(1)">Next →</button>
+</div>
+
+<div class="main">
+  <div>
+    <div class="days-grid" id="days-grid"></div>
+  </div>
+  <div class="picker">
+    <div class="picker-header">
+      <h3>Add a Recipe</h3>
+      <input class="picker-search" id="picker-search" placeholder="Search recipes…" oninput="filterPicker(this.value)">
+    </div>
+    <div class="picker-recipes" id="picker-recipes"></div>
+  </div>
+</div>
+
+<!-- Day picker modal -->
+<div class="day-pick-overlay" id="day-pick-overlay" onclick="if(event.target===this)closeDayPick()">
+  <div class="day-pick-modal">
+    <h3 id="dpick-recipe-name"></h3>
+    <p>Which day would you like to add this to?</p>
+    <div class="day-pick-grid" id="dpick-grid"></div>
+    <button class="day-pick-cancel" onclick="closeDayPick()">Cancel</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = "/.netlify/functions";
+const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const FULL_DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const MI = {"Slow Cooker":"🥘","Oven":"🔥","Stovetop":"🍳","Air Fryer":"💨","No Cook":"🥗","Microwave":"📡","Stovetop / Air Fryer":"🍳","Stovetop / Oven":"🍳","Oven / Stovetop":"🔥","Slow Cooker / Stovetop":"🥘"};
+
+let recipes = [];
+let weekOffset = 0;  // 0 = current week
+let plan = {};  // { "2026-02-24": [recipeId, ...], ... }
+let pendingRecipe = null;  // recipe being assigned to a day
+
+// ── Google Auth ──
+let gToken = null;
+let gRefreshToken = null;
+let gTokenExpiry = 0;
+let selectedCalendars = new Set();
+let calendarEvents = {};  // { "2026-02-24": [{title, color},...] }
+const GCAL_COLORS = {"1":"#7986CB","2":"#33B679","3":"#8E24AA","4":"#E67C73","5":"#F6BF26","6":"#F4511E","7":"#039BE5","8":"#616161","9":"#3F51B5","10":"#0B8043","11":"#D50000"};
+
+function getClientId() {
+  return window.__GOOGLE_CLIENT_ID__ || "";
+}
+
+function startGoogleAuth() {
+  const clientId = getClientId();
+  if (!clientId) {
+    alert("Google Client ID not configured. Add GOOGLE_CLIENT_ID to your Netlify environment variables.");
+    return;
+  }
+  const scope = "https://www.googleapis.com/auth/calendar";
+  const redirectUri = encodeURIComponent(location.origin + "/planner.html");
+  const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;
+  location.href = url;
+}
+
+async function handleAuthCallback() {
+  const params = new URLSearchParams(location.search);
+  const code = params.get("code");
+  if (!code) return false;
+
+  // Clean URL
+  history.replaceState({}, "", location.pathname);
+
+  try {
+    const res = await fetch(`${API}/google-auth`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    gToken = data.access_token;
+    gRefreshToken = data.refresh_token;
+    gTokenExpiry = Date.now() + (data.expires_in * 1000);
+    localStorage.setItem("gcal-refresh", gRefreshToken);
+    localStorage.setItem("gcal-expiry", gTokenExpiry);
+    localStorage.setItem("gcal-token", gToken);
+    return true;
+  } catch(e) {
+    console.error("Auth failed:", e);
+    return false;
+  }
+}
+
+async function ensureToken() {
+  if (gToken && Date.now() < gTokenExpiry - 60000) return true;
+  const refresh = gRefreshToken || localStorage.getItem("gcal-refresh");
+  if (!refresh) return false;
+  try {
+    const res = await fetch(`${API}/google-auth`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "refresh", refresh_token: refresh })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    gToken = data.access_token;
+    gTokenExpiry = Date.now() + (data.expires_in * 1000);
+    localStorage.setItem("gcal-token", gToken);
+    localStorage.setItem("gcal-expiry", gTokenExpiry);
+    return true;
+  } catch(e) {
+    disconnectGoogle();
+    return false;
+  }
+}
+
+function disconnectGoogle() {
+  gToken = null; gRefreshToken = null; gTokenExpiry = 0;
+  localStorage.removeItem("gcal-refresh");
+  localStorage.removeItem("gcal-token");
+  localStorage.removeItem("gcal-expiry");
+  localStorage.removeItem("gcal-selected-cals");
+  selectedCalendars.clear();
+  calendarEvents = {};
+  updateAuthUI(false);
+  renderWeek();
+}
+
+function updateAuthUI(connected) {
+  const banner = document.getElementById("gcal-banner");
+  const selector = document.getElementById("cal-selector");
+  const gcalBtn = document.getElementById("gcal-btn");
+  if (connected) {
+    banner.className = "gcal-banner connected";
+    banner.innerHTML = `<span style="font-size:20px">✅</span><p><strong>Google Calendar connected</strong> — select calendars to display below.</p><button class="disconnect-btn" onclick="disconnectGoogle()">Disconnect</button>`;
+    selector.classList.add("show");
+    gcalBtn.disabled = false;
+  } else {
+    banner.className = "gcal-banner";
+    banner.innerHTML = `<span style="font-size:24px">📆</span><p><strong>Connect Google Calendar</strong> to see your schedule alongside your meals.</p><button class="connect-btn" onclick="startGoogleAuth()"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>Connect Google</button>`;
+    selector.classList.remove("show");
+    gcalBtn.disabled = true;
+  }
+}
+
+async function loadCalendars() {
+  const ok = await ensureToken();
+  if (!ok) return;
+  try {
+    const res = await fetch(`${API}/google-calendar?action=list-calendars`, {
+      headers: { Authorization: `Bearer ${gToken}` }
+    });
+    const cals = await res.json();
+    if (!Array.isArray(cals)) return;
+
+    // Restore previously selected calendars
+    const saved = JSON.parse(localStorage.getItem("gcal-selected-cals") || "[]");
+    selectedCalendars = new Set(saved.length ? saved : cals.slice(0,1).map(c => c.id));
+
+    const chips = document.getElementById("cal-chips");
+    chips.innerHTML = cals.map(c => {
+      const color = c.backgroundColor || GCAL_COLORS[c.colorId] || "#6e8efb";
+      const sel = selectedCalendars.has(c.id);
+      return `<div class="cal-chip${sel?" selected":""}" onclick="toggleCal('${c.id}',this)" data-id="${c.id}">
+        <span class="cal-dot" style="background:${color}"></span>${c.summary}
+      </div>`;
+    }).join("");
+
+    await fetchCalendarEvents();
+  } catch(e) { console.error("loadCalendars:", e); }
+}
+
+function toggleCal(id, el) {
+  if (selectedCalendars.has(id)) { selectedCalendars.delete(id); el.classList.remove("selected"); }
+  else { selectedCalendars.add(id); el.classList.add("selected"); }
+  localStorage.setItem("gcal-selected-cals", JSON.stringify([...selectedCalendars]));
+  fetchCalendarEvents();
+}
+
+async function fetchCalendarEvents() {
+  if (!gToken || !selectedCalendars.size) { calendarEvents = {}; renderWeek(); return; }
+  const start = getWeekStart(weekOffset);
+  const end = new Date(start); end.setDate(start.getDate() + 7);
+  const timeMin = start.toISOString();
+  const timeMax = end.toISOString();
+  const calIds = [...selectedCalendars].join(",");
+  try {
+    const res = await fetch(`${API}/google-calendar?action=events&calendarId=${encodeURIComponent(calIds)}&timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`, {
+      headers: { Authorization: `Bearer ${gToken}` }
+    });
+    const events = await res.json();
+    calendarEvents = {};
+    if (Array.isArray(events)) {
+      for (const ev of events) {
+        const ds = (ev.start || "").slice(0, 10);
+        if (!ds) continue;
+        if (!calendarEvents[ds]) calendarEvents[ds] = [];
+        calendarEvents[ds].push(ev);
+      }
+    }
+    renderWeek();
+  } catch(e) { console.error("fetchCalendarEvents:", e); }
+}
+
+let cartIds = new Set();
+
+async function init() {
+  try {
+    recipes = await fetch(`${API}/extra-recipes`).then(r => r.json());
+    // Load cart from localStorage (set by main page)
+    try {
+      const saved = localStorage.getItem("recipe-cart");
+      cartIds = new Set(JSON.parse(saved || "[]"));
+    } catch(e) { cartIds = new Set(); }
+    await loadPlan();
+
+    // Handle Google OAuth callback
+    const authed = await handleAuthCallback();
+
+    // Restore existing Google session
+    if (!authed) {
+      const savedToken = localStorage.getItem("gcal-token");
+      const savedExpiry = parseInt(localStorage.getItem("gcal-expiry") || "0");
+      const savedRefresh = localStorage.getItem("gcal-refresh");
+      if (savedRefresh) {
+        gRefreshToken = savedRefresh;
+        gToken = savedToken;
+        gTokenExpiry = savedExpiry;
+        updateAuthUI(true);
+        await loadCalendars();
+      } else {
+        updateAuthUI(false);
+        renderWeek();
+      }
+    } else {
+      updateAuthUI(true);
+      await loadCalendars();
+    }
+
+    renderPicker(recipes);
+  } catch(e) { console.error(e); renderWeek(); renderPicker(recipes || []); }
+}
+
+// ── Plan persistence (Supabase via a simple key in localStorage for now, upgrade later) ──
+function planKey() { return "meal-plan-v1"; }
+
+async function loadPlan() {
+  try {
+    const saved = localStorage.getItem(planKey());
+    plan = saved ? JSON.parse(saved) : {};
+  } catch(e) { plan = {}; }
+}
+
+function savePlan() {
+  localStorage.setItem(planKey(), JSON.stringify(plan));
+}
+
+// ── Week helpers ──
+function getWeekStart(offset = 0) {
+  const now = new Date();
+  const day = now.getDay(); // 0 = Sun
+  const start = new Date(now);
+  start.setDate(now.getDate() - day + (offset * 7));
+  start.setHours(0,0,0,0);
+  return start;
+}
+
+function dateStr(d) {
+  return d.toISOString().slice(0, 10);
+}
+
+function changeWeek(delta) {
+  weekOffset += delta;
+  if (gToken && selectedCalendars.size) {
+    fetchCalendarEvents(); // also calls renderWeek
+  } else {
+    renderWeek();
+  }
+}
+
+// ── Render ──
+function renderWeek() {
+  const start = getWeekStart(weekOffset);
+  const today = dateStr(new Date());
+
+  // Update label
+  const end = new Date(start); end.setDate(start.getDate() + 6);
+  document.getElementById("week-label").textContent =
+    start.toLocaleDateString("en-US",{month:"short",day:"numeric"}) + " – " +
+    end.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+
+  // Render days
+  const grid = document.getElementById("days-grid");
+  grid.innerHTML = "";
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start); d.setDate(start.getDate() + i);
+    const ds = dateStr(d);
+    const isToday = ds === today;
+    const dayMeals = (plan[ds] || []).map(id => recipes.find(r => r.id === id)).filter(Boolean);
+
+    const mealsHtml = dayMeals.length
+      ? dayMeals.map(r => `
+          <div class="meal-chip" onclick="openRecipe(${r.id})">
+            <div class="chip-name">${r.name}</div>
+            <div class="chip-cat">${r.category}</div>
+            <button class="chip-remove" onclick="event.stopPropagation();removeMeal('${ds}',${r.id})" title="Remove">×</button>
+          </div>`).join("")
+      : `<div class="day-empty">No meals</div>`;
+
+    // Calendar events for this day
+    const dayEvents = calendarEvents[ds] || [];
+    const eventsHtml = dayEvents.length
+      ? `<div class="cal-events-section">${dayEvents.map(ev => {
+          const col = ev.color || "#6e8efb";
+          return `<div class="cal-event" style="background:${col}22;color:${col};border-left:2px solid ${col}" title="${ev.title}">${ev.title}</div>`;
+        }).join("")}</div>`
+      : "";
+
+    grid.innerHTML += `
+      <div class="day-col${isToday?" today":""}">
+        <div class="day-header">
+          <div class="day-name">${DAYS[d.getDay()]}</div>
+          <div class="day-date">${d.getDate()}</div>
+        </div>
+        ${eventsHtml}
+        <div class="day-meals">${mealsHtml}</div>
+        <div class="add-to-day" onclick="addMealToDay('${ds}')">+ Add meal</div>
+      </div>`;
+  }
+}
+
+function recipeCard(r, isCart=false) {
+  const icon = MI[r.method] || "🍴";
+  const img = r.image_url
+    ? `<img src="${r.image_url}" alt="" onerror="this.style.display='none'">`
+    : `<div class="pr-placeholder">${icon}</div>`;
+  return `<div class="picker-recipe${isCart?" cart-item":""}" onclick="pickRecipe(${r.id})">
+    ${img}
+    <div>
+      <div class="pr-name">${r.name}</div>
+      <div class="pr-cat">${r.category}</div>
+    </div>
+  </div>`;
+}
+
+function renderPicker(list) {
+  const el = document.getElementById("picker-recipes");
+  const active = list.filter(r => !r.archived);
+  if (!active.length) { el.innerHTML = '<div class="picker-empty">No recipes found.</div>'; return; }
+
+  const cartItems = active.filter(r => cartIds.has(r.id));
+  const rest = active.filter(r => !cartIds.has(r.id));
+
+  let html = "";
+  if (cartItems.length) {
+    html += `<div class="picker-section-label">⭐ In your cart</div>`;
+    html += cartItems.map(r => recipeCard(r, true)).join("");
+    if (rest.length) html += `<div class="picker-section-label">All Recipes</div>`;
+  }
+  html += rest.map(r => recipeCard(r, false)).join("");
+  el.innerHTML = html;
+}
+
+function filterPicker(q) {
+  const filtered = recipes.filter(r =>
+    !r.archived &&
+    (r.name.toLowerCase().includes(q.toLowerCase()) ||
+     r.category.toLowerCase().includes(q.toLowerCase()))
+  );
+  renderPicker(filtered);
+}
+
+// ── Add meal flow ──
+let pendingDay = null;
+
+function addMealToDay(ds) {
+  // Pre-select day and open picker — just scroll to picker and set pending day
+  pendingDay = ds;
+  showToast(`Now click a recipe to add it to ${new Date(ds+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})}`);
+  document.getElementById("picker-search").focus();
+  document.querySelector(".picker").scrollIntoView({ behavior:"smooth" });
+}
+
+function pickRecipe(id) {
+  const r = recipes.find(x => x.id === id);
+  if (!r) return;
+
+  if (pendingDay) {
+    // Add directly to pending day
+    addToPlan(pendingDay, id);
+    pendingDay = null;
+    showToast(`${r.name} added!`);
+  } else {
+    // Show day picker modal
+    pendingRecipe = r;
+    document.getElementById("dpick-recipe-name").textContent = r.name;
+    buildDayPickGrid();
+    document.getElementById("day-pick-overlay").classList.add("show");
+  }
+}
+
+function buildDayPickGrid() {
+  const start = getWeekStart(weekOffset);
+  const grid = document.getElementById("dpick-grid");
+  grid.innerHTML = DAYS.map((d, i) => {
+    const date = new Date(start); date.setDate(start.getDate() + i);
+    const ds = dateStr(date);
+    return `<button class="day-pick-btn" onclick="assignDay('${ds}')">${d}<br><span style="font-size:10px;opacity:0.6">${date.getDate()}</span></button>`;
+  }).join("");
+}
+
+function assignDay(ds) {
+  if (!pendingRecipe) return;
+  addToPlan(ds, pendingRecipe.id);
+  showToast(`${pendingRecipe.name} added!`);
+  closeDayPick();
+}
+
+function closeDayPick() {
+  document.getElementById("day-pick-overlay").classList.remove("show");
+  pendingRecipe = null;
+}
+
+function addToPlan(ds, id) {
+  if (!plan[ds]) plan[ds] = [];
+  if (!plan[ds].includes(id)) plan[ds].push(id);
+  savePlan();
+  renderWeek();
+}
+
+function removeMeal(ds, id) {
+  if (!plan[ds]) return;
+  plan[ds] = plan[ds].filter(x => x !== id);
+  if (!plan[ds].length) delete plan[ds];
+  savePlan();
+  renderWeek();
+}
+
+function openRecipe(id) {
+  window.open(`/recipe.html?id=${id}`, "_blank");
+}
+
+// ── Google Calendar Export ──
+async function exportToGCal() {
+  const start = getWeekStart(weekOffset);
+  const entries = [];
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start); d.setDate(start.getDate() + i);
+    const ds = dateStr(d);
+    const dayMeals = (plan[ds] || []).map(id => recipes.find(r => r.id === id)).filter(Boolean);
+    if (dayMeals.length) entries.push({ date: ds, meals: dayMeals });
+  }
+
+  if (!entries.length) { showToast("No meals planned this week!"); return; }
+
+  const btn = document.getElementById("gcal-btn");
+  btn.disabled = true;
+  btn.textContent = "Creating events…";
+
+  try {
+    // Create one event per day with all meals as the title
+    for (const { date, meals } of entries) {
+      const title = "🍽 " + meals.map(m => m.name).join(" + ");
+      const description = meals.map(m =>
+        `${m.name}\nCategory: ${m.category}\nMethod: ${m.method}${m.cost ? "\nEst. cost: " + m.cost : ""}${m.url ? "\nRecipe: " + m.url : ""}`
+      ).join("\n\n");
+
+      // Use Google Calendar API via MCP
+      await ensureToken();
+    const response = await fetch(`${API}/gcal-event`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${gToken}` },
+        body: JSON.stringify({ date, title, description })
+      });
+      const result = await response.json();
+      if (result.error) throw new Error(result.error);
+    }
+
+    showToast(`✓ ${entries.length} day${entries.length>1?"s":""} exported to Google Calendar!`);
+  } catch(e) {
+    // Fallback: open Google Calendar links
+    for (const { date, meals } of entries) {
+      const title = encodeURIComponent("🍽 " + meals.map(m => m.name).join(" + "));
+      const details = encodeURIComponent(meals.map(m => m.name + (m.url ? " - " + m.url : "")).join("\n"));
+      const d = date.replace(/-/g, "");
+      const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${d}/${d}&details=${details}`;
+      window.open(url, "_blank");
+    }
+    showToast("Opened Google Calendar for each day!");
+  }
+
+  btn.disabled = false;
+  btn.textContent = "📆 Export to Google Calendar";
+}
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 3000);
+}
+
+document.addEventListener("keydown", e => { if (e.key === "Escape") { closeDayPick(); pendingDay = null; } });
+
+init();
+</script>
+</body>
+</html>
