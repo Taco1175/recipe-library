@@ -141,6 +141,25 @@ select.flt {
 .trow-wrap.open .expand-icon { transform: rotate(90deg); }
 .has-details .recipe-name { color: #b8d8ff; }
 .no-details-hint { font-size: 9px; color: #334; font-family: monospace; flex-shrink: 0; }
+
+/* Grid view */
+.view-toggle { display:flex; gap:4px; }
+.view-toggle button { background:#1e2330; border:1px solid #2a2f3e; color:#666; border-radius:6px; width:30px; height:30px; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+.view-toggle button.active { background:#2a3050; border-color:#6e8efb; color:#6e8efb; }
+.recipe-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:16px; }
+.recipe-card { background:#1a1f2e; border:1px solid #2a2f3e; border-radius:10px; overflow:hidden; cursor:pointer; transition:all 0.2s; position:relative; }
+.recipe-card:hover { border-color:#6e8efb; transform:translateY(-2px); box-shadow:0 4px 20px rgba(0,0,0,0.3); }
+.recipe-card.no-details { opacity:0.6; }
+.recipe-card .card-img { width:100%; aspect-ratio:4/3; object-fit:cover; background:#12151f; display:block; }
+.recipe-card .card-img-placeholder { width:100%; aspect-ratio:4/3; background:#12151f; display:flex; align-items:center; justify-content:center; font-size:36px; }
+.recipe-card .card-body { padding:10px 12px 12px; }
+.recipe-card .card-name { font-size:13px; font-weight:600; color:#e8e4dc; margin-bottom:5px; line-height:1.3; }
+.recipe-card .card-name.dim { color:#555; }
+.recipe-card .card-meta { display:flex; align-items:center; justify-content:space-between; }
+.recipe-card .card-cost { font-size:12px; color:#7bcf8e; font-family:monospace; font-weight:600; }
+.recipe-card .card-check { position:absolute; top:8px; left:8px; width:20px; height:20px; accent-color:#6e8efb; cursor:pointer; }
+.recipe-card .card-badge { position:absolute; top:8px; right:8px; }
+@media (max-width:700px) { .recipe-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:10px; } }
 .trow.no-details .recipe-name-text { color: #555; }
 .badge { display: inline-flex; align-items: center; gap: 3px; border-radius: 10px; padding: 2px 8px; font-size: 10px; font-family: monospace; white-space: nowrap; }
 .badge .dot { width: 4px; height: 4px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
@@ -379,6 +398,10 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
 
     <!-- Topbar -->
     <div class="topbar">
+      <div class="view-toggle">
+        <button id="btn-table" class="active" onclick="setView('table')" title="Table view">☰</button>
+        <button id="btn-grid" onclick="setView('grid')" title="Grid view">⊞</button>
+      </div>
       <div class="search-wrap">
         <input type="text" id="search" placeholder="Search recipes…" oninput="onSearch(this.value)">
         <button class="search-clear" onclick="clearSearch()" title="Clear">×</button>
@@ -397,7 +420,8 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
 
     <div class="count" id="count"></div>
 
-    <div class="table">
+    <div id="grid-view" class="recipe-grid" style="display:none"></div>
+    <div class="table" id="table-view">
       <div class="thead">
         <div></div>
         <div class="sort-hdr" onclick="setSort('name')"><span id="shdr-name">Recipe</span></div>
@@ -534,6 +558,7 @@ const MI={"Slow Cooker":"🥘","Oven":"🔥","Stovetop":"🍳","Air Fryer":"💨
 let recipes = [...BASE];  // replaced by DB data in loadData()
 let details = {};
 let checked = new Set();
+let viewMode = "table";
 let servingsMap = {};  // recipe id -> current servings (for scaling)
 
 function getDefaultServings(id) {
@@ -666,6 +691,60 @@ function buildSelects() {
   mc.innerHTML=`<option value="">All Methods</option>`+meths.map(m=>`<option${m===mv?" selected":""}>${m}</option>`).join("");
 }
 
+function setView(mode) {
+  viewMode = mode;
+  document.getElementById("btn-table").classList.toggle("active", mode === "table");
+  document.getElementById("btn-grid").classList.toggle("active", mode === "grid");
+  document.getElementById("table-view").style.display = mode === "table" ? "" : "none";
+  document.getElementById("grid-view").style.display = mode === "grid" ? "" : "none";
+  render();
+}
+
+function renderGrid(list) {
+  const CC_CAT = Object.keys(CC);
+  const container = document.getElementById("grid-view");
+  if (!list.length) { container.innerHTML = '<div style="color:#555;font-size:14px;padding:40px 0;text-align:center">No recipes match.</div>'; return; }
+
+  container.innerHTML = list.map(r => {
+    const hd = !!details[r.id];
+    const c = CC[r.category] || { bg:"#333", text:"#ccc", dot:"#888" };
+    const icon = MI[r.method] || "🍴";
+    const isChecked = checked.has(r.id);
+    const isArchived = archivedRecipes.has(r.id);
+    if (isArchived) return "";
+
+    const imgHtml = r.image_url
+      ? `<img class="card-img" src="${r.image_url}" alt="${esc(r.name)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+<div class="card-img-placeholder" style="display:none">${icon}</div>`
+      : `<div class="card-img-placeholder">${icon}</div>`;
+
+    return `<div class="recipe-card${hd?"":" no-details"}" onclick="cardClick(event,${r.id})">
+      <input type="checkbox" class="card-check" ${isChecked?"checked":""} onclick="chk(event,${r.id})">
+      ${imgHtml}
+      <div class="card-body">
+        <div class="card-name${hd?"":" dim"}">${esc(r.name)}</div>
+        <div class="card-meta">
+          <span style="font-size:11px;color:${c.text};background:${c.bg};padding:2px 7px;border-radius:10px;font-family:monospace">${r.category}</span>
+          ${r.cost ? `<span class="card-cost">${r.cost}</span>` : ""}
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function cardClick(event, id) {
+  if (event.target.tagName === "INPUT") return;
+  // Switch to table view and open the detail panel
+  setView("table");
+  setTimeout(() => {
+    const wrap = document.getElementById("wrap-"+id);
+    if (wrap && !wrap.classList.contains("open")) {
+      wrap.classList.add("open");
+      wrap.scrollIntoView({ behavior:"smooth", block:"center" });
+    }
+  }, 50);
+}
+
 function render() {
   buildPills();
   const list = getFiltered();
@@ -675,6 +754,9 @@ function render() {
   const gb = document.getElementById("grocery-btn");
   gb.style.display = checked.size > 0 ? "inline-flex" : "none";
   document.getElementById("grocery-count").textContent = checked.size;
+
+  // Render grid or table
+  if (viewMode === "grid") { renderGrid(list); return; }
 
   // Match column always visible
   const activeList = list.filter(r => !archivedRecipes.has(r.id));
@@ -837,6 +919,7 @@ function parseRecipeHTML(html, url) {
       if (Array.isArray(data)) data = data.find(i => i["@type"] === "Recipe") || {};
       if (data["@type"] !== "Recipe") continue;
       if (data.name) result.name = data.name.trim();
+      if (data.image) result.image = Array.isArray(data.image) ? data.image[0] : (typeof data.image === "object" ? data.image.url : data.image);
       if (Array.isArray(data.recipeIngredient))
         result.ingredients = data.recipeIngredient.map(i => decodeEntities(i.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim())).filter(Boolean);
       if (Array.isArray(data.recipeInstructions))
@@ -944,6 +1027,16 @@ function parseRecipeHTML(html, url) {
     }
   }
 
+  // Image: try JSON-LD image first, then og:image, then first large img
+  if (!result.image) {
+    const ogImg = html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/);
+    if (ogImg) result.image = ogImg[1];
+    else {
+      const twitterImg = html.match(/<meta[^>]+name="twitter:image"[^>]+content="([^"]+)"/);
+      if (twitterImg) result.image = twitterImg[1];
+    }
+  }
+
   return result;
 }
 
@@ -1002,6 +1095,7 @@ async function autoFetchRecipe(url) {
 
     if (data.name) document.getElementById("new-name").value = data.name;
     if (data.servings) document.getElementById("new-servings").value = data.servings;
+    if (data.image) pendingDetails = { ...pendingDetails, image_url: data.image };
 
     if (data.ingredients.length) {
       pendingDetails = { ingredients: data.ingredients, steps: data.steps || [], servings: data.servings || 4 };
@@ -1026,7 +1120,7 @@ async function saveNew() {
   const url = document.getElementById("new-url").value.trim();
   if (!name) return addMsg("Please enter a recipe name.", "error");
   const nid = Math.max(...BASE.map(r=>r.id), ...recipes.map(r=>r.id)) + 1;
-  const nr = { id:nid, name, category:document.getElementById("new-cat").value, protein:document.getElementById("new-protein").value||"Other", method:document.getElementById("new-method").value||"Stovetop", source:document.getElementById("new-source").value||"Unknown", url, cost:document.getElementById("new-cost").value||"TBD" };
+  const nr = { id:nid, name, category:document.getElementById("new-cat").value, protein:document.getElementById("new-protein").value||"Other", method:document.getElementById("new-method").value||"Stovetop", source:document.getElementById("new-source").value||"Unknown", url, cost:document.getElementById("new-cost").value||"TBD", image_url: pendingDetails?.image_url || null };
   recipes.push(nr);
   await api("extra-recipes","POST",nr);
   const servings = parseInt(document.getElementById("new-servings").value) || 4;
