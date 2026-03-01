@@ -2385,6 +2385,7 @@ document.getElementById("edit-modal").addEventListener("click", function(e) {
 <div id="tut-backdrop" style="display:none;position:fixed;inset:0;z-index:3000;background:transparent;pointer-events:all"></div>
 <div id="tut-highlight" style="display:none;position:fixed;z-index:3001;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,0.72);pointer-events:none;transition:left 0.25s,top 0.25s,width 0.25s,height 0.25s"></div>
 <div id="tut-card" style="display:none;position:fixed;z-index:3002;background:#1a1f2e;border:1px solid #6e8efb;border-radius:14px;padding:20px 22px;width:290px;box-shadow:0 12px 40px rgba(0,0,0,0.7)">
+  <div id="tut-arrow" style="position:absolute;width:12px;height:12px;background:#1a1f2e;border-left:1px solid #6e8efb;border-top:1px solid #6e8efb;"></div>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
     <div style="display:flex;align-items:center;gap:8px">
       <span id="tut-emoji" style="font-size:18px"></span>
@@ -2460,6 +2461,7 @@ document.getElementById("edit-modal").addEventListener("click", function(e) {
       }
     }
 
+    var arrow = document.getElementById("tut-arrow");
     if (target) {
       var r = target.getBoundingClientRect();
       var pad = 8;
@@ -2469,14 +2471,41 @@ document.getElementById("edit-modal").addEventListener("click", function(e) {
       highlight.style.width = (r.width + pad*2) + "px";
       highlight.style.height = (r.height + pad*2) + "px";
 
+      var cardW = 290;
+      var cardH = card.offsetHeight || 180;
       var spaceBelow = window.innerHeight - r.bottom;
-      var top = spaceBelow > 200 ? r.bottom + 14 : r.top - 190;
-      var left = Math.max(12, Math.min(r.left, window.innerWidth - 310));
-      card.style.top = Math.max(8, top) + "px";
-      card.style.left = left + "px";
-      card.style.transform = "";
+      var spaceAbove = r.top;
+      var left = Math.max(12, Math.min(r.left + r.width/2 - cardW/2, window.innerWidth - cardW - 12));
+
+      if (spaceBelow >= cardH + 24 || spaceBelow >= spaceAbove) {
+        // Card below target — arrow points UP
+        card.style.top = (r.bottom + 16) + "px";
+        card.style.left = left + "px";
+        card.style.transform = "";
+        arrow.style.top = "-7px";
+        arrow.style.left = (Math.min(r.left + r.width/2 - left - 6, cardW - 24)) + "px";
+        arrow.style.transform = "rotate(45deg)";
+        arrow.style.borderRight = "none";
+        arrow.style.borderBottom = "none";
+        arrow.style.borderLeft = "1px solid #6e8efb";
+        arrow.style.borderTop = "1px solid #6e8efb";
+      } else {
+        // Card above target — arrow points DOWN
+        card.style.top = (r.top - cardH - 16) + "px";
+        card.style.left = left + "px";
+        card.style.transform = "";
+        arrow.style.top = (cardH - 7) + "px";
+        arrow.style.left = (Math.min(r.left + r.width/2 - left - 6, cardW - 24)) + "px";
+        arrow.style.transform = "rotate(225deg)";
+        arrow.style.borderRight = "none";
+        arrow.style.borderBottom = "none";
+        arrow.style.borderLeft = "1px solid #6e8efb";
+        arrow.style.borderTop = "1px solid #6e8efb";
+      }
+      arrow.style.display = "block";
     } else {
       highlight.style.display = "none";
+      arrow.style.display = "none";
       card.style.top = "50%";
       card.style.left = "50%";
       card.style.transform = "translate(-50%,-50%)";
