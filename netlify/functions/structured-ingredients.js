@@ -1,8 +1,11 @@
-const { supabase } = require("./_supabase-helper");
+const { supabase, getUserFromRequest, unauthorized, CORS } = require("./_supabase-helper");
 
 exports.handler = async (event) => {
-  const headers = { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" };
-  if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers };
+  if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers: CORS };
+  const auth = await getUserFromRequest(event);
+  if (!auth) return unauthorized();
+  const { user, token } = auth;
+  const headers = CORS;
 
   if (event.httpMethod === "POST") {
     const { recipe_ids } = JSON.parse(event.body || "{}");

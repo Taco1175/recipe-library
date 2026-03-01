@@ -30,7 +30,7 @@ a { color: var(--accent); }
 /* ── HEADER ── */
 .header {
   background: linear-gradient(135deg, #1a1f2e, var(--bg));
-  border-bottom: 1px solid var(--border); padding: 20px 24px 18px;
+  border-bottom: 1px solid var(--border); padding: 14px 24px 14px;
   position: sticky; top: 0; z-index: 50;
 }
 .header-inner { max-width: 1300px; margin: 0 auto; }
@@ -50,7 +50,7 @@ a { color: var(--accent); }
 .pill.active .dot { background: var(--dot); }
 
 /* ── MAIN ── */
-.main { max-width: 1300px; margin: 0 auto; padding: 20px 24px; }
+.main { max-width: 1300px; margin: 0 auto; padding: 16px 24px; }
 
 /* ── BUTTONS ── */
 .btn {
@@ -76,7 +76,7 @@ a { color: var(--accent); }
 }
 
 /* ── TOPBAR ── */
-.topbar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+.topbar { display: flex; gap: 8px; margin-bottom: 0; flex-wrap: wrap; align-items: center; }
 .search-wrap { position: relative; flex: 1; min-width: 200px; }
 .search-wrap input {
   width: 100%; background: var(--bg4); border: 1px solid var(--border);
@@ -286,41 +286,63 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
 
 /* ── MOBILE ── */
 @media (max-width: 700px) {
-  .header { padding: 14px 16px 12px; }
-  .header h1 { font-size: 20px; }
-  .main { padding: 14px 12px; }
+  /* Header */
+  .header { padding: 12px 14px 10px; }
+  .header h1 { font-size: 18px; }
+  .header-top { flex-wrap: wrap; gap: 8px; }
+  .header-actions { flex-wrap: wrap; gap: 6px; }
+  .header-actions .btn { font-size: 11px !important; padding: 5px 8px; }
+  .backfill-btn { display: none; } /* hide on mobile */
+  .main { padding: 10px 10px; }
+  .pills { gap: 4px; }
+
+  /* Hide table header */
   .thead { display: none; }
 
-  /* Mobile row: checkbox | name | archive button */
+  /* Mobile row: checkbox | name+meta | archive */
   .trow {
     grid-template-columns: 28px 1fr 32px;
     grid-template-rows: auto;
-    padding: 12px 10px;
+    padding: 10px 10px;
     gap: 0;
+    align-items: center;
   }
-  /* Hide: category, method, source, cost, match, servings controls */
+  /* Hide all columns except checkbox(1), name(2), archive(9) */
   .trow > *:nth-child(3),
   .trow > *:nth-child(4),
   .trow > *:nth-child(5),
   .trow > *:nth-child(6),
   .trow > *:nth-child(7),
-  .trow > *:nth-child(8) { display: none; }
-  /* Archive/restore button stays visible in col 3 */
-  .trow > *:nth-child(9) { grid-column: 3; grid-row: 1; display: flex; }
+  .trow > *:nth-child(8) { display: none !important; }
+  .trow > *:nth-child(9) { grid-column: 3; grid-row: 1; display: flex; justify-content: center; }
 
-  .recipe-name { font-size: 14px; color: #e8e4dc; flex-wrap: wrap; }
-  .recipe-mobile-meta { display: block; }
-  .recipe-name-text { color: #e8e4dc; }
-  .recipe-mobile-meta { display: none; font-size: 12px; color: #b0b5c4; margin-top: 3px; width: 100%; }
-  .meta { color: #b0b5c4; }
+  /* Recipe name */
+  .recipe-name { font-size: 14px; flex-wrap: nowrap; gap: 4px; }
+  .recipe-name-text { color: #e8e4dc; font-size: 13px; }
+  .no-details-hint { display: none; }
 
+  /* Mobile meta subtitle */
+  .recipe-mobile-meta { display: block !important; font-size: 11px; color: #778; margin-top: 2px; }
+
+  /* Detail panel */
   .detail-panel { padding: 0 10px 16px 10px; }
   .detail-inner { grid-template-columns: 1fr; gap: 16px; }
+
+  /* Add form */
   .add-grid { grid-template-columns: 1fr; }
   .field.full { grid-column: 1; }
-  .modal { padding: 20px 16px; }
-  .topbar { gap: 6px; }
-  .pills { gap: 5px; }
+
+  /* Modals */
+  .modal { padding: 16px 14px; }
+  .recipe-modal { margin: 8px; max-height: calc(100vh - 16px); }
+  .recipe-modal-header { padding: 14px 16px 12px; flex-wrap: wrap; }
+  .recipe-modal-body { padding: 14px 16px; }
+
+  /* Topbar filters */
+  .topbar { gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .topbar .flt { font-size: 12px; padding: 7px 8px; }
+  .topbar .search-wrap { flex: 1 1 100%; }
+  .view-toggle button { width: 28px; height: 28px; font-size: 13px; }
 }
 
 /* Boost text contrast globally */
@@ -328,10 +350,34 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
   --text2: #b0b5c4;
 }
 </style>
+<script src="/auth.js"></script>
 </head>
 <body>
+<!-- AUTH GUARD -->
+<script>
+// Auth guard — redirect to login if no valid session
+(function() {
+  const token = localStorage.getItem("sb-access-token");
+  const expiry = parseInt(localStorage.getItem("sb-token-expiry") || "0");
+  if (!token || Date.now() > expiry) {
+    location.href = "/login.html?next=" + encodeURIComponent(location.pathname);
+  }
+})();
+</script>
 
 <!-- APP -->
+<script>
+// Bootstrap: load config FIRST, then init app
+(async () => {
+  try {
+    const cfg = await fetch("/.netlify/functions/config").then(r => r.json());
+    window.__SUPABASE_URL__ = cfg.supabaseUrl;
+    window.__SUPABASE_ANON_KEY__ = cfg.supabaseAnonKey;
+    window.__GOOGLE_CLIENT_ID__ = cfg.googleClientId;
+  } catch(e) { console.error("Config load failed", e); }
+  await showApp();
+})();
+</script>
 <div id="app">
   <div class="header">
     <div class="header-inner">
@@ -342,12 +388,52 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
           <button class="btn btn-outline" style="font-size:12px" onclick="location.href='planner.html'">📅 Plan Week</button>
           <button class="btn btn-outline" style="font-size:12px" onclick="toggleAdd()">＋ Add</button>
           <button id="backfill-btn" class="backfill-btn" onclick="backfillImages()">🖼 Backfill Images</button>
+          <button onclick="startTutorial()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text2);font-size:12px;cursor:pointer;font-family:monospace;display:flex;align-items:center;gap:5px">
+            ✨ Tutorial
+          </button>
+          <button onclick="openShareModal()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text2);font-size:12px;cursor:pointer;font-family:monospace;display:flex;align-items:center;gap:5px">
+            👥 Share
+          </button>
+          <div id="user-menu" style="position:relative;display:inline-flex;align-items:center">
+            <button onclick="toggleUserMenu()" style="background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:4px 12px 4px 6px;display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--text2);font-size:12px;font-family:monospace">
+              <span style="width:24px;height:24px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff" id="user-avatar">?</span>
+              <span id="user-email-short"></span>
+            </button>
+            <div id="user-dropdown" style="display:none;position:absolute;top:36px;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:8px;min-width:180px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,0.4)">
+              <div id="user-email-full" style="font-size:11px;color:var(--text3);font-family:monospace;padding:4px 8px 8px;border-bottom:1px solid var(--border);margin-bottom:6px"></div>
+              <button onclick="Auth.signOut()" style="width:100%;text-align:left;background:none;border:none;color:var(--red);font-size:13px;padding:6px 8px;border-radius:6px;cursor:pointer;font-family:DM Sans,sans-serif">Sign out</button>
+            </div>
+          </div>
           <button class="btn btn-success" id="grocery-btn" onclick="openGrocery()" style="display:none">
             🛒 <span class="grocery-badge" id="grocery-count">0</span>
           </button>
+          <div id="user-menu" style="display:flex;align-items:center;gap:8px;margin-left:4px">
+            <span id="user-email" style="font-size:11px;color:var(--text3);font-family:monospace;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+            <button class="btn btn-outline" style="font-size:11px;padding:4px 8px" onclick="Auth.signOut()">Sign Out</button>
+          </div>
         </div>
       </div>
       <div class="pills" id="pills"></div>
+      <div class="topbar" style="margin-top:10px">
+        <div class="view-toggle">
+          <button id="btn-table" class="active" onclick="setView('table')" title="Table view">☰</button>
+          <button id="btn-grid" onclick="setView('grid')" title="Grid view">⊞</button>
+        </div>
+        <div class="search-wrap">
+          <input type="text" id="search" placeholder="Search recipes…" oninput="onSearch(this.value)">
+          <button class="search-clear" id="search-clear-btn" onclick="clearSearch()" title="Clear" style="display:none">×</button>
+        </div>
+        <select class="flt" id="filterProt" onchange="fProt=this.value;render()"><option value="">All Proteins</option></select>
+        <select class="flt" id="filterMeth" onchange="fMeth=this.value;render()"><option value="">All Methods</option></select>
+        <select class="flt" id="sortBy" onchange="sort=this.value;render()">
+          <option value="category">Category</option>
+          <option value="name">Name A-Z</option>
+          <option value="protein">Protein</option>
+          <option value="method">Method</option>
+          <option value="cost">Cost ↑</option>
+          <option value="match">Match %</option>
+        </select>
+      </div>
     </div>
   </div>
 
@@ -425,27 +511,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
       </div>
     </div>
 
-    <!-- Topbar -->
-    <div class="topbar">
-      <div class="view-toggle">
-        <button id="btn-table" class="active" onclick="setView('table')" title="Table view">☰</button>
-        <button id="btn-grid" onclick="setView('grid')" title="Grid view">⊞</button>
-      </div>
-      <div class="search-wrap">
-        <input type="text" id="search" placeholder="Search recipes…" oninput="onSearch(this.value)">
-        <button class="search-clear" onclick="clearSearch()" title="Clear">×</button>
-      </div>
-      <select class="flt" id="filterProt" onchange="fProt=this.value;render()"><option value="">All Proteins</option></select>
-      <select class="flt" id="filterMeth" onchange="fMeth=this.value;render()"><option value="">All Methods</option></select>
-      <select class="flt" id="sortBy" onchange="sort=this.value;render()">
-        <option value="category">Category</option>
-        <option value="name">Name A-Z</option>
-        <option value="protein">Protein</option>
-        <option value="method">Method</option>
-        <option value="cost">Cost ↑</option>
-        <option value="match">Match %</option>
-      </select>
-    </div>
+
 
     <div class="count" id="count"></div>
 
@@ -464,7 +530,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
       </div>
       <div id="rows"></div>
     </div>
-    <div class="footer-note">Blue = has saved details · Click row to expand · ✓ to add to grocery list</div>
+    <div class="footer-note">Blue = has saved details · Click row to expand · ✓ to add to grocery list · <a href="/privacy.html" style="color:#556;text-decoration:none">Privacy Policy</a></div>
   </div>
 </div>
 
@@ -671,15 +737,33 @@ let matchScores = {}; // id -> {score, match, note}
 let matchActive = false;
 let pendingDetails = null;
 
-function api(path, method="GET", body=null) {
-  return fetch(`/.netlify/functions/${path}`, {
+async function api(path, method="GET", body=null) {
+  const hdrs = await Auth.headers();
+  if (!hdrs) { Auth.signOut(); throw new Error("Not authenticated"); }
+  const r = await fetch(`/.netlify/functions/${path}`, {
     method,
-    headers: { "Content-Type":"application/json" },
+    headers: hdrs,
     body: body ? JSON.stringify(body) : undefined
-  }).then(r => r.json());
+  });
+  return r.json();
 }
 
 async function showApp() {
+  // Auth guard
+  const ok = await Auth.require();
+  if (!ok) return;
+
+  // Populate user menu
+  const user = Auth.getUser();
+  if (user?.email) {
+    const avatar = document.getElementById("user-avatar");
+    const short = document.getElementById("user-email-short");
+    const full = document.getElementById("user-email-full");
+    if (avatar) avatar.textContent = user.email[0].toUpperCase();
+    if (short) short.textContent = user.email.split("@")[0];
+    if (full) full.textContent = user.email;
+  }
+
   await loadData();
   buildSelects();
   render();
@@ -691,11 +775,10 @@ async function loadData() {
       api("extra-recipes"),  // now points to full recipes table
       api("recipe-details")
     ]);
-    if (Array.isArray(recipesRes) && recipesRes.length) {
-      recipes = recipesRes;  // replace BASE entirely with DB data
-      archivedRecipes.clear();
-      recipes.forEach(r => { if (r.archived) archivedRecipes.add(r.id); });
-    }
+    // Always replace with DB data, even if empty
+    recipes = Array.isArray(recipesRes) ? recipesRes : [];
+    archivedRecipes.clear();
+    recipes.forEach(r => { if (r.archived) archivedRecipes.add(r.id); });
     if (Array.isArray(detailsRes)) {
       detailsRes.forEach(d => { details[d.recipe_id] = { ingredients: d.ingredients, steps: d.steps }; });
     }
@@ -709,7 +792,7 @@ function getFiltered() {
     const d = details[r.id];
     const ingText = (d?.ingredients||[]).join(' ').toLowerCase();
     const stepText = (d?.steps||[]).join(' ').toLowerCase();
-    return (!s || r.name.toLowerCase().includes(s) || r.protein.toLowerCase().includes(s) || r.source.toLowerCase().includes(s) || ingText.includes(s) || stepText.includes(s))
+    return (!s || (r.name||'').toLowerCase().includes(s) || (r.protein||'').toLowerCase().includes(s) || (r.source||'').toLowerCase().includes(s) || ingText.includes(s) || stepText.includes(s))
       && (!fCat || r.category === fCat)
       && (!fProt || r.protein === fProt)
       && (!fMeth || r.method === fMeth)
@@ -782,7 +865,7 @@ function renderGrid(list) {
         <div class="card-name${hd?"":" dim"}">${esc(r.name)}</div>
         <div class="card-meta">
           <span style="font-size:11px;color:${c.text};background:${c.bg};padding:2px 7px;border-radius:10px;font-family:monospace">${r.category}</span>
-          ${r.cost ? `<span class="card-cost">${r.cost}</span>` : ""}
+          ${dynamicCostStr(r) ? `<span class="card-cost">${dynamicCostStr(r)}</span>` : ""}
         </div>
       </div>
     </div>`;
@@ -811,7 +894,7 @@ function openRecipeModal(id) {
   document.getElementById("rmodal-meta").innerHTML = `
     <span style="font-size:12px;background:${c.bg};color:${c.text};padding:2px 10px;border-radius:10px;font-family:monospace">${r.category}</span>
     <span style="font-size:12px;color:#9a9fae">${MI[r.method]||"🍴"} ${r.method}</span>
-    ${r.cost ? `<span style="font-size:12px;color:#7bcf8e;font-family:monospace;font-weight:600">${r.cost}</span>` : ""}
+    ${dynamicCostStr(r) ? `<span style="font-size:12px;color:#7bcf8e;font-family:monospace;font-weight:600">${dynamicCostStr(r)}</span>` : ""}
     ${r.servings ? `<span style="font-size:12px;color:#556;font-family:monospace">${r.servings} servings</span>` : ""}
   `;
 
@@ -885,7 +968,8 @@ function render() {
   const list = getFiltered();
   document.getElementById("total-badge").textContent = recipes.length+" recipes";
   const hasFilter = fCat||fProt||fMeth||q||matchActive;
-  document.getElementById("count").innerHTML = `Showing ${list.length} of ${recipes.length} recipes${hasFilter?'<span class="clear-link" onclick="clearAll()">Clear</span>':""}`;
+  const selStr = checked.size > 0 ? ` · <span style="color:#6e8efb;font-weight:600">${checked.size} selected</span>` : "";
+  document.getElementById("count").innerHTML = `Showing ${list.length} of ${recipes.length} recipes${hasFilter?'<span class="clear-link" onclick="clearAll()">Clear</span>':""}${selStr}`;
   const gb = document.getElementById("grocery-btn");
   gb.style.display = checked.size > 0 ? "inline-flex" : "none";
   document.getElementById("grocery-count").textContent = checked.size;
@@ -915,7 +999,7 @@ function render() {
     <div><span class="badge" style="background:${c.bg};color:${c.text}"><span class="dot" style="background:${c.dot}"></span>${r.category}</span></div>
     <div class="meta">${MI[r.method]||"🍴"} ${r.method}</div>
 
-    <div class="cost">${r.cost}</div>
+    <div class="cost" style="color:${dynamicCostStr(r) ? '#7bcf8e' : '#556'}">${dynamicCostStr(r) || ''}</div>
     <div style="display:flex;align-items:center;justify-content:center">
       ${ms ? `<span class="match-badge ${ms.match==='full'?'match-full':'match-partial'}" title="${esc(ms.note)}">${ms.score}%</span>` : (matchActive ? `<span style="font-size:11px;color:#333;font-family:monospace">—</span>` : "")}
     </div>
@@ -931,7 +1015,10 @@ function render() {
             onmouseover="this.style.background='#1a3a1a'" onmouseout="this.style.background='#1e2330'">↩</button>`
         : `<button onclick="event.stopPropagation();archiveRecipe(${r.id})" title="Archive"
             style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:transparent;border:none;color:#3a3a4a;font-size:16px;font-weight:700;cursor:pointer;line-height:1"
-            onmouseover="this.style.color='#cc4444'" onmouseout="this.style.color='#3a3a4a'">✕</button>`
+            onmouseover="this.style.color='#cc4444'" onmouseout="this.style.color='#3a3a4a'">✕</button>
+          <button onclick="event.stopPropagation();openEditModal(${r.id})" title="Edit recipe"
+            style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:transparent;border:none;color:#3a3a4a;font-size:13px;cursor:pointer"
+            onmouseover="this.style.color='#6e8efb'" onmouseout="this.style.color='#3a3a4a'">✏</button>`
       }
     </div>
   </div>
@@ -1012,10 +1099,33 @@ function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").
 
 // ── Interactions ──
 function rowClick(e,id){if(e.target.type==="checkbox"||e.target.tagName==="A")return;document.getElementById("wrap-"+id)?.classList.toggle("open");}
-function chk(e,id){e.stopPropagation();e.target.checked?checked.add(id):checked.delete(id);document.getElementById("grocery-btn").style.display=checked.size>0?"inline-flex":"none";document.getElementById("grocery-count").textContent=checked.size;localStorage.setItem("recipe-cart",JSON.stringify([...checked]));}
-function onSearch(v){q=v;render();}
-function clearSearch(){document.getElementById("search").value="";q="";render();}
-function clearAll(){fCat="";fProt="";fMeth="";q="";matchActive=false;matchScores={};fridgeSelected.clear();renderFridgeChips();document.getElementById("search").value="";document.getElementById("filterProt").value="";document.getElementById("filterMeth").value="";document.getElementById("fridge-search").value="";document.getElementById("fridge-info").textContent="";render();}
+function toggleUserMenu() {
+  const dd = document.getElementById("user-dropdown");
+  dd.style.display = dd.style.display === "none" ? "block" : "none";
+}
+document.addEventListener("click", e => {
+  if (!e.target.closest("#user-menu")) {
+    const dd = document.getElementById("user-dropdown");
+    if (dd) dd.style.display = "none";
+  }
+});
+
+function chk(e,id){
+  e.stopPropagation();
+  e.target.checked ? checked.add(id) : checked.delete(id);
+  localStorage.setItem("recipe-cart",JSON.stringify([...checked]));
+  // Update counter and grocery button without full re-render (avoids disrupting search/focus)
+  const gb = document.getElementById("grocery-btn");
+  gb.style.display = checked.size > 0 ? "inline-flex" : "none";
+  document.getElementById("grocery-count").textContent = checked.size;
+  const countEl = document.getElementById("count");
+  const selStr = checked.size > 0 ? ` · <span style="color:#6e8efb;font-weight:600">${checked.size} selected</span>` : "";
+  // Replace only the selected part — preserve the "Showing X of Y" text
+  countEl.innerHTML = countEl.innerHTML.replace(/ · <span[^>]*>\d+ selected<\/span>/, "") + selStr;
+}
+function onSearch(v){q=v;const cb=document.getElementById("search-clear-btn");if(cb)cb.style.display=v?"":"none";render();}
+function clearSearch(){document.getElementById("search").value="";q="";const cb=document.getElementById("search-clear-btn");if(cb)cb.style.display="none";render();}
+function clearAll(){fCat="";fProt="";fMeth="";q="";matchActive=false;matchScores={};fridgeSelected.clear();renderFridgeChips();document.getElementById("search").value="";document.getElementById("filterProt").value="";document.getElementById("filterMeth").value="";document.getElementById("fridge-search").value="";document.getElementById("fridge-info").textContent="";const cb=document.getElementById("search-clear-btn");if(cb)cb.style.display="none";render();}
 function toggleFridge(){document.getElementById("fridge-bar").classList.toggle("show");}
 function toggleAdd(){document.getElementById("add-panel").classList.toggle("show");}
 
@@ -1434,46 +1544,246 @@ let groceryItems = [];
 let _cachedStructuredRows = [];
 let archivedRecipes = new Set(); // persisted across refreshes
 
+// Cost DB: { price, size, unit }
+// price = package price at Aldi
+// size = package size in that unit
+// unit = the unit we measure cost per
 const COST_DB = {
-  // Proteins
-  "chicken breast": 4.00, "chicken thigh": 3.50, "chicken wing": 5.00, "chicken": 3.50,
-  "ground turkey": 5.00, "ground beef": 6.00, "turkey": 5.00, "beef": 7.00,
-  "pork shoulder": 4.00, "pork butt": 4.00, "pork": 5.00,
-  "shrimp": 8.00, "tuna": 2.50, "chorizo": 4.00, "sausage": 4.50, "bacon": 5.00,
-  "frozen meatballs": 7.00, "meatballs": 7.00,
-  // Dairy & Eggs
-  "eggs": 4.00, "egg whites": 4.00, "cheddar cheese": 3.50, "mozzarella": 3.50,
-  "parmesan": 4.00, "ricotta": 4.00, "feta": 3.50, "mexican cheese": 3.50,
-  "heavy cream": 3.00, "sour cream": 2.00, "butter": 3.00, "cream cheese": 3.00,
-  "yogurt": 3.00,
-  // Produce
-  "onion": 1.00, "garlic": 1.50, "bell pepper": 1.50, "spinach": 3.00,
-  "avocado": 1.50, "tomato": 2.00, "jalapeno": 0.50, "jalapeño": 0.50,
-  "lime": 1.00, "lemon": 1.00, "cilantro": 1.00, "parsley": 1.00, "basil": 2.00,
-  "green onion": 1.00, "mushroom": 3.00, "broccoli": 2.50, "cauliflower": 3.00,
-  "zucchini": 1.50, "sweet potato": 2.00, "potato": 2.00, "brussels sprouts": 3.00,
-  // Pantry/Canned
-  "salsa verde": 3.50, "salsa": 3.00, "enchilada sauce": 2.50, "pesto": 4.00,
-  "marinara": 3.00, "tomato sauce": 1.50, "crushed tomatoes": 2.00, "diced tomatoes": 1.50,
-  "chicken broth": 2.50, "beef broth": 2.50, "vegetable broth": 2.00,
-  "black beans": 1.50, "pinto beans": 1.50, "chickpeas": 1.50,
-  "cream of mushroom soup": 2.00, "bread crumbs": 2.00,
-  // Oils, Sauces
-  "avocado oil": 6.00, "olive oil": 5.00, "coconut aminos": 5.00, "soy sauce": 2.50,
-  "honey": 4.00, "rice vinegar": 2.50, "ketchup": 2.50, "bbq sauce": 3.00,
-  "hot sauce": 2.00, "sriracha": 3.00, "peanut butter": 3.50, "cornstarch": 1.50,
-  "oat flour": 3.00,
-  // Grains & Carbs
-  "pasta": 2.50, "rotini": 2.50, "egg noodles": 2.50, "chickpea pasta": 4.00,
-  "cassava tortillas": 5.00, "corn tortillas": 3.00, "flour tortillas": 3.50, "tortillas": 3.50,
-  "rice": 2.50, "cauliflower rice": 3.50, "tater tots": 3.50, "rolls": 3.00,
+  // === PROTEINS (priced per lb) ===
+  "chicken breast":       { price: 7.00,  size: 2,    unit: "lb" },
+  "chicken thigh":        { price: 6.00,  size: 2,    unit: "lb" },
+  "chicken wing":         { price: 8.00,  size: 2,    unit: "lb" },
+  "chicken":              { price: 6.00,  size: 2,    unit: "lb" },
+  "ground turkey":        { price: 5.00,  size: 1,    unit: "lb" },
+  "ground beef":          { price: 6.00,  size: 1,    unit: "lb" },
+  "turkey":               { price: 5.00,  size: 1,    unit: "lb" },
+  "beef":                 { price: 7.00,  size: 1,    unit: "lb" },
+  "pork shoulder":        { price: 5.00,  size: 2,    unit: "lb" },
+  "pork":                 { price: 5.00,  size: 2,    unit: "lb" },
+  "shrimp":               { price: 8.00,  size: 1,    unit: "lb" },
+  "tuna":                 { price: 2.50,  size: 1,    unit: "can" },
+  "chorizo":              { price: 4.00,  size: 1,    unit: "lb" },
+  "sausage":              { price: 4.50,  size: 1,    unit: "lb" },
+  "bacon":                { price: 5.00,  size: 1,    unit: "lb" },
+  "deli chicken":         { price: 5.00,  size: 1,    unit: "lb" },
+  "meatballs":            { price: 7.00,  size: 26,   unit: "oz" },
+
+  // === DAIRY & EGGS ===
+  "eggs":                 { price: 4.00,  size: 12,   unit: "egg" },
+  "egg whites":           { price: 4.00,  size: 32,   unit: "oz" },
+  "cheddar cheese":       { price: 3.50,  size: 8,    unit: "oz" },
+  "mozzarella":           { price: 3.50,  size: 8,    unit: "oz" },
+  "parmesan":             { price: 4.00,  size: 8,    unit: "oz" },
+  "ricotta":              { price: 4.00,  size: 15,   unit: "oz" },
+  "feta":                 { price: 3.50,  size: 6,    unit: "oz" },
+  "mexican cheese":       { price: 3.50,  size: 8,    unit: "oz" },
+  "cream cheese":         { price: 3.00,  size: 8,    unit: "oz" },
+  "heavy cream":          { price: 3.00,  size: 16,   unit: "oz" },
+  "sour cream":           { price: 2.00,  size: 16,   unit: "oz" },
+  "butter":               { price: 3.00,  size: 16,   unit: "tbsp" },
+  "greek yogurt":         { price: 4.00,  size: 32,   unit: "oz" },
+  "yogurt":               { price: 3.00,  size: 32,   unit: "oz" },
+  "milk":                 { price: 3.00,  size: 128,  unit: "oz" },
+  "protein powder":       { price: 30.00, size: 30,   unit: "scoop" },
+
+  // === PRODUCE (priced per unit or oz) ===
+  "onion":                { price: 1.50,  size: 3,    unit: "whole" },
+  "garlic":               { price: 1.50,  size: 30,   unit: "clove" },
+  "bell pepper":          { price: 2.50,  size: 3,    unit: "whole" },
+  "spinach":              { price: 3.00,  size: 5,    unit: "oz" },
+  "avocado":              { price: 1.50,  size: 1,    unit: "whole" },
+  "tomato":               { price: 2.00,  size: 4,    unit: "whole" },
+  "jalapeno":             { price: 1.00,  size: 6,    unit: "whole" },
+  "jalapeño":             { price: 1.00,  size: 6,    unit: "whole" },
+  "lime":                 { price: 1.50,  size: 6,    unit: "whole" },
+  "lemon":                { price: 1.50,  size: 6,    unit: "whole" },
+  "cilantro":             { price: 1.00,  size: 1,    unit: "bunch" },
+  "parsley":              { price: 1.00,  size: 1,    unit: "bunch" },
+  "basil":                { price: 2.00,  size: 1,    unit: "bunch" },
+  "green onion":          { price: 1.00,  size: 1,    unit: "bunch" },
+  "mushroom":             { price: 3.00,  size: 8,    unit: "oz" },
+  "broccoli":             { price: 2.50,  size: 12,   unit: "oz" },
+  "cauliflower":          { price: 3.00,  size: 1,    unit: "head" },
+  "zucchini":             { price: 1.50,  size: 2,    unit: "whole" },
+  "sweet potato":         { price: 2.00,  size: 3,    unit: "whole" },
+  "potato":               { price: 2.00,  size: 5,    unit: "whole" },
+  "brussels sprouts":     { price: 3.00,  size: 12,   unit: "oz" },
+  "artichoke":            { price: 3.00,  size: 14,   unit: "oz" },
+  "corn":                 { price: 2.00,  size: 15,   unit: "oz" },
+
+  // === PANTRY / CANNED ===
+  "salsa verde":          { price: 3.50,  size: 16,   unit: "oz" },
+  "salsa":                { price: 3.00,  size: 16,   unit: "oz" },
+  "enchilada sauce":      { price: 2.50,  size: 19,   unit: "oz" },
+  "pesto":                { price: 4.00,  size: 6,    unit: "oz" },
+  "marinara":             { price: 3.00,  size: 24,   unit: "oz" },
+  "tomato sauce":         { price: 1.50,  size: 15,   unit: "oz" },
+  "crushed tomatoes":     { price: 2.00,  size: 28,   unit: "oz" },
+  "diced tomatoes":       { price: 1.50,  size: 14.5, unit: "oz" },
+  "chicken broth":        { price: 2.50,  size: 32,   unit: "oz" },
+  "beef broth":           { price: 2.50,  size: 32,   unit: "oz" },
+  "vegetable broth":      { price: 2.00,  size: 32,   unit: "oz" },
+  "black beans":          { price: 1.50,  size: 15,   unit: "oz" },
+  "pinto beans":          { price: 1.50,  size: 15,   unit: "oz" },
+  "chickpeas":            { price: 1.50,  size: 15,   unit: "oz" },
+  "cream of mushroom":    { price: 2.00,  size: 10.5, unit: "oz" },
+  "bread crumbs":         { price: 2.00,  size: 15,   unit: "oz" },
+
+  // === OILS & SAUCES (tbsp-based) ===
+  "avocado oil":          { price: 6.00,  size: 48,   unit: "tbsp" },
+  "olive oil":            { price: 5.00,  size: 48,   unit: "tbsp" },
+  "coconut aminos":       { price: 5.00,  size: 32,   unit: "tbsp" },
+  "soy sauce":            { price: 2.50,  size: 32,   unit: "tbsp" },
+  "honey":                { price: 4.00,  size: 24,   unit: "tbsp" },
+  "rice vinegar":         { price: 2.50,  size: 32,   unit: "tbsp" },
+  "ketchup":              { price: 2.50,  size: 40,   unit: "tbsp" },
+  "bbq sauce":            { price: 3.00,  size: 24,   unit: "tbsp" },
+  "hot sauce":            { price: 2.00,  size: 24,   unit: "tbsp" },
+  "sriracha":             { price: 3.00,  size: 28,   unit: "tbsp" },
+  "peanut butter":        { price: 3.50,  size: 32,   unit: "tbsp" },
+  "cornstarch":           { price: 1.50,  size: 48,   unit: "tbsp" },
+  "oat flour":            { price: 3.00,  size: 32,   unit: "tbsp" },
+  "tahini":               { price: 4.00,  size: 16,   unit: "tbsp" },
+
+  // === SPICES (tsp-based, tiny cost per use) ===
+  "salt":                 { price: 1.00,  size: 200,  unit: "tsp" },
+  "pepper":               { price: 1.50,  size: 100,  unit: "tsp" },
+  "cumin":                { price: 2.00,  size: 60,   unit: "tsp" },
+  "chili powder":         { price: 2.00,  size: 60,   unit: "tsp" },
+  "garlic powder":        { price: 2.00,  size: 60,   unit: "tsp" },
+  "onion powder":         { price: 2.00,  size: 60,   unit: "tsp" },
+  "paprika":              { price: 2.00,  size: 60,   unit: "tsp" },
+  "oregano":              { price: 2.00,  size: 40,   unit: "tsp" },
+  "cinnamon":             { price: 2.00,  size: 60,   unit: "tsp" },
+  "red pepper flakes":    { price: 2.00,  size: 40,   unit: "tsp" },
+  "italian seasoning":    { price: 2.00,  size: 40,   unit: "tsp" },
+  "taco seasoning":       { price: 2.00,  size: 12,   unit: "tsp" },
+  "everything bagel":     { price: 3.00,  size: 60,   unit: "tsp" },
+
+  // === GRAINS & CARBS ===
+  "pasta":                { price: 2.50,  size: 16,   unit: "oz" },
+  "rotini":               { price: 2.50,  size: 16,   unit: "oz" },
+  "egg noodles":          { price: 2.50,  size: 16,   unit: "oz" },
+  "chickpea pasta":       { price: 4.00,  size: 8,    unit: "oz" },
+  "rice":                 { price: 2.50,  size: 32,   unit: "oz" },
+  "cauliflower rice":     { price: 3.50,  size: 12,   unit: "oz" },
+  "tater tots":           { price: 3.50,  size: 28,   unit: "oz" },
+  "tortillas":            { price: 3.50,  size: 8,    unit: "whole" },
+  "corn tortillas":       { price: 3.00,  size: 30,   unit: "whole" },
+  "flour tortillas":      { price: 3.50,  size: 8,    unit: "whole" },
+  "cassava tortillas":    { price: 5.00,  size: 6,    unit: "whole" },
+  "rolls":                { price: 3.00,  size: 8,    unit: "whole" },
+  "bread":                { price: 3.00,  size: 16,   unit: "slice" },
+  "noodles":              { price: 2.00,  size: 1,    unit: "pack" },
 };
 
+// Unit conversion to normalize measurements
+const UNIT_CONVERSIONS = {
+  // volume to tbsp
+  "tsp": 0.333, "teaspoon": 0.333, "teaspoons": 0.333,
+  "tbsp": 1, "tablespoon": 1, "tablespoons": 1,
+  "cup": 16, "cups": 16,
+  "oz": 2, "ounce": 2, "ounces": 2, "fl oz": 2,
+  "pint": 32, "quart": 64,
+  // weight
+  "lb": 1, "lbs": 1, "pound": 1, "pounds": 1,
+  "g": 0.0022, "gram": 0.0022, "grams": 0.0022,
+  // count
+  "whole": 1, "clove": 1, "cloves": 1, "egg": 1, "eggs": 1,
+  "can": 1, "cans": 1, "bunch": 1, "head": 1, "scoop": 1, "pack": 1,
+  "slice": 1, "slices": 1,
+  // meat-specific
+  "strip": 1, "strips": 1, "piece": 1, "pieces": 1,
+  "fillet": 1, "fillets": 1, "breast": 1, "thigh": 1, "thighs": 1,
+};
+
+// Map count-based units to per-lb equivalents for proteins
+const COUNT_TO_LB = {
+  "strip": 0.05,   // 1 bacon strip ≈ 0.05 lb
+  "strips": 0.05,
+  "piece": 0.25,
+  "pieces": 0.25,
+  "breast": 0.5,   // 1 chicken breast ≈ 0.5 lb
+  "thigh": 0.25,
+  "thighs": 0.25,
+  "fillet": 0.33,
+};
+
+function parseIngredientCost(ingStr) {
+  if (!ingStr) return 0;
+  const lower = ingStr.toLowerCase().trim();
+
+  // Find matching item in COST_DB
+  let matched = null, matchedKey = '';
+  for (const key of Object.keys(COST_DB)) {
+    if (lower.includes(key) && key.length > matchedKey.length) {
+      matched = COST_DB[key];
+      matchedKey = key;
+    }
+  }
+  if (!matched) return 0;
+
+  // Parse amount and unit from ingredient string
+  // e.g. "2 tbsp olive oil" -> amount=2, unit=tbsp
+  const numMatch = lower.match(/^([\d¼½¾⅓⅔⅛⅜⅝⅞]+\.?\d*)\s*(?:to\s+[\d.]+\s+)?([a-z\s]+?)\s/);
+  let amount = 1, unit = matched.unit;
+
+  if (numMatch) {
+    // Handle fractions
+    const raw = numMatch[1].replace('¼','0.25').replace('½','0.5').replace('¾','0.75')
+      .replace('⅓','0.33').replace('⅔','0.67').replace('⅛','0.125');
+    amount = parseFloat(raw) || 1;
+    const parsedUnit = numMatch[2].trim().toLowerCase();
+    if (UNIT_CONVERSIONS[parsedUnit] !== undefined) unit = parsedUnit;
+  }
+
+  // Convert both to the same base unit and calculate cost
+  const pkgUnit = matched.unit;
+  const pkgSize = matched.size;
+  const pkgPrice = matched.price;
+
+  // If units match directly
+  if (unit === pkgUnit || UNIT_CONVERSIONS[unit] === UNIT_CONVERSIONS[pkgUnit]) {
+    return (amount / pkgSize) * pkgPrice;
+  }
+
+  // Both in volume (tbsp-based) conversion
+  const toBbsp = UNIT_CONVERSIONS[unit];
+  const pkgToTbsp = UNIT_CONVERSIONS[pkgUnit];
+  if (toBbsp && pkgToTbsp) {
+    const amountInTbsp = amount * toBbsp;
+    const pkgInTbsp = pkgSize * pkgToTbsp;
+    return (amountInTbsp / pkgInTbsp) * pkgPrice;
+  }
+
+  // Count-based meat units -> lb conversion
+  if (COUNT_TO_LB[unit] && pkgUnit === 'lb') {
+    const amountInLb = amount * COUNT_TO_LB[unit];
+    return (amountInLb / pkgSize) * pkgPrice;
+  }
+
+  // Both weight (lb-based)
+  const toLb = { lb:1,lbs:1,pound:1,pounds:1,oz:0.0625,ounces:0.0625,g:0.0022,gram:0.0022,grams:0.0022 };
+  if (toLb[unit] && toLb[pkgUnit]) {
+    const amountInLb = amount * toLb[unit];
+    const pkgInLb = pkgSize * toLb[pkgUnit];
+    return (amountInLb / pkgInLb) * pkgPrice;
+  }
+
+  // Fallback: treat as fractional package (cap at 2x package price)
+  const fraction = Math.min(amount / pkgSize, 2);
+  return fraction * pkgPrice;
+}
+
 function estimateCost(ingredient) {
+  // Use parseIngredientCost for accuracy, with a per-ingredient sanity cap
   if (!ingredient) return null;
+  const cost = parseIngredientCost(ingredient);
+  if (cost > 0 && cost < 15) return cost;
+  // Fallback: flat 30% of package price
   const lower = ingredient.toLowerCase();
-  for (const [key, cost] of Object.entries(COST_DB)) {
-    if (lower.includes(key)) return cost;
+  for (const [key, item] of Object.entries(COST_DB)) {
+    if (lower.includes(key)) return Math.min(item.price * 0.3, 10);
   }
   return null;
 }
@@ -1527,15 +1837,51 @@ function evalFraction(str) {
   return b ? parseInt(a) / parseInt(b) : parseFloat(a);
 }
 
+// Calculate cost from ingredients using per-unit COST_DB
+function calcCostFromIngredients(recipeId, servings) {
+  const d = details[recipeId];
+  if (!d || !d.ingredients || d.ingredients.length < 2) return null;
+  const defaultSv = getDefaultServings(recipeId) || 4;
+  const sv = servings || defaultSv;
+  let total = 0, matched = 0;
+  d.ingredients.forEach(ing => {
+    const cost = parseIngredientCost(ing);
+    if (cost > 0) { total += cost; matched++; }
+  });
+  if (matched < 2) return null;
+  const ratio = sv / defaultSv;
+  return total * (ratio > 1 ? 1 + (ratio-1)*0.75 : ratio > 0 ? 1-(1-ratio)*0.75 : 1);
+}
+
+// Format dynamic cost as a string like "$4" or "$8-12"
+function dynamicCostStr(r) {
+  const d = details[r.id];
+  if (!d || !d.ingredients || d.ingredients.length < 2) {
+    return r.cost && r.cost !== 'TBD' ? r.cost : null;
+  }
+  // Use the same method as the grocery list for consistency
+  let total = 0, matched = 0;
+  d.ingredients.forEach(ing => {
+    const cost = estimateCost(ing);
+    if (cost > 0) { total += cost; matched++; }
+  });
+  if (matched < 2 || total <= 0) return r.cost && r.cost !== 'TBD' ? r.cost : null;
+  // Sanity check: if still unrealistic fall back to stored cost
+  if (total > 80) return r.cost && r.cost !== 'TBD' ? r.cost : null;
+  return `~$${Math.round(total)}`;
+}
+
 function scaledCost(r, sv, def) {
-  // Parse low end of cost range like "$6-9" -> 7.5
-  if (!r.cost || r.cost === 'TBD') return null;
-  const nums = r.cost.replace(/[^0-9\-\.]/g,'').split('-').map(Number).filter(n=>n>0);
+  // Always prefer ingredient-based calculation
+  const fromIngredients = calcCostFromIngredients(r.id, sv);
+  if (fromIngredients && fromIngredients < 100) return fromIngredients; // sanity cap
+  // Fall back to hardcoded cost string
+  if (!r.cost || r.cost === 'TBD' || r.cost === 'null') return null;
+  const nums = r.cost.replace(/[^0-9\.]/g,' ').trim().split(/\s+/).map(Number).filter(n=>n>0&&n<200);
   if (!nums.length) return null;
   const base = nums.reduce((a,b)=>a+b,0)/nums.length;
   const ratio = def > 0 ? sv / def : 1;
-  const scaled = base * (ratio > 1 ? 1 + (ratio-1)*0.75 : ratio > 0 ? 1-(1-ratio)*0.75 : 1);
-  return scaled;
+  return base * (ratio > 1 ? 1 + (ratio-1)*0.75 : ratio > 0 ? 1-(1-ratio)*0.75 : 1);
 }
 
 function buildCartHeaderHTML(sel) {
@@ -1546,7 +1892,7 @@ function buildCartHeaderHTML(sel) {
   return `<div style="margin-bottom:12px;padding:12px 16px;background:#12151f;border:1px solid #2a2f3e;border-radius:10px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#556;font-family:monospace">🛒 In your cart</div>
-      ${totalCost > 0 ? `<div style="font-size:12px;color:#6aaa6a;font-family:monospace">~$${totalCost.toFixed(0)} est.</div>` : ''}
+      ${totalCost > 0 ? `<div id="cart-header-total" style="font-size:12px;color:#6aaa6a;font-family:monospace">~$${totalCost.toFixed(0)} est.</div>` : ''}
     </div>
     <div style="display:flex;flex-direction:column;gap:6px">
       ${sel.map(r => {
@@ -1619,6 +1965,8 @@ async function openGrocery() {
     const unit = normalizeUnit(row.measurement);
     const key = `${ingKey}|||${unit}`;
     const mult = servingsMult[row.recipe_id] || 1;
+    const cmult = costMult[row.recipe_id] || 1;
+    const baseCost = estimateCost(row.ingredient);
     if (!merged[key]) {
       merged[key] = {
         ingredient: row.ingredient.trim(),
@@ -1626,10 +1974,14 @@ async function openGrocery() {
         amount: 0,
         hasAmount: false,
         recipes: [],
-        cost: estimateCost(row.ingredient),
+        cost: 0,
+        baseCost,
         sortKey: ingKey,
       };
     }
+    // Accumulate scaled cost — each recipe contribution scaled by its costMult
+    if (baseCost) merged[key].cost = (merged[key].cost || 0) + baseCost * cmult;
+    else if (!merged[key].cost) merged[key].cost = null;
     if (row.amount) { merged[key].amount += parseFloat(row.amount) * mult; merged[key].hasAmount = true; }
     const rname = recipeNames[row.recipe_id];
     if (rname && !merged[key].recipes.includes(rname)) merged[key].recipes.push(rname);
@@ -1638,21 +1990,19 @@ async function openGrocery() {
   // Fallback: use text ingredients for recipes without structured data (best-effort scaling)
   fallbackRecipes.forEach(r => {
     const mult = servingsMult[r.id] || 1;
+    const cmult = costMult[r.id] || 1;
     (details[r.id].ingredients || []).forEach(ing => {
       // Try to scale numbers in the text
       let scaledIng = ing.trim();
-      let wasScaled = false;
-      if (mult !== 1) {
-        scaledIng = scaleIngredientText(ing.trim(), mult);
-        wasScaled = scaledIng !== ing.trim();
-      }
+      if (mult !== 1) scaledIng = scaleIngredientText(ing.trim(), mult);
       const key = `__text__${ing.trim().toLowerCase()}`;
+      const baseCost = estimateCost(ing);
       if (!merged[key]) merged[key] = {
         ingredient: scaledIng,
         measurement: null, amount: 0, hasAmount: false,
-        recipes: [], cost: estimateCost(ing),
+        recipes: [], cost: baseCost ? baseCost * cmult : null,
         sortKey: ing.trim().toLowerCase(),
-        needsReview: mult !== 1, // flag for ⚠️
+        needsReview: mult !== 1,
       };
       if (!merged[key].recipes.includes(r.name)) merged[key].recipes.push(r.name);
     });
@@ -1673,10 +2023,16 @@ async function openGrocery() {
 
   // Cost summary banner
   const totalCost = groceryItems.reduce((s, i) => s + (i.cost || 0), 0);
+
+  // Sync cart header total with ingredient-based calculation
+  const cartTotalEl = document.getElementById("cart-header-total");
+  if (cartTotalEl && totalCost > 0) cartTotalEl.textContent = "~$" + totalCost.toFixed(0) + " est.";
   if (totalCost > 0) {
-    body.innerHTML += `<div style="margin-top:14px;padding:10px 14px;background:#0f1f0f;border:1px solid #2a4a2a;border-radius:8px;font-size:12px;color:#6aaa6a;font-family:monospace">
-      💰 Estimated total: <strong style="font-size:14px">~$${totalCost.toFixed(0)}</strong> <span style="color:#3a6a3a">(rough estimate, prices vary)</span>
-    </div>`;
+    const bnr = document.createElement("div");
+    bnr.className = "cost-banner";
+    bnr.style.cssText = "margin-top:14px;padding:10px 14px;background:#0f1f0f;border:1px solid #2a4a2a;border-radius:8px;font-size:12px;color:#6aaa6a;font-family:monospace";
+    bnr.innerHTML = `💰 Estimated total: <strong style="font-size:14px">~$${totalCost.toFixed(0)}</strong> <span style="color:#3a6a3a">(rough estimate, prices vary)</span>`;
+    body.appendChild(bnr);
   }
 
   if (noDataRecipes.length) {
@@ -1732,17 +2088,22 @@ function rerenderGrocery() {
     const unit = normalizeUnit(row.measurement);
     const key = `${ingKey}|||${unit}`;
     const mult = servingsMult[row.recipe_id] || 1;
-    if (!merged[key]) merged[key] = { ingredient: row.ingredient.trim(), measurement: unit || null, amount: 0, hasAmount: false, recipes: [], cost: estimateCost(row.ingredient), sortKey: ingKey };
+    const cmult = costMult[row.recipe_id] || 1;
+    const baseCost = estimateCost(row.ingredient);
+    if (!merged[key]) merged[key] = { ingredient: row.ingredient.trim(), measurement: unit || null, amount: 0, hasAmount: false, recipes: [], cost: 0, sortKey: ingKey };
+    if (baseCost) merged[key].cost = (merged[key].cost || 0) + baseCost * cmult;
     if (row.amount) { merged[key].amount += parseFloat(row.amount) * mult; merged[key].hasAmount = true; }
     const rname = recipeNames[row.recipe_id];
     if (rname && !merged[key].recipes.includes(rname)) merged[key].recipes.push(rname);
   });
   fallbackRecipes.forEach(r => {
     const mult = servingsMult[r.id] || 1;
+    const cmult = costMult[r.id] || 1;
     (details[r.id].ingredients || []).forEach(ing => {
       const key = `__text__${ing.trim().toLowerCase()}`;
       let scaledIng = mult !== 1 ? scaleIngredientText(ing.trim(), mult) : ing.trim();
-      if (!merged[key]) merged[key] = { ingredient: scaledIng, measurement: null, amount: 0, hasAmount: false, recipes: [], cost: estimateCost(ing), sortKey: ing.trim().toLowerCase(), needsReview: mult !== 1 };
+      const baseCost = estimateCost(ing);
+      if (!merged[key]) merged[key] = { ingredient: scaledIng, measurement: null, amount: 0, hasAmount: false, recipes: [], cost: baseCost ? baseCost * cmult : null, sortKey: ing.trim().toLowerCase(), needsReview: mult !== 1 };
       if (!merged[key].recipes.includes(r.name)) merged[key].recipes.push(r.name);
     });
   });
@@ -1758,12 +2119,24 @@ function rerenderGrocery() {
   renderGroceryList(groceryItems);
   updateGroceryCount();
 
+  // Rebuild cart header so servings + per-recipe costs stay in sync
+  document.getElementById("g-cart-header").innerHTML = buildCartHeaderHTML(sel);
+
   const totalCost = groceryItems.reduce((s, i) => s + (i.cost || 0), 0);
+  // Sync cart header summary total to ingredient-based calculation
+  const cartTotalEl = document.getElementById("cart-header-total");
+  if (cartTotalEl && totalCost > 0) cartTotalEl.textContent = "~$" + totalCost.toFixed(0) + " est.";
+
   const body = document.getElementById("g-body");
+  // Remove old cost banner before re-adding to avoid duplicates
+  const oldBanner = body.querySelector(".cost-banner");
+  if (oldBanner) oldBanner.remove();
   if (totalCost > 0) {
-    body.innerHTML += `<div style="margin-top:14px;padding:10px 14px;background:#0f1f0f;border:1px solid #2a4a2a;border-radius:8px;font-size:12px;color:#6aaa6a;font-family:monospace">
-      💰 Estimated total: <strong style="font-size:14px">~$${totalCost.toFixed(0)}</strong> <span style="color:#3a6a3a">(rough estimate, prices vary)</span>
-    </div>`;
+    const banner = document.createElement("div");
+    banner.className = "cost-banner";
+    banner.style.cssText = "margin-top:14px;padding:10px 14px;background:#0f1f0f;border:1px solid #2a4a2a;border-radius:8px;font-size:12px;color:#6aaa6a;font-family:monospace";
+    banner.innerHTML = `💰 Estimated total: <strong style="font-size:14px">~$${totalCost.toFixed(0)}</strong> <span style="color:#3a6a3a">(rough estimate, prices vary)</span>`;
+    body.appendChild(banner);
   }
 
   // Archived section
@@ -1883,16 +2256,548 @@ function closeGrocery() { document.getElementById("grocery-modal").classList.rem
 function copyCheckedGrocery() {
   const checkedItems = groceryItems.filter(i => i.checked);
   const lines = checkedItems.map(i => `☐ ${i.text}`);
-  const totalCost = checkedItems.reduce((s, i) => s + (i.cost || 0), 0);
-  const text = `🛒 GROCERY LIST\n\n${lines.join("\n")}\n\n💰 Estimated total: ~$${totalCost.toFixed(0)}`;
-  navigator.clipboard.writeText(text).then(() => {
+  navigator.clipboard.writeText(lines.join("\n")).then(() => {
     const b = event.target; b.textContent = "✅ Copied!";
     setTimeout(() => b.textContent = "📋 Copy checked", 2000);
   });
 }
 
 // ── Boot ──
-showApp();
+
+// ── Sharing ──
+async function openShareModal() {
+  document.getElementById("share-modal").style.display = "flex";
+  await loadShares();
+}
+
+function closeShareModal() {
+  document.getElementById("share-modal").style.display = "none";
+  document.getElementById("share-msg").textContent = "";
+  document.getElementById("share-email").value = "";
+}
+
+async function loadShares() {
+  const list = document.getElementById("share-list");
+  list.innerHTML = '<div style="font-size:13px;color:var(--text3)">Loading...</div>';
+  try {
+    const shares = await api("library-shares");
+    if (!Array.isArray(shares) || shares.length === 0) {
+      list.innerHTML = '<div style="font-size:13px;color:var(--text3)">No one has access yet.</div>';
+      return;
+    }
+    list.innerHTML = shares.map(s => `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;flex-shrink:0">
+          ${s.shared_with_email[0].toUpperCase()}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.shared_with_email}</div>
+          <div style="font-size:11px;color:var(--text3);font-family:monospace">${s.shared_with_id ? '\u2713 Account linked' : '\u23f3 Pending sign up'}</div>
+        </div>
+        <select onchange="updateSharePerm('${s.id}', this.value)"
+          style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--text2);font-size:12px;outline:none;cursor:pointer">
+          <option value="view" ${s.permission === 'view' ? 'selected' : ''}>View only</option>
+          <option value="edit" ${s.permission === 'edit' ? 'selected' : ''}>Can edit</option>
+        </select>
+        <button onclick="revokeShare('${s.id}')"
+          style="background:none;border:1px solid #4a2020;color:#f87171;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">
+          Revoke
+        </button>
+      </div>
+    `).join('');
+  } catch(e) {
+    list.innerHTML = '<div style="font-size:13px;color:#f87171">Failed to load shares.</div>';
+  }
+}
+
+async function inviteUser() {
+  const email = document.getElementById("share-email").value.trim();
+  const permission = document.getElementById("share-perm").value;
+  const msg = document.getElementById("share-msg");
+  const btn = document.getElementById("share-invite-btn");
+  if (!email) { msg.style.color = "#f87171"; msg.textContent = "Please enter an email."; return; }
+  btn.disabled = true; btn.textContent = "Inviting...";
+  msg.textContent = "";
+  try {
+    const res = await api("library-shares", "POST", { email, permission });
+    if (res.error) {
+      msg.style.color = "#f87171"; msg.textContent = res.error;
+    } else {
+      msg.style.color = "#7bcf8e";
+      msg.textContent = res.userFound
+        ? "\u2713 " + email + " now has " + permission + " access."
+        : "\u2713 Invited! They'll get access when they sign up.";
+      document.getElementById("share-email").value = "";
+      await loadShares();
+    }
+  } catch(e) {
+    msg.style.color = "#f87171"; msg.textContent = "Something went wrong.";
+  }
+  btn.disabled = false; btn.textContent = "Invite";
+}
+
+async function updateSharePerm(id, permission) {
+  await api("library-shares", "PATCH", { id, permission });
+}
+
+async function revokeShare(id) {
+  if (!confirm("Remove this person's access?")) return;
+  await api("library-shares?id=" + id, "DELETE");
+  await loadShares();
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  const sm = document.getElementById("share-modal");
+  if (sm) sm.addEventListener("click", function(e) {
+    if (e.target === sm) closeShareModal();
+  });
+});
+
+
+// ── Edit Recipe Modal ──
+let editingId = null;
+
+function openEditModal(id) {
+  const r = recipes.find(x => x.id === id);
+  if (!r) return;
+  editingId = id;
+
+  // Populate basic fields
+  document.getElementById("edit-name").value = r.name || "";
+  document.getElementById("edit-cat").value = r.category || "Lunch/Dinner";
+  document.getElementById("edit-protein").value = r.protein || "";
+  document.getElementById("edit-method").value = r.method || "";
+  document.getElementById("edit-source").value = r.source || "";
+  document.getElementById("edit-cost").value = r.cost || "";
+  document.getElementById("edit-url").value = r.url || "";
+  document.getElementById("edit-servings").value = getServings(id);
+  document.getElementById("edit-modal-subtitle").textContent = "ID #" + id;
+  document.getElementById("edit-msg").style.display = "none";
+
+  // Populate ingredients
+  const d = details[id] || {};
+  renderEditIngredients(d.ingredients || []);
+  renderEditSteps(d.steps || []);
+
+  document.getElementById("edit-modal").style.display = "flex";
+  document.body.style.overflow = "hidden";
+}
+
+function closeEditModal() {
+  document.getElementById("edit-modal").style.display = "none";
+  document.body.style.overflow = "";
+  editingId = null;
+}
+
+function renderEditIngredients(ings) {
+  const list = document.getElementById("edit-ingredients-list");
+  list.innerHTML = ings.map((ing, i) => `
+    <div style="display:flex;gap:6px;align-items:center" id="edit-ing-row-${i}">
+      <input value="${esc(ing)}" onchange="updateEditIngredient(${i}, this.value)"
+        style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif">
+      <button onclick="removeEditIngredient(${i})" style="background:none;border:none;color:#555;font-size:16px;cursor:pointer;line-height:1;padding:2px 6px" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='#555'">×</button>
+    </div>
+  `).join("");
+  list._data = [...ings];
+}
+
+function renderEditSteps(steps) {
+  const list = document.getElementById("edit-steps-list");
+  list.innerHTML = steps.map((step, i) => `
+    <div style="display:flex;gap:6px;align-items:flex-start" id="edit-step-row-${i}">
+      <span style="font-size:11px;color:var(--text3);font-family:monospace;padding-top:10px;min-width:18px;text-align:right">${i+1}.</span>
+      <textarea onchange="updateEditStep(${i}, this.value)" rows="2"
+        style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif;resize:vertical;line-height:1.5">${esc(step)}</textarea>
+      <button onclick="removeEditStep(${i})" style="background:none;border:none;color:#555;font-size:16px;cursor:pointer;line-height:1;padding:6px 6px 0" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='#555'">×</button>
+    </div>
+  `).join("");
+  list._data = [...steps];
+}
+
+function getEditIngredients() {
+  return Array.from(document.getElementById("edit-ingredients-list").querySelectorAll("input"))
+    .map(el => el.value.trim()).filter(Boolean);
+}
+
+function getEditSteps() {
+  return Array.from(document.getElementById("edit-steps-list").querySelectorAll("textarea"))
+    .map(el => el.value.trim()).filter(Boolean);
+}
+
+function updateEditIngredient(i, val) {
+  document.getElementById("edit-ingredients-list")._data[i] = val;
+}
+
+function updateEditStep(i, val) {
+  document.getElementById("edit-steps-list")._data[i] = val;
+}
+
+function removeEditIngredient(i) {
+  const ings = getEditIngredients();
+  ings.splice(i, 1);
+  renderEditIngredients(ings);
+}
+
+function removeEditStep(i) {
+  const steps = getEditSteps();
+  steps.splice(i, 1);
+  renderEditSteps(steps);
+}
+
+function addEditIngredient() {
+  const ings = getEditIngredients();
+  ings.push("");
+  renderEditIngredients(ings);
+  // Focus the new input
+  const inputs = document.getElementById("edit-ingredients-list").querySelectorAll("input");
+  inputs[inputs.length - 1]?.focus();
+}
+
+function addEditStep() {
+  const steps = getEditSteps();
+  steps.push("");
+  renderEditSteps(steps);
+  const tas = document.getElementById("edit-steps-list").querySelectorAll("textarea");
+  tas[tas.length - 1]?.focus();
+}
+
+function showEditMsg(text, type) {
+  const el = document.getElementById("edit-msg");
+  el.style.display = "block";
+  el.textContent = text;
+  el.style.background = type === "error" ? "#2a1515" : "#152a1e";
+  el.style.color = type === "error" ? "#f87171" : "#7bcf8e";
+  el.style.border = "1px solid " + (type === "error" ? "#4a2020" : "#2a5a3e");
+}
+
+async function saveEdit() {
+  if (!editingId) return;
+  const btn = document.getElementById("edit-save-btn");
+  btn.disabled = true; btn.textContent = "Saving...";
+
+  const name = document.getElementById("edit-name").value.trim();
+  if (!name) { showEditMsg("Recipe name is required.", "error"); btn.disabled = false; btn.textContent = "Save Changes"; return; }
+
+  const updatedRecipe = {
+    id: editingId,
+    name,
+    category: document.getElementById("edit-cat").value,
+    protein: document.getElementById("edit-protein").value.trim() || "Other",
+    method: document.getElementById("edit-method").value.trim() || "Stovetop",
+    source: document.getElementById("edit-source").value.trim(),
+    cost: document.getElementById("edit-cost").value.trim(),
+    url: document.getElementById("edit-url").value.trim(),
+  };
+
+  const ingredients = getEditIngredients();
+  const steps = getEditSteps();
+  const servings = parseInt(document.getElementById("edit-servings").value) || 4;
+
+  try {
+    // Save recipe metadata
+    await api("extra-recipes", "POST", updatedRecipe);
+
+    // Save details
+    await api("recipe-details", "POST", {
+      recipe_id: editingId,
+      ingredients,
+      steps,
+      servings,
+    });
+
+    // Update local state
+    const idx = recipes.findIndex(r => r.id === editingId);
+    if (idx !== -1) recipes[idx] = { ...recipes[idx], ...updatedRecipe };
+    details[editingId] = { ingredients, steps, servings };
+
+    showEditMsg("✓ Saved!", "success");
+    setTimeout(() => {
+      closeEditModal();
+      buildSelects();
+      render();
+    }, 600);
+  } catch(e) {
+    showEditMsg("Save failed. Please try again.", "error");
+  }
+
+  btn.disabled = false; btn.textContent = "Save Changes";
+}
+
+// Close on backdrop click
+document.addEventListener("DOMContentLoaded", function() {
+  const em = document.getElementById("edit-modal");
+  if (em) em.addEventListener("click", function(e) { if (e.target === this) closeEditModal(); });
+});
+
+
+
+</script>
+
+<!-- Share Modal -->
+<div id="share-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:32px;width:100%;max-width:480px;margin:16px;box-shadow:0 24px 64px rgba(0,0,0,0.5)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+      <h2 style="font-family:'Playfair Display',serif;font-size:22px;color:var(--text)">👥 Share Library</h2>
+      <button onclick="closeShareModal()" style="background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;line-height:1">×</button>
+    </div>
+
+    <p style="font-size:13px;color:var(--text2);margin-bottom:20px">Invite someone to view or edit your entire recipe library.</p>
+
+    <!-- Invite form -->
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <input id="share-email" type="email" placeholder="their@email.com"
+        style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif"
+        onkeydown="if(event.key==='Enter') inviteUser()">
+      <select id="share-perm"
+        style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 10px;color:var(--text);font-size:13px;outline:none;cursor:pointer">
+        <option value="view">View only</option>
+        <option value="edit">Can edit</option>
+      </select>
+      <button onclick="inviteUser()" id="share-invite-btn"
+        style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap">
+        Invite
+      </button>
+    </div>
+    <div id="share-msg" style="font-size:12px;font-family:monospace;min-height:18px;margin-bottom:16px"></div>
+
+    <!-- Current shares -->
+    <div style="border-top:1px solid var(--border);padding-top:16px">
+      <p style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:12px">People with access</p>
+      <div id="share-list" style="display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:13px;color:var(--text3)">Loading...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Recipe Modal -->
+<div id="edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:500;align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 16px">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;width:100%;max-width:680px;margin:auto;box-shadow:0 24px 64px rgba(0,0,0,0.5)">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:24px 28px 20px;border-bottom:1px solid var(--border)">
+      <div>
+        <h2 style="font-family:'Playfair Display',serif;font-size:22px;color:var(--text);margin:0 0 4px">✏ Edit Recipe</h2>
+        <p style="font-size:12px;color:var(--text3);font-family:monospace;margin:0" id="edit-modal-subtitle"></p>
+      </div>
+      <button onclick="closeEditModal()" style="background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;line-height:1;padding:4px">×</button>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:24px 28px;display:flex;flex-direction:column;gap:20px">
+
+      <!-- Basic Info -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div style="grid-column:1/-1">
+          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Recipe Name</label>
+          <input id="edit-name" type="text" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:14px;outline:none;font-family:'DM Sans',sans-serif">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Category</label>
+          <select id="edit-cat" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;cursor:pointer">
+            <option value="Breakfast">Breakfast</option>
+            <option value="Lunch/Dinner">Lunch/Dinner</option>
+            <option value="Salad">Salad</option>
+            <option value="Side">Side</option>
+            <option value="Dessert">Dessert</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Protein</label>
+          <input id="edit-protein" type="text" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Method</label>
+          <input id="edit-method" type="text" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Source</label>
+          <input id="edit-source" type="text" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Est. Cost</label>
+          <input id="edit-cost" type="text" placeholder="e.g. $10-13" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">URL</label>
+          <input id="edit-url" type="url" placeholder="https://..." style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Servings</label>
+          <input id="edit-servings" type="number" min="1" max="24" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif">
+        </div>
+      </div>
+
+      <!-- Ingredients -->
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase">Ingredients</label>
+          <button onclick="addEditIngredient()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:11px;padding:3px 10px;cursor:pointer;font-family:monospace">+ Add</button>
+        </div>
+        <div id="edit-ingredients-list" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto"></div>
+      </div>
+
+      <!-- Steps -->
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase">Steps</label>
+          <button onclick="addEditStep()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:11px;padding:3px 10px;cursor:pointer;font-family:monospace">+ Add</button>
+        </div>
+        <div id="edit-steps-list" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto"></div>
+      </div>
+
+      <!-- Message -->
+      <div id="edit-msg" style="display:none;font-size:13px;font-family:monospace;padding:8px 12px;border-radius:8px"></div>
+
+      <!-- Footer -->
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px;border-top:1px solid var(--border)">
+        <button onclick="closeEditModal()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:9px 18px;color:var(--text2);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif">Cancel</button>
+        <button onclick="saveEdit()" id="edit-save-btn" style="background:var(--accent);border:none;border-radius:8px;padding:9px 22px;color:#fff;font-size:13px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+<!-- Tutorial -->
+<div id="tut-backdrop" style="display:none;position:fixed;inset:0;z-index:3000;background:transparent;pointer-events:all"></div>
+<div id="tut-highlight" style="display:none;position:fixed;z-index:3001;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,0.72);pointer-events:none;transition:left 0.25s,top 0.25s,width 0.25s,height 0.25s"></div>
+<div id="tut-card" style="display:none;position:fixed;z-index:3002;background:#1a1f2e;border:1px solid #6e8efb;border-radius:14px;padding:20px 22px;width:290px;box-shadow:0 12px 40px rgba(0,0,0,0.7)">
+  <div id="tut-arrow" style="position:absolute;width:12px;height:12px;background:#1a1f2e;border-left:1px solid #6e8efb;border-top:1px solid #6e8efb;"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span id="tut-emoji" style="font-size:18px"></span>
+      <strong id="tut-title" style="font-size:14px;color:#F5F0E8"></strong>
+    </div>
+    <button id="tut-x" style="background:none;border:none;color:#556;font-size:18px;cursor:pointer;line-height:1">×</button>
+  </div>
+  <p id="tut-body" style="margin:0 0 14px;font-size:13px;color:#b0b5c4;line-height:1.6"></p>
+  <div style="display:flex;align-items:center;justify-content:space-between">
+    <div id="tut-dots" style="display:flex;gap:4px"></div>
+    <div style="display:flex;gap:6px">
+      <button id="tut-skip" style="background:none;border:1px solid #2a2f3e;border-radius:6px;padding:5px 10px;color:#667;font-size:12px;cursor:pointer">Skip</button>
+      <button id="tut-next" style="background:#6e8efb;border:none;border-radius:6px;padding:5px 14px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">Next →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var STEPS = [
+    { emoji:"👋", title:"Welcome!", body:"This is your recipe library and meal planner. Let me show you around!", sel:null },
+    { emoji:"🔍", title:"Search & Filter", body:"Search recipes by name, protein, or source. Use the dropdowns to filter by category, protein, or method.", sel:"input[placeholder*='Search']" },
+    { emoji:"☑️", title:"Select Recipes", body:"Check the box next to recipes to add them to your grocery list. Select multiple to combine ingredients.", sel:"input[type='checkbox']" },
+    { emoji:"🛒", title:"Grocery List", body:"After selecting recipes, this button generates a combined shopping list with all ingredients.", sel:"#grocery-btn" },
+    { emoji:"📅", title:"Plan Your Week", body:"Open the weekly planner to drag recipes onto days, view your Google Calendar, and export meal plans.", sel:"button[onclick*='planner']" },
+    { emoji:"➕", title:"Add Recipes", body:"Click Add to create a new recipe. Paste in a URL and the app will try to auto-fill the details.", sel:"button[onclick*='toggleAdd']" },
+    { emoji:"👥", title:"Share Your Library", body:"Invite someone by email to view or edit your recipe library. They'll get an email invite.", sel:"button[onclick*='ShareModal']" },
+    { emoji:"🎉", title:"You're all set!", body:"Start by browsing, select some recipes, and hit Grocery List. Happy cooking!", sel:null },
+  ];
+
+  var idx = 0;
+  var backdrop = document.getElementById("tut-backdrop");
+  var highlight = document.getElementById("tut-highlight");
+  var card = document.getElementById("tut-card");
+
+  document.getElementById("tut-x").onclick = skip;
+  document.getElementById("tut-skip").onclick = skip;
+  document.getElementById("tut-next").onclick = next;
+  backdrop.onclick = skip;
+
+  function skip() {
+    backdrop.style.display = "none";
+    highlight.style.display = "none";
+    card.style.display = "none";
+    localStorage.setItem("tut-seen","1");
+  }
+
+  function next() {
+    idx++;
+    if (idx >= STEPS.length) { skip(); return; }
+    show(idx);
+  }
+
+  function show(i) {
+    var step = STEPS[i];
+    document.getElementById("tut-emoji").textContent = step.emoji;
+    document.getElementById("tut-title").textContent = step.title;
+    document.getElementById("tut-body").textContent = step.body;
+    document.getElementById("tut-next").textContent = i === STEPS.length - 1 ? "Done ✓" : "Next →";
+    document.getElementById("tut-dots").innerHTML = STEPS.map(function(_,j) {
+      return '<div style="width:6px;height:6px;border-radius:50%;background:' + (j===i?'#6e8efb':'#2a2f3e') + '"></div>';
+    }).join('');
+
+    backdrop.style.display = "block";
+    card.style.display = "block";
+
+    var target = null;
+    if (step.sel) {
+      var sels = step.sel.split(", ");
+      for (var s = 0; s < sels.length; s++) {
+        target = document.querySelector(sels[s].trim());
+        if (target) break;
+      }
+    }
+
+    var arrow = document.getElementById("tut-arrow");
+    if (target) {
+      var r = target.getBoundingClientRect();
+      var pad = 8;
+      highlight.style.display = "block";
+      highlight.style.left = (r.left - pad) + "px";
+      highlight.style.top = (r.top - pad) + "px";
+      highlight.style.width = (r.width + pad*2) + "px";
+      highlight.style.height = (r.height + pad*2) + "px";
+
+      var cardW = 290;
+      var cardH = card.offsetHeight || 180;
+      var spaceBelow = window.innerHeight - r.bottom;
+      var spaceAbove = r.top;
+      var left = Math.max(12, Math.min(r.left + r.width/2 - cardW/2, window.innerWidth - cardW - 12));
+
+      if (spaceBelow >= cardH + 24 || spaceBelow >= spaceAbove) {
+        // Card below target — arrow points UP
+        card.style.top = (r.bottom + 16) + "px";
+        card.style.left = left + "px";
+        card.style.transform = "";
+        arrow.style.top = "-7px";
+        arrow.style.left = (Math.min(r.left + r.width/2 - left - 6, cardW - 24)) + "px";
+        arrow.style.transform = "rotate(45deg)";
+        arrow.style.borderRight = "none";
+        arrow.style.borderBottom = "none";
+        arrow.style.borderLeft = "1px solid #6e8efb";
+        arrow.style.borderTop = "1px solid #6e8efb";
+      } else {
+        // Card above target — arrow points DOWN
+        card.style.top = (r.top - cardH - 16) + "px";
+        card.style.left = left + "px";
+        card.style.transform = "";
+        arrow.style.top = (cardH - 7) + "px";
+        arrow.style.left = (Math.min(r.left + r.width/2 - left - 6, cardW - 24)) + "px";
+        arrow.style.transform = "rotate(225deg)";
+        arrow.style.borderRight = "none";
+        arrow.style.borderBottom = "none";
+        arrow.style.borderLeft = "1px solid #6e8efb";
+        arrow.style.borderTop = "1px solid #6e8efb";
+      }
+      arrow.style.display = "block";
+    } else {
+      highlight.style.display = "none";
+      arrow.style.display = "none";
+      card.style.top = "50%";
+      card.style.left = "50%";
+      card.style.transform = "translate(-50%,-50%)";
+    }
+  }
+
+  window.startTutorial = function() { idx = 0; show(0); };
+
+  // Auto-show for first time users (wait for app to load)
+  if (!localStorage.getItem("tut-seen")) {
+    setTimeout(function() { window.startTutorial(); }, 1200);
+  }
+})();
 </script>
 </body>
 </html>
