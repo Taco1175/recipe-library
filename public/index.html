@@ -2010,9 +2010,11 @@ async function openGrocery() {
   const cartTotalEl = document.getElementById("cart-header-total");
   if (cartTotalEl && totalCost > 0) cartTotalEl.textContent = "~$" + totalCost.toFixed(0) + " est.";
   if (totalCost > 0) {
-    body.innerHTML += `<div style="margin-top:14px;padding:10px 14px;background:#0f1f0f;border:1px solid #2a4a2a;border-radius:8px;font-size:12px;color:#6aaa6a;font-family:monospace">
-      💰 Estimated total: <strong style="font-size:14px">~$${totalCost.toFixed(0)}</strong> <span style="color:#3a6a3a">(rough estimate, prices vary)</span>
-    </div>`;
+    const bnr = document.createElement("div");
+    bnr.className = "cost-banner";
+    bnr.style.cssText = "margin-top:14px;padding:10px 14px;background:#0f1f0f;border:1px solid #2a4a2a;border-radius:8px;font-size:12px;color:#6aaa6a;font-family:monospace";
+    bnr.innerHTML = `💰 Estimated total: <strong style="font-size:14px">~$${totalCost.toFixed(0)}</strong> <span style="color:#3a6a3a">(rough estimate, prices vary)</span>`;
+    body.appendChild(bnr);
   }
 
   if (noDataRecipes.length) {
@@ -2094,12 +2096,24 @@ function rerenderGrocery() {
   renderGroceryList(groceryItems);
   updateGroceryCount();
 
+  // Rebuild cart header so servings + per-recipe costs stay in sync
+  document.getElementById("g-cart-header").innerHTML = buildCartHeaderHTML(sel);
+
   const totalCost = groceryItems.reduce((s, i) => s + (i.cost || 0), 0);
+  // Sync cart header summary total to ingredient-based calculation
+  const cartTotalEl = document.getElementById("cart-header-total");
+  if (cartTotalEl && totalCost > 0) cartTotalEl.textContent = "~$" + totalCost.toFixed(0) + " est.";
+
   const body = document.getElementById("g-body");
+  // Remove old cost banner before re-adding to avoid duplicates
+  const oldBanner = body.querySelector(".cost-banner");
+  if (oldBanner) oldBanner.remove();
   if (totalCost > 0) {
-    body.innerHTML += `<div style="margin-top:14px;padding:10px 14px;background:#0f1f0f;border:1px solid #2a4a2a;border-radius:8px;font-size:12px;color:#6aaa6a;font-family:monospace">
-      💰 Estimated total: <strong style="font-size:14px">~$${totalCost.toFixed(0)}</strong> <span style="color:#3a6a3a">(rough estimate, prices vary)</span>
-    </div>`;
+    const banner = document.createElement("div");
+    banner.className = "cost-banner";
+    banner.style.cssText = "margin-top:14px;padding:10px 14px;background:#0f1f0f;border:1px solid #2a4a2a;border-radius:8px;font-size:12px;color:#6aaa6a;font-family:monospace";
+    banner.innerHTML = `💰 Estimated total: <strong style="font-size:14px">~$${totalCost.toFixed(0)}</strong> <span style="color:#3a6a3a">(rough estimate, prices vary)</span>`;
+    body.appendChild(banner);
   }
 
   // Archived section
