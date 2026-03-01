@@ -1530,46 +1530,221 @@ let groceryItems = [];
 let _cachedStructuredRows = [];
 let archivedRecipes = new Set(); // persisted across refreshes
 
+// Cost DB: { price, size, unit }
+// price = package price at Aldi
+// size = package size in that unit
+// unit = the unit we measure cost per
 const COST_DB = {
-  // Proteins
-  "chicken breast": 4.00, "chicken thigh": 3.50, "chicken wing": 5.00, "chicken": 3.50,
-  "ground turkey": 5.00, "ground beef": 6.00, "turkey": 5.00, "beef": 7.00,
-  "pork shoulder": 4.00, "pork butt": 4.00, "pork": 5.00,
-  "shrimp": 8.00, "tuna": 2.50, "chorizo": 4.00, "sausage": 4.50, "bacon": 5.00,
-  "frozen meatballs": 7.00, "meatballs": 7.00,
-  // Dairy & Eggs
-  "eggs": 4.00, "egg whites": 4.00, "cheddar cheese": 3.50, "mozzarella": 3.50,
-  "parmesan": 4.00, "ricotta": 4.00, "feta": 3.50, "mexican cheese": 3.50,
-  "heavy cream": 3.00, "sour cream": 2.00, "butter": 3.00, "cream cheese": 3.00,
-  "yogurt": 3.00,
-  // Produce
-  "onion": 1.00, "garlic": 1.50, "bell pepper": 1.50, "spinach": 3.00,
-  "avocado": 1.50, "tomato": 2.00, "jalapeno": 0.50, "jalapeño": 0.50,
-  "lime": 1.00, "lemon": 1.00, "cilantro": 1.00, "parsley": 1.00, "basil": 2.00,
-  "green onion": 1.00, "mushroom": 3.00, "broccoli": 2.50, "cauliflower": 3.00,
-  "zucchini": 1.50, "sweet potato": 2.00, "potato": 2.00, "brussels sprouts": 3.00,
-  // Pantry/Canned
-  "salsa verde": 3.50, "salsa": 3.00, "enchilada sauce": 2.50, "pesto": 4.00,
-  "marinara": 3.00, "tomato sauce": 1.50, "crushed tomatoes": 2.00, "diced tomatoes": 1.50,
-  "chicken broth": 2.50, "beef broth": 2.50, "vegetable broth": 2.00,
-  "black beans": 1.50, "pinto beans": 1.50, "chickpeas": 1.50,
-  "cream of mushroom soup": 2.00, "bread crumbs": 2.00,
-  // Oils, Sauces
-  "avocado oil": 6.00, "olive oil": 5.00, "coconut aminos": 5.00, "soy sauce": 2.50,
-  "honey": 4.00, "rice vinegar": 2.50, "ketchup": 2.50, "bbq sauce": 3.00,
-  "hot sauce": 2.00, "sriracha": 3.00, "peanut butter": 3.50, "cornstarch": 1.50,
-  "oat flour": 3.00,
-  // Grains & Carbs
-  "pasta": 2.50, "rotini": 2.50, "egg noodles": 2.50, "chickpea pasta": 4.00,
-  "cassava tortillas": 5.00, "corn tortillas": 3.00, "flour tortillas": 3.50, "tortillas": 3.50,
-  "rice": 2.50, "cauliflower rice": 3.50, "tater tots": 3.50, "rolls": 3.00,
+  // === PROTEINS (priced per lb) ===
+  "chicken breast":       { price: 7.00,  size: 2,    unit: "lb" },
+  "chicken thigh":        { price: 6.00,  size: 2,    unit: "lb" },
+  "chicken wing":         { price: 8.00,  size: 2,    unit: "lb" },
+  "chicken":              { price: 6.00,  size: 2,    unit: "lb" },
+  "ground turkey":        { price: 5.00,  size: 1,    unit: "lb" },
+  "ground beef":          { price: 6.00,  size: 1,    unit: "lb" },
+  "turkey":               { price: 5.00,  size: 1,    unit: "lb" },
+  "beef":                 { price: 7.00,  size: 1,    unit: "lb" },
+  "pork shoulder":        { price: 5.00,  size: 2,    unit: "lb" },
+  "pork":                 { price: 5.00,  size: 2,    unit: "lb" },
+  "shrimp":               { price: 8.00,  size: 1,    unit: "lb" },
+  "tuna":                 { price: 2.50,  size: 1,    unit: "can" },
+  "chorizo":              { price: 4.00,  size: 1,    unit: "lb" },
+  "sausage":              { price: 4.50,  size: 1,    unit: "lb" },
+  "bacon":                { price: 5.00,  size: 1,    unit: "lb" },
+  "deli chicken":         { price: 5.00,  size: 1,    unit: "lb" },
+  "meatballs":            { price: 7.00,  size: 26,   unit: "oz" },
+
+  // === DAIRY & EGGS ===
+  "eggs":                 { price: 4.00,  size: 12,   unit: "egg" },
+  "egg whites":           { price: 4.00,  size: 32,   unit: "oz" },
+  "cheddar cheese":       { price: 3.50,  size: 8,    unit: "oz" },
+  "mozzarella":           { price: 3.50,  size: 8,    unit: "oz" },
+  "parmesan":             { price: 4.00,  size: 8,    unit: "oz" },
+  "ricotta":              { price: 4.00,  size: 15,   unit: "oz" },
+  "feta":                 { price: 3.50,  size: 6,    unit: "oz" },
+  "mexican cheese":       { price: 3.50,  size: 8,    unit: "oz" },
+  "cream cheese":         { price: 3.00,  size: 8,    unit: "oz" },
+  "heavy cream":          { price: 3.00,  size: 16,   unit: "oz" },
+  "sour cream":           { price: 2.00,  size: 16,   unit: "oz" },
+  "butter":               { price: 3.00,  size: 16,   unit: "tbsp" },
+  "greek yogurt":         { price: 4.00,  size: 32,   unit: "oz" },
+  "yogurt":               { price: 3.00,  size: 32,   unit: "oz" },
+  "milk":                 { price: 3.00,  size: 128,  unit: "oz" },
+  "protein powder":       { price: 30.00, size: 30,   unit: "scoop" },
+
+  // === PRODUCE (priced per unit or oz) ===
+  "onion":                { price: 1.50,  size: 3,    unit: "whole" },
+  "garlic":               { price: 1.50,  size: 30,   unit: "clove" },
+  "bell pepper":          { price: 2.50,  size: 3,    unit: "whole" },
+  "spinach":              { price: 3.00,  size: 5,    unit: "oz" },
+  "avocado":              { price: 1.50,  size: 1,    unit: "whole" },
+  "tomato":               { price: 2.00,  size: 4,    unit: "whole" },
+  "jalapeno":             { price: 1.00,  size: 6,    unit: "whole" },
+  "jalapeño":             { price: 1.00,  size: 6,    unit: "whole" },
+  "lime":                 { price: 1.50,  size: 6,    unit: "whole" },
+  "lemon":                { price: 1.50,  size: 6,    unit: "whole" },
+  "cilantro":             { price: 1.00,  size: 1,    unit: "bunch" },
+  "parsley":              { price: 1.00,  size: 1,    unit: "bunch" },
+  "basil":                { price: 2.00,  size: 1,    unit: "bunch" },
+  "green onion":          { price: 1.00,  size: 1,    unit: "bunch" },
+  "mushroom":             { price: 3.00,  size: 8,    unit: "oz" },
+  "broccoli":             { price: 2.50,  size: 12,   unit: "oz" },
+  "cauliflower":          { price: 3.00,  size: 1,    unit: "head" },
+  "zucchini":             { price: 1.50,  size: 2,    unit: "whole" },
+  "sweet potato":         { price: 2.00,  size: 3,    unit: "whole" },
+  "potato":               { price: 2.00,  size: 5,    unit: "whole" },
+  "brussels sprouts":     { price: 3.00,  size: 12,   unit: "oz" },
+  "artichoke":            { price: 3.00,  size: 14,   unit: "oz" },
+  "corn":                 { price: 2.00,  size: 15,   unit: "oz" },
+
+  // === PANTRY / CANNED ===
+  "salsa verde":          { price: 3.50,  size: 16,   unit: "oz" },
+  "salsa":                { price: 3.00,  size: 16,   unit: "oz" },
+  "enchilada sauce":      { price: 2.50,  size: 19,   unit: "oz" },
+  "pesto":                { price: 4.00,  size: 6,    unit: "oz" },
+  "marinara":             { price: 3.00,  size: 24,   unit: "oz" },
+  "tomato sauce":         { price: 1.50,  size: 15,   unit: "oz" },
+  "crushed tomatoes":     { price: 2.00,  size: 28,   unit: "oz" },
+  "diced tomatoes":       { price: 1.50,  size: 14.5, unit: "oz" },
+  "chicken broth":        { price: 2.50,  size: 32,   unit: "oz" },
+  "beef broth":           { price: 2.50,  size: 32,   unit: "oz" },
+  "vegetable broth":      { price: 2.00,  size: 32,   unit: "oz" },
+  "black beans":          { price: 1.50,  size: 15,   unit: "oz" },
+  "pinto beans":          { price: 1.50,  size: 15,   unit: "oz" },
+  "chickpeas":            { price: 1.50,  size: 15,   unit: "oz" },
+  "cream of mushroom":    { price: 2.00,  size: 10.5, unit: "oz" },
+  "bread crumbs":         { price: 2.00,  size: 15,   unit: "oz" },
+
+  // === OILS & SAUCES (tbsp-based) ===
+  "avocado oil":          { price: 6.00,  size: 48,   unit: "tbsp" },
+  "olive oil":            { price: 5.00,  size: 48,   unit: "tbsp" },
+  "coconut aminos":       { price: 5.00,  size: 32,   unit: "tbsp" },
+  "soy sauce":            { price: 2.50,  size: 32,   unit: "tbsp" },
+  "honey":                { price: 4.00,  size: 24,   unit: "tbsp" },
+  "rice vinegar":         { price: 2.50,  size: 32,   unit: "tbsp" },
+  "ketchup":              { price: 2.50,  size: 40,   unit: "tbsp" },
+  "bbq sauce":            { price: 3.00,  size: 24,   unit: "tbsp" },
+  "hot sauce":            { price: 2.00,  size: 24,   unit: "tbsp" },
+  "sriracha":             { price: 3.00,  size: 28,   unit: "tbsp" },
+  "peanut butter":        { price: 3.50,  size: 32,   unit: "tbsp" },
+  "cornstarch":           { price: 1.50,  size: 48,   unit: "tbsp" },
+  "oat flour":            { price: 3.00,  size: 32,   unit: "tbsp" },
+  "tahini":               { price: 4.00,  size: 16,   unit: "tbsp" },
+
+  // === SPICES (tsp-based, tiny cost per use) ===
+  "salt":                 { price: 1.00,  size: 200,  unit: "tsp" },
+  "pepper":               { price: 1.50,  size: 100,  unit: "tsp" },
+  "cumin":                { price: 2.00,  size: 60,   unit: "tsp" },
+  "chili powder":         { price: 2.00,  size: 60,   unit: "tsp" },
+  "garlic powder":        { price: 2.00,  size: 60,   unit: "tsp" },
+  "onion powder":         { price: 2.00,  size: 60,   unit: "tsp" },
+  "paprika":              { price: 2.00,  size: 60,   unit: "tsp" },
+  "oregano":              { price: 2.00,  size: 40,   unit: "tsp" },
+  "cinnamon":             { price: 2.00,  size: 60,   unit: "tsp" },
+  "red pepper flakes":    { price: 2.00,  size: 40,   unit: "tsp" },
+  "italian seasoning":    { price: 2.00,  size: 40,   unit: "tsp" },
+  "taco seasoning":       { price: 2.00,  size: 12,   unit: "tsp" },
+  "everything bagel":     { price: 3.00,  size: 60,   unit: "tsp" },
+
+  // === GRAINS & CARBS ===
+  "pasta":                { price: 2.50,  size: 16,   unit: "oz" },
+  "rotini":               { price: 2.50,  size: 16,   unit: "oz" },
+  "egg noodles":          { price: 2.50,  size: 16,   unit: "oz" },
+  "chickpea pasta":       { price: 4.00,  size: 8,    unit: "oz" },
+  "rice":                 { price: 2.50,  size: 32,   unit: "oz" },
+  "cauliflower rice":     { price: 3.50,  size: 12,   unit: "oz" },
+  "tater tots":           { price: 3.50,  size: 28,   unit: "oz" },
+  "tortillas":            { price: 3.50,  size: 8,    unit: "whole" },
+  "corn tortillas":       { price: 3.00,  size: 30,   unit: "whole" },
+  "flour tortillas":      { price: 3.50,  size: 8,    unit: "whole" },
+  "cassava tortillas":    { price: 5.00,  size: 6,    unit: "whole" },
+  "rolls":                { price: 3.00,  size: 8,    unit: "whole" },
+  "bread":                { price: 3.00,  size: 16,   unit: "slice" },
+  "noodles":              { price: 2.00,  size: 1,    unit: "pack" },
 };
 
+// Unit conversion to normalize measurements
+const UNIT_CONVERSIONS = {
+  // volume to tbsp
+  "tsp": 0.333, "teaspoon": 0.333, "teaspoons": 0.333,
+  "tbsp": 1, "tablespoon": 1, "tablespoons": 1,
+  "cup": 16, "cups": 16,
+  "oz": 2, "ounce": 2, "ounces": 2, "fl oz": 2,
+  "pint": 32, "quart": 64,
+  // weight
+  "lb": 1, "lbs": 1, "pound": 1, "pounds": 1,
+  "g": 0.0022, "gram": 0.0022, "grams": 0.0022,
+  // count
+  "whole": 1, "clove": 1, "cloves": 1, "egg": 1, "eggs": 1,
+  "can": 1, "cans": 1, "bunch": 1, "head": 1, "scoop": 1, "pack": 1,
+  "slice": 1, "slices": 1,
+};
+
+function parseIngredientCost(ingStr) {
+  if (!ingStr) return 0;
+  const lower = ingStr.toLowerCase().trim();
+
+  // Find matching item in COST_DB
+  let matched = null, matchedKey = '';
+  for (const key of Object.keys(COST_DB)) {
+    if (lower.includes(key) && key.length > matchedKey.length) {
+      matched = COST_DB[key];
+      matchedKey = key;
+    }
+  }
+  if (!matched) return 0;
+
+  // Parse amount and unit from ingredient string
+  // e.g. "2 tbsp olive oil" -> amount=2, unit=tbsp
+  const numMatch = lower.match(/^([\d¼½¾⅓⅔⅛⅜⅝⅞]+\.?\d*)\s*(?:to\s+[\d.]+\s+)?([a-z\s]+?)\s/);
+  let amount = 1, unit = matched.unit;
+
+  if (numMatch) {
+    // Handle fractions
+    const raw = numMatch[1].replace('¼','0.25').replace('½','0.5').replace('¾','0.75')
+      .replace('⅓','0.33').replace('⅔','0.67').replace('⅛','0.125');
+    amount = parseFloat(raw) || 1;
+    const parsedUnit = numMatch[2].trim().toLowerCase();
+    if (UNIT_CONVERSIONS[parsedUnit] !== undefined) unit = parsedUnit;
+  }
+
+  // Convert both to the same base unit and calculate cost
+  const pkgUnit = matched.unit;
+  const pkgSize = matched.size;
+  const pkgPrice = matched.price;
+
+  // If units match directly
+  if (unit === pkgUnit || UNIT_CONVERSIONS[unit] === UNIT_CONVERSIONS[pkgUnit]) {
+    return (amount / pkgSize) * pkgPrice;
+  }
+
+  // Both in volume (tbsp-based) conversion
+  const toBbsp = UNIT_CONVERSIONS[unit];
+  const pkgToTbsp = UNIT_CONVERSIONS[pkgUnit];
+  if (toBbsp && pkgToTbsp) {
+    const amountInTbsp = amount * toBbsp;
+    const pkgInTbsp = pkgSize * pkgToTbsp;
+    return (amountInTbsp / pkgInTbsp) * pkgPrice;
+  }
+
+  // Both weight (lb-based)
+  const toLb = { lb:1,lbs:1,pound:1,pounds:1,oz:0.0625,ounces:0.0625,g:0.0022,gram:0.0022,grams:0.0022 };
+  if (toLb[unit] && toLb[pkgUnit]) {
+    const amountInLb = amount * toLb[unit];
+    const pkgInLb = pkgSize * toLb[pkgUnit];
+    return (amountInLb / pkgInLb) * pkgPrice;
+  }
+
+  // Fallback: assume full package cost scaled by amount
+  return (amount / pkgSize) * pkgPrice;
+}
+
 function estimateCost(ingredient) {
+  // Legacy function for grocery list compatibility
   if (!ingredient) return null;
   const lower = ingredient.toLowerCase();
-  for (const [key, cost] of Object.entries(COST_DB)) {
-    if (lower.includes(key)) return cost;
+  for (const [key, item] of Object.entries(COST_DB)) {
+    if (lower.includes(key)) return item.price * 0.3; // rough 30% usage estimate
   }
   return null;
 }
@@ -1623,19 +1798,18 @@ function evalFraction(str) {
   return b ? parseInt(a) / parseInt(b) : parseFloat(a);
 }
 
-// Calculate cost from ingredients using COST_DB
+// Calculate cost from ingredients using per-unit COST_DB
 function calcCostFromIngredients(recipeId, servings) {
   const d = details[recipeId];
-  if (!d || !d.ingredients || !d.ingredients.length) return null;
+  if (!d || !d.ingredients || d.ingredients.length < 2) return null;
   const defaultSv = getDefaultServings(recipeId) || 4;
   const sv = servings || defaultSv;
   let total = 0, matched = 0;
   d.ingredients.forEach(ing => {
-    const cost = estimateCost(ing);
-    if (cost) { total += cost; matched++; }
+    const cost = parseIngredientCost(ing);
+    if (cost > 0) { total += cost; matched++; }
   });
-  if (matched < 2) return null; // not enough data
-  // Scale by servings ratio
+  if (matched < 2) return null;
   const ratio = sv / defaultSv;
   return total * (ratio > 1 ? 1 + (ratio-1)*0.75 : ratio > 0 ? 1-(1-ratio)*0.75 : 1);
 }
@@ -1648,12 +1822,14 @@ function dynamicCostStr(r) {
   }
   let total = 0, matched = 0;
   d.ingredients.forEach(ing => {
-    const cost = estimateCost(ing);
-    if (cost) { total += cost; matched++; }
+    const cost = parseIngredientCost(ing);
+    if (cost > 0) { total += cost; matched++; }
   });
   if (matched < 2) return r.cost && r.cost !== 'TBD' ? r.cost : null;
-  const lo = Math.round(total * 0.85);
-  const hi = Math.round(total * 1.15);
+  // Add 15% buffer for missing ingredients
+  const adjusted = total * 1.15;
+  const lo = Math.floor(adjusted * 0.9);
+  const hi = Math.ceil(adjusted * 1.1);
   return `$${lo}-${hi}`;
 }
 
