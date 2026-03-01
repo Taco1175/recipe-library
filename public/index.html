@@ -498,7 +498,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
       </div>
       <div class="search-wrap">
         <input type="text" id="search" placeholder="Search recipes…" oninput="onSearch(this.value)">
-        <button class="search-clear" onclick="clearSearch()" title="Clear">×</button>
+        <button class="search-clear" id="search-clear-btn" onclick="clearSearch()" title="Clear" style="display:none">×</button>
       </div>
       <select class="flt" id="filterProt" onchange="fProt=this.value;render()"><option value="">All Proteins</option></select>
       <select class="flt" id="filterMeth" onchange="fMeth=this.value;render()"><option value="">All Methods</option></select>
@@ -1122,9 +1122,9 @@ function chk(e,id){
   // Replace only the selected part — preserve the "Showing X of Y" text
   countEl.innerHTML = countEl.innerHTML.replace(/ · <span[^>]*>\d+ selected<\/span>/, "") + selStr;
 }
-function onSearch(v){q=v;render();}
-function clearSearch(){document.getElementById("search").value="";q="";render();}
-function clearAll(){fCat="";fProt="";fMeth="";q="";matchActive=false;matchScores={};fridgeSelected.clear();renderFridgeChips();document.getElementById("search").value="";document.getElementById("filterProt").value="";document.getElementById("filterMeth").value="";document.getElementById("fridge-search").value="";document.getElementById("fridge-info").textContent="";render();}
+function onSearch(v){q=v;const cb=document.getElementById("search-clear-btn");if(cb)cb.style.display=v?"":"none";render();}
+function clearSearch(){document.getElementById("search").value="";q="";const cb=document.getElementById("search-clear-btn");if(cb)cb.style.display="none";render();}
+function clearAll(){fCat="";fProt="";fMeth="";q="";matchActive=false;matchScores={};fridgeSelected.clear();renderFridgeChips();document.getElementById("search").value="";document.getElementById("filterProt").value="";document.getElementById("filterMeth").value="";document.getElementById("fridge-search").value="";document.getElementById("fridge-info").textContent="";const cb=document.getElementById("search-clear-btn");if(cb)cb.style.display="none";render();}
 function toggleFridge(){document.getElementById("fridge-bar").classList.toggle("show");}
 function toggleAdd(){document.getElementById("add-panel").classList.toggle("show");}
 
