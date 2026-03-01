@@ -1951,6 +1951,8 @@ async function openGrocery() {
     const unit = normalizeUnit(row.measurement);
     const key = `${ingKey}|||${unit}`;
     const mult = servingsMult[row.recipe_id] || 1;
+    const cmult = costMult[row.recipe_id] || 1;
+    const baseCost = estimateCost(row.ingredient);
     if (!merged[key]) {
       merged[key] = {
         ingredient: row.ingredient.trim(),
@@ -1958,10 +1960,14 @@ async function openGrocery() {
         amount: 0,
         hasAmount: false,
         recipes: [],
-        cost: estimateCost(row.ingredient),
+        cost: 0,
+        baseCost,
         sortKey: ingKey,
       };
     }
+    // Accumulate scaled cost — each recipe contribution scaled by its costMult
+    if (baseCost) merged[key].cost = (merged[key].cost || 0) + baseCost * cmult;
+    else if (!merged[key].cost) merged[key].cost = null;
     if (row.amount) { merged[key].amount += parseFloat(row.amount) * mult; merged[key].hasAmount = true; }
     const rname = recipeNames[row.recipe_id];
     if (rname && !merged[key].recipes.includes(rname)) merged[key].recipes.push(rname);
@@ -1970,21 +1976,19 @@ async function openGrocery() {
   // Fallback: use text ingredients for recipes without structured data (best-effort scaling)
   fallbackRecipes.forEach(r => {
     const mult = servingsMult[r.id] || 1;
+    const cmult = costMult[r.id] || 1;
     (details[r.id].ingredients || []).forEach(ing => {
       // Try to scale numbers in the text
       let scaledIng = ing.trim();
-      let wasScaled = false;
-      if (mult !== 1) {
-        scaledIng = scaleIngredientText(ing.trim(), mult);
-        wasScaled = scaledIng !== ing.trim();
-      }
+      if (mult !== 1) scaledIng = scaleIngredientText(ing.trim(), mult);
       const key = `__text__${ing.trim().toLowerCase()}`;
+      const baseCost = estimateCost(ing);
       if (!merged[key]) merged[key] = {
         ingredient: scaledIng,
         measurement: null, amount: 0, hasAmount: false,
-        recipes: [], cost: estimateCost(ing),
+        recipes: [], cost: baseCost ? baseCost * cmult : null,
         sortKey: ing.trim().toLowerCase(),
-        needsReview: mult !== 1, // flag for ⚠️
+        needsReview: mult !== 1,
       };
       if (!merged[key].recipes.includes(r.name)) merged[key].recipes.push(r.name);
     });
@@ -2070,17 +2074,22 @@ function rerenderGrocery() {
     const unit = normalizeUnit(row.measurement);
     const key = `${ingKey}|||${unit}`;
     const mult = servingsMult[row.recipe_id] || 1;
-    if (!merged[key]) merged[key] = { ingredient: row.ingredient.trim(), measurement: unit || null, amount: 0, hasAmount: false, recipes: [], cost: estimateCost(row.ingredient), sortKey: ingKey };
+    const cmult = costMult[row.recipe_id] || 1;
+    const baseCost = estimateCost(row.ingredient);
+    if (!merged[key]) merged[key] = { ingredient: row.ingredient.trim(), measurement: unit || null, amount: 0, hasAmount: false, recipes: [], cost: 0, sortKey: ingKey };
+    if (baseCost) merged[key].cost = (merged[key].cost || 0) + baseCost * cmult;
     if (row.amount) { merged[key].amount += parseFloat(row.amount) * mult; merged[key].hasAmount = true; }
     const rname = recipeNames[row.recipe_id];
     if (rname && !merged[key].recipes.includes(rname)) merged[key].recipes.push(rname);
   });
   fallbackRecipes.forEach(r => {
     const mult = servingsMult[r.id] || 1;
+    const cmult = costMult[r.id] || 1;
     (details[r.id].ingredients || []).forEach(ing => {
       const key = `__text__${ing.trim().toLowerCase()}`;
       let scaledIng = mult !== 1 ? scaleIngredientText(ing.trim(), mult) : ing.trim();
-      if (!merged[key]) merged[key] = { ingredient: scaledIng, measurement: null, amount: 0, hasAmount: false, recipes: [], cost: estimateCost(ing), sortKey: ing.trim().toLowerCase(), needsReview: mult !== 1 };
+      const baseCost = estimateCost(ing);
+      if (!merged[key]) merged[key] = { ingredient: scaledIng, measurement: null, amount: 0, hasAmount: false, recipes: [], cost: baseCost ? baseCost * cmult : null, sortKey: ing.trim().toLowerCase(), needsReview: mult !== 1 };
       if (!merged[key].recipes.includes(r.name)) merged[key].recipes.push(r.name);
     });
   });
