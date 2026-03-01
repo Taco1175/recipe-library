@@ -864,7 +864,7 @@ function renderGrid(list) {
         <div class="card-name${hd?"":" dim"}">${esc(r.name)}</div>
         <div class="card-meta">
           <span style="font-size:11px;color:${c.text};background:${c.bg};padding:2px 7px;border-radius:10px;font-family:monospace">${r.category}</span>
-          ${r.cost ? `<span class="card-cost">${r.cost}</span>` : ""}
+          ${dynamicCostStr(r) ? `<span class="card-cost">${dynamicCostStr(r)}</span>` : ""}
         </div>
       </div>
     </div>`;
@@ -893,7 +893,7 @@ function openRecipeModal(id) {
   document.getElementById("rmodal-meta").innerHTML = `
     <span style="font-size:12px;background:${c.bg};color:${c.text};padding:2px 10px;border-radius:10px;font-family:monospace">${r.category}</span>
     <span style="font-size:12px;color:#9a9fae">${MI[r.method]||"🍴"} ${r.method}</span>
-    ${r.cost ? `<span style="font-size:12px;color:#7bcf8e;font-family:monospace;font-weight:600">${r.cost}</span>` : ""}
+    ${dynamicCostStr(r) ? `<span style="font-size:12px;color:#7bcf8e;font-family:monospace;font-weight:600">${dynamicCostStr(r)}</span>` : ""}
     ${r.servings ? `<span style="font-size:12px;color:#556;font-family:monospace">${r.servings} servings</span>` : ""}
   `;
 
@@ -997,7 +997,7 @@ function render() {
     <div><span class="badge" style="background:${c.bg};color:${c.text}"><span class="dot" style="background:${c.dot}"></span>${r.category}</span></div>
     <div class="meta">${MI[r.method]||"🍴"} ${r.method}</div>
 
-    <div class="cost">${r.cost || ''}</div>
+    <div class="cost" style="color:${dynamicCostStr(r) ? '#7bcf8e' : '#556'}">${dynamicCostStr(r) || ''}</div>
     <div style="display:flex;align-items:center;justify-content:center">
       ${ms ? `<span class="match-badge ${ms.match==='full'?'match-full':'match-partial'}" title="${esc(ms.note)}">${ms.score}%</span>` : (matchActive ? `<span style="font-size:11px;color:#333;font-family:monospace">—</span>` : "")}
     </div>
@@ -1623,8 +1623,45 @@ function evalFraction(str) {
   return b ? parseInt(a) / parseInt(b) : parseFloat(a);
 }
 
+// Calculate cost from ingredients using COST_DB
+function calcCostFromIngredients(recipeId, servings) {
+  const d = details[recipeId];
+  if (!d || !d.ingredients || !d.ingredients.length) return null;
+  const defaultSv = getDefaultServings(recipeId) || 4;
+  const sv = servings || defaultSv;
+  let total = 0, matched = 0;
+  d.ingredients.forEach(ing => {
+    const cost = estimateCost(ing);
+    if (cost) { total += cost; matched++; }
+  });
+  if (matched < 2) return null; // not enough data
+  // Scale by servings ratio
+  const ratio = sv / defaultSv;
+  return total * (ratio > 1 ? 1 + (ratio-1)*0.75 : ratio > 0 ? 1-(1-ratio)*0.75 : 1);
+}
+
+// Format dynamic cost as a string like "$8-12"
+function dynamicCostStr(r) {
+  const d = details[r.id];
+  if (!d || !d.ingredients || d.ingredients.length < 2) {
+    return r.cost && r.cost !== 'TBD' ? r.cost : null;
+  }
+  let total = 0, matched = 0;
+  d.ingredients.forEach(ing => {
+    const cost = estimateCost(ing);
+    if (cost) { total += cost; matched++; }
+  });
+  if (matched < 2) return r.cost && r.cost !== 'TBD' ? r.cost : null;
+  const lo = Math.round(total * 0.85);
+  const hi = Math.round(total * 1.15);
+  return `$${lo}-${hi}`;
+}
+
 function scaledCost(r, sv, def) {
-  // Parse low end of cost range like "$6-9" -> 7.5
+  // Try dynamic calculation from ingredients first
+  const fromIngredients = calcCostFromIngredients(r.id, sv);
+  if (fromIngredients) return fromIngredients;
+  // Fall back to hardcoded cost string
   if (!r.cost || r.cost === 'TBD') return null;
   const nums = r.cost.replace(/[^0-9\-\.]/g,'').split('-').map(Number).filter(n=>n>0);
   if (!nums.length) return null;
