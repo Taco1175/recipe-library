@@ -1762,11 +1762,14 @@ function parseIngredientCost(ingStr) {
 }
 
 function estimateCost(ingredient) {
-  // Legacy function for grocery list compatibility
+  // Use parseIngredientCost for accuracy, with a per-ingredient sanity cap
   if (!ingredient) return null;
+  const cost = parseIngredientCost(ingredient);
+  if (cost > 0 && cost < 15) return cost;
+  // Fallback: flat 30% of package price
   const lower = ingredient.toLowerCase();
   for (const [key, item] of Object.entries(COST_DB)) {
-    if (lower.includes(key)) return item.price * 0.3; // rough 30% usage estimate
+    if (lower.includes(key)) return Math.min(item.price * 0.3, 10);
   }
   return null;
 }
@@ -1845,11 +1848,13 @@ function dynamicCostStr(r) {
   let total = 0, matched = 0;
   d.ingredients.forEach(ing => {
     const cost = parseIngredientCost(ing);
-    if (cost > 0) { total += cost; matched++; }
+    // Cap individual ingredient at $15 to prevent runaway values
+    if (cost > 0 && cost < 15) { total += cost; matched++; }
   });
   if (matched < 2) return r.cost && r.cost !== 'TBD' ? r.cost : null;
-  // Add 15% buffer for missing ingredients
   const adjusted = total * 1.15;
+  // Sanity check: fall back to stored cost if total looks wrong
+  if (adjusted > 60) return r.cost && r.cost !== 'TBD' ? r.cost : null;
   const lo = Math.floor(adjusted * 0.9);
   const hi = Math.ceil(adjusted * 1.1);
   return `$${lo}-${hi}`;
