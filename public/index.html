@@ -766,7 +766,6 @@ async function showApp() {
   await loadData();
   buildSelects();
   render();
-  maybeShowTutorial();
 }
 
 async function loadData() {
@@ -2253,98 +2252,6 @@ document.getElementById("edit-modal").addEventListener("click", function(e) {
 
 
 
-
-// ── Tutorial ──
-const TUT_STEPS = [
-  { emoji:"👋", title:"Welcome!", body:"This is your personal recipe library and meal planner. Let me show you around.", sel:null },
-  { emoji:"🔍", title:"Search & Filter", body:"Search recipes by name, protein, or source. Use the dropdowns to filter by category, protein, or cooking method.", sel:"input[placeholder*='Search']" },
-  { emoji:"☑️", title:"Select Recipes", body:"Check the box next to any recipe to select it for your grocery list. Check multiple to combine their ingredients.", sel:"input[type='checkbox']" },
-  { emoji:"🛒", title:"Grocery List", body:"After selecting recipes, click 'Grocery List' to get a combined shopping list with all ingredients ready to go.", sel:"#grocery-btn" },
-  { emoji:"▶", title:"Expand a Recipe", body:"Click the ▶ arrow next to a recipe name to expand it and see ingredients and steps inline.", sel:"button.expand-btn, .expand-btn, tr .expand" },
-  { emoji:"✏️", title:"Edit Recipes", body:"Click the pencil icon on any recipe to add or update ingredients, steps, cost, servings, and a source URL.", sel:"button[onclick*='openEdit'], .edit-btn" },
-  { emoji:"📅", title:"Plan Your Week", body:"Click 'Plan Week' to drag recipes onto days of the week, view your Google Calendar, and export your meal plan.", sel:"button[onclick*='planner'], a[href*='planner']" },
-  { emoji:"👥", title:"Share Your Library", body:"Click 'Share' to invite someone by email. Give them view-only or edit access to your full recipe library.", sel:"button[onclick*='ShareModal']" },
-  { emoji:"🎉", title:"You're all set!", body:"That's everything! Start by browsing, select some recipes, and generate your first grocery list. Happy cooking!", sel:null },
-];
-
-let tutIdx = 0;
-
-function startTutorial() {
-  tutIdx = 0;
-  document.getElementById("tut-backdrop").style.display = "block";
-  tutShow(0);
-}
-
-function tutSkip() {
-  ["tut-backdrop","tut-highlight","tut-card"].forEach(id => {
-    document.getElementById(id).style.display = "none";
-  });
-  localStorage.setItem("tut-seen","1");
-}
-
-function tutNext() {
-  tutIdx++;
-  if (tutIdx >= TUT_STEPS.length) { tutSkip(); return; }
-  tutShow(tutIdx);
-}
-
-function tutShow(idx) {
-  const step = TUT_STEPS[idx];
-  document.getElementById("tut-emoji").textContent = step.emoji;
-  document.getElementById("tut-title").textContent = step.title;
-  document.getElementById("tut-body").textContent = step.body;
-  document.getElementById("tut-next").textContent = idx === TUT_STEPS.length - 1 ? "Done ✓" : "Next →";
-
-  // Dots
-  document.getElementById("tut-dots").innerHTML = TUT_STEPS.map((_,i) =>
-    `<div style="width:6px;height:6px;border-radius:50%;background:${i===idx?'#6e8efb':'#2a2f3e'}"></div>`
-  ).join('');
-
-  const card = document.getElementById("tut-card");
-  const hl = document.getElementById("tut-highlight");
-  card.style.display = "block";
-
-  let targetEl = null;
-  if (step.sel) {
-    for (const s of step.sel.split(", ")) {
-      targetEl = document.querySelector(s.trim());
-      if (targetEl) break;
-    }
-  }
-
-  if (targetEl) {
-    const r = targetEl.getBoundingClientRect();
-    const pad = 6;
-    hl.style.display = "block";
-    hl.style.left = (r.left - pad) + "px";
-    hl.style.top = (r.top - pad) + "px";
-    hl.style.width = (r.width + pad*2) + "px";
-    hl.style.height = (r.height + pad*2) + "px";
-
-    // Position card below target, or above if too close to bottom
-    const cardH = 160;
-    const spaceBelow = window.innerHeight - r.bottom;
-    let top = spaceBelow > cardH + 20
-      ? r.bottom + 12
-      : r.top - cardH - 12;
-    let left = Math.max(12, Math.min(r.left, window.innerWidth - 316));
-    card.style.top = top + "px";
-    card.style.left = left + "px";
-    card.style.transform = "";
-  } else {
-    hl.style.display = "none";
-    card.style.top = "50%";
-    card.style.left = "50%";
-    card.style.transform = "translate(-50%, -50%)";
-  }
-}
-
-function maybeShowTutorial() {
-  if (!localStorage.getItem("tut-seen")) {
-    setTimeout(startTutorial, 800);
-  }
-}
-
 </script>
 
 <!-- Share Modal -->
@@ -2473,25 +2380,116 @@ function maybeShowTutorial() {
 
 
 
+
 <!-- Tutorial -->
-<div id="tut-backdrop" onclick="tutSkip()" style="display:none;position:fixed;inset:0;z-index:3000;background:transparent;pointer-events:all"></div>
-<div id="tut-highlight" style="display:none;position:fixed;z-index:3001;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,0.72);pointer-events:none;transition:all 0.3s ease"></div>
-<div id="tut-card" style="display:none;position:fixed;z-index:3002;background:#1a1f2e;border:1px solid #6e8efb;border-radius:14px;padding:20px 22px;max-width:300px;box-shadow:0 12px 40px rgba(0,0,0,0.7);pointer-events:all">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+<div id="tut-backdrop" style="display:none;position:fixed;inset:0;z-index:3000;background:transparent;pointer-events:all"></div>
+<div id="tut-highlight" style="display:none;position:fixed;z-index:3001;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,0.72);pointer-events:none;transition:left 0.25s,top 0.25s,width 0.25s,height 0.25s"></div>
+<div id="tut-card" style="display:none;position:fixed;z-index:3002;background:#1a1f2e;border:1px solid #6e8efb;border-radius:14px;padding:20px 22px;width:290px;box-shadow:0 12px 40px rgba(0,0,0,0.7)">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
     <div style="display:flex;align-items:center;gap:8px">
       <span id="tut-emoji" style="font-size:18px"></span>
-      <strong id="tut-title" style="font-size:14px;color:#F5F0E8;font-family:'Playfair Display',serif"></strong>
+      <strong id="tut-title" style="font-size:14px;color:#F5F0E8"></strong>
     </div>
-    <button onclick="tutSkip()" style="background:none;border:none;color:#556;font-size:16px;cursor:pointer;line-height:1;padding:0 0 0 8px">×</button>
+    <button id="tut-x" style="background:none;border:none;color:#556;font-size:18px;cursor:pointer;line-height:1">×</button>
   </div>
-  <p id="tut-body" style="margin:0 0 16px;font-size:13px;color:#b0b5c4;line-height:1.6"></p>
+  <p id="tut-body" style="margin:0 0 14px;font-size:13px;color:#b0b5c4;line-height:1.6"></p>
   <div style="display:flex;align-items:center;justify-content:space-between">
     <div id="tut-dots" style="display:flex;gap:4px"></div>
     <div style="display:flex;gap:6px">
-      <button onclick="tutSkip()" style="background:none;border:1px solid #2a2f3e;border-radius:6px;padding:5px 10px;color:#667;font-size:12px;cursor:pointer">Skip</button>
-      <button onclick="tutNext()" id="tut-next" style="background:#6e8efb;border:none;border-radius:6px;padding:5px 14px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">Next →</button>
+      <button id="tut-skip" style="background:none;border:1px solid #2a2f3e;border-radius:6px;padding:5px 10px;color:#667;font-size:12px;cursor:pointer">Skip</button>
+      <button id="tut-next" style="background:#6e8efb;border:none;border-radius:6px;padding:5px 14px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">Next →</button>
     </div>
   </div>
 </div>
+
+<script>
+(function() {
+  var STEPS = [
+    { emoji:"👋", title:"Welcome!", body:"This is your recipe library and meal planner. Let me show you around!", sel:null },
+    { emoji:"🔍", title:"Search & Filter", body:"Search recipes by name, protein, or source. Use the dropdowns to filter by category, protein, or method.", sel:"input[placeholder*='Search']" },
+    { emoji:"☑️", title:"Select Recipes", body:"Check the box next to recipes to add them to your grocery list. Select multiple to combine ingredients.", sel:"input[type='checkbox']" },
+    { emoji:"🛒", title:"Grocery List", body:"After selecting recipes, this button generates a combined shopping list with all ingredients.", sel:"#grocery-btn" },
+    { emoji:"📅", title:"Plan Your Week", body:"Open the weekly planner to drag recipes onto days, view your Google Calendar, and export meal plans.", sel:"button[onclick*='planner']" },
+    { emoji:"➕", title:"Add Recipes", body:"Click Add to create a new recipe. Paste in a URL and the app will try to auto-fill the details.", sel:"button[onclick*='toggleAdd']" },
+    { emoji:"👥", title:"Share Your Library", body:"Invite someone by email to view or edit your recipe library. They'll get an email invite.", sel:"button[onclick*='ShareModal']" },
+    { emoji:"🎉", title:"You're all set!", body:"Start by browsing, select some recipes, and hit Grocery List. Happy cooking!", sel:null },
+  ];
+
+  var idx = 0;
+  var backdrop = document.getElementById("tut-backdrop");
+  var highlight = document.getElementById("tut-highlight");
+  var card = document.getElementById("tut-card");
+
+  document.getElementById("tut-x").onclick = skip;
+  document.getElementById("tut-skip").onclick = skip;
+  document.getElementById("tut-next").onclick = next;
+  backdrop.onclick = skip;
+
+  function skip() {
+    backdrop.style.display = "none";
+    highlight.style.display = "none";
+    card.style.display = "none";
+    localStorage.setItem("tut-seen","1");
+  }
+
+  function next() {
+    idx++;
+    if (idx >= STEPS.length) { skip(); return; }
+    show(idx);
+  }
+
+  function show(i) {
+    var step = STEPS[i];
+    document.getElementById("tut-emoji").textContent = step.emoji;
+    document.getElementById("tut-title").textContent = step.title;
+    document.getElementById("tut-body").textContent = step.body;
+    document.getElementById("tut-next").textContent = i === STEPS.length - 1 ? "Done ✓" : "Next →";
+    document.getElementById("tut-dots").innerHTML = STEPS.map(function(_,j) {
+      return '<div style="width:6px;height:6px;border-radius:50%;background:' + (j===i?'#6e8efb':'#2a2f3e') + '"></div>';
+    }).join('');
+
+    backdrop.style.display = "block";
+    card.style.display = "block";
+
+    var target = null;
+    if (step.sel) {
+      var sels = step.sel.split(", ");
+      for (var s = 0; s < sels.length; s++) {
+        target = document.querySelector(sels[s].trim());
+        if (target) break;
+      }
+    }
+
+    if (target) {
+      var r = target.getBoundingClientRect();
+      var pad = 8;
+      highlight.style.display = "block";
+      highlight.style.left = (r.left - pad) + "px";
+      highlight.style.top = (r.top - pad) + "px";
+      highlight.style.width = (r.width + pad*2) + "px";
+      highlight.style.height = (r.height + pad*2) + "px";
+
+      var spaceBelow = window.innerHeight - r.bottom;
+      var top = spaceBelow > 200 ? r.bottom + 14 : r.top - 190;
+      var left = Math.max(12, Math.min(r.left, window.innerWidth - 310));
+      card.style.top = Math.max(8, top) + "px";
+      card.style.left = left + "px";
+      card.style.transform = "";
+    } else {
+      highlight.style.display = "none";
+      card.style.top = "50%";
+      card.style.left = "50%";
+      card.style.transform = "translate(-50%,-50%)";
+    }
+  }
+
+  window.startTutorial = function() { idx = 0; show(0); };
+
+  // Auto-show for first time users (wait for app to load)
+  if (!localStorage.getItem("tut-seen")) {
+    setTimeout(function() { window.startTutorial(); }, 1200);
+  }
+})();
+</script>
 </body>
 </html>
