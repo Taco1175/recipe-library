@@ -967,7 +967,8 @@ function render() {
   const list = getFiltered();
   document.getElementById("total-badge").textContent = recipes.length+" recipes";
   const hasFilter = fCat||fProt||fMeth||q||matchActive;
-  document.getElementById("count").innerHTML = `Showing ${list.length} of ${recipes.length} recipes${hasFilter?'<span class="clear-link" onclick="clearAll()">Clear</span>':""}`;
+  const selStr = checked.size > 0 ? ` · <span style="color:#6e8efb;font-weight:600">${checked.size} selected</span>` : "";
+  document.getElementById("count").innerHTML = `Showing ${list.length} of ${recipes.length} recipes${hasFilter?'<span class="clear-link" onclick="clearAll()">Clear</span>':""}${selStr}`;
   const gb = document.getElementById("grocery-btn");
   gb.style.display = checked.size > 0 ? "inline-flex" : "none";
   document.getElementById("grocery-count").textContent = checked.size;
@@ -1108,7 +1109,19 @@ document.addEventListener("click", e => {
   }
 });
 
-function chk(e,id){e.stopPropagation();e.target.checked?checked.add(id):checked.delete(id);document.getElementById("grocery-btn").style.display=checked.size>0?"inline-flex":"none";document.getElementById("grocery-count").textContent=checked.size;localStorage.setItem("recipe-cart",JSON.stringify([...checked]));}
+function chk(e,id){
+  e.stopPropagation();
+  e.target.checked ? checked.add(id) : checked.delete(id);
+  localStorage.setItem("recipe-cart",JSON.stringify([...checked]));
+  // Update counter and grocery button without full re-render (avoids disrupting search/focus)
+  const gb = document.getElementById("grocery-btn");
+  gb.style.display = checked.size > 0 ? "inline-flex" : "none";
+  document.getElementById("grocery-count").textContent = checked.size;
+  const countEl = document.getElementById("count");
+  const selStr = checked.size > 0 ? ` · <span style="color:#6e8efb;font-weight:600">${checked.size} selected</span>` : "";
+  // Replace only the selected part — preserve the "Showing X of Y" text
+  countEl.innerHTML = countEl.innerHTML.replace(/ · <span[^>]*>\d+ selected<\/span>/, "") + selStr;
+}
 function onSearch(v){q=v;render();}
 function clearSearch(){document.getElementById("search").value="";q="";render();}
 function clearAll(){fCat="";fProt="";fMeth="";q="";matchActive=false;matchScores={};fridgeSelected.clear();renderFridgeChips();document.getElementById("search").value="";document.getElementById("filterProt").value="";document.getElementById("filterMeth").value="";document.getElementById("fridge-search").value="";document.getElementById("fridge-info").textContent="";render();}
@@ -2242,9 +2255,7 @@ function closeGrocery() { document.getElementById("grocery-modal").classList.rem
 function copyCheckedGrocery() {
   const checkedItems = groceryItems.filter(i => i.checked);
   const lines = checkedItems.map(i => `☐ ${i.text}`);
-  const totalCost = checkedItems.reduce((s, i) => s + (i.cost || 0), 0);
-  const text = `🛒 GROCERY LIST\n\n${lines.join("\n")}\n\n💰 Estimated total: ~$${totalCost.toFixed(0)}`;
-  navigator.clipboard.writeText(text).then(() => {
+  navigator.clipboard.writeText(lines.join("\n")).then(() => {
     const b = event.target; b.textContent = "✅ Copied!";
     setTimeout(() => b.textContent = "📋 Copy checked", 2000);
   });
