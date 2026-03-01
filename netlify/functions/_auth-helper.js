@@ -12,7 +12,8 @@ function simpleHmac(data, key) {
 function verifyToken(token) {
   if (!token) return false;
   try {
-    const secret = process.env.SESSION_SECRET || "fallback-secret";
+    const secret = process.env.SESSION_SECRET;
+    if (!secret) return false;
     const decoded = Buffer.from(token, "base64").toString("utf8");
     const [timestamp, sig] = decoded.split(":");
     if (!timestamp || !sig) return false;
