@@ -1878,7 +1878,7 @@ function buildCartHeaderHTML(sel) {
   return `<div style="margin-bottom:12px;padding:12px 16px;background:#12151f;border:1px solid #2a2f3e;border-radius:10px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#556;font-family:monospace">🛒 In your cart</div>
-      ${totalCost > 0 ? `<div style="font-size:12px;color:#6aaa6a;font-family:monospace">~$${totalCost.toFixed(0)} est.</div>` : ''}
+      ${totalCost > 0 ? `<div id="cart-header-total" style="font-size:12px;color:#6aaa6a;font-family:monospace">~$${totalCost.toFixed(0)} est.</div>` : ''}
     </div>
     <div style="display:flex;flex-direction:column;gap:6px">
       ${sel.map(r => {
@@ -2005,6 +2005,10 @@ async function openGrocery() {
 
   // Cost summary banner
   const totalCost = groceryItems.reduce((s, i) => s + (i.cost || 0), 0);
+
+  // Sync cart header total with ingredient-based calculation
+  const cartTotalEl = document.getElementById("cart-header-total");
+  if (cartTotalEl && totalCost > 0) cartTotalEl.textContent = "~$" + totalCost.toFixed(0) + " est.";
   if (totalCost > 0) {
     body.innerHTML += `<div style="margin-top:14px;padding:10px 14px;background:#0f1f0f;border:1px solid #2a4a2a;border-radius:8px;font-size:12px;color:#6aaa6a;font-family:monospace">
       💰 Estimated total: <strong style="font-size:14px">~$${totalCost.toFixed(0)}</strong> <span style="color:#3a6a3a">(rough estimate, prices vary)</span>
