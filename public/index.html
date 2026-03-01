@@ -2252,139 +2252,95 @@ document.getElementById("edit-modal").addEventListener("click", function(e) {
 });
 
 
+
+
 // ── Tutorial ──
-const TUTORIAL_STEPS = [
-  {
-    emoji: "👋",
-    title: "Welcome to Recipe Library!",
-    body: "This is your personal meal planning hub. Let's take a quick tour so you can get the most out of it.",
-    target: null,
-  },
-  {
-    emoji: "🔍",
-    title: "Search & Filter",
-    body: "Use the search bar to find recipes by name, protein, or source. Filter by category, protein type, or cooking method using the dropdowns.",
-    target: ".search-bar-wrap, input[placeholder*='Search']",
-  },
-  {
-    emoji: "☑️",
-    title: "Select Recipes",
-    body: "Check the checkbox next to any recipe to add it to your selection. Selected recipes show up in your grocery list.",
-    target: "thead, .table-header",
-  },
-  {
-    emoji: "🛒",
-    title: "Grocery List",
-    body: "Once you've checked recipes, click 'Grocery List' to generate a combined shopping list with all ingredients grouped and ready to go.",
-    target: "#grocery-btn, button[onclick*='grocery']",
-  },
-  {
-    emoji: "📖",
-    title: "Recipe Details",
-    body: "Click the ▶ arrow next to any recipe name to expand it and see ingredients and steps. Click the 🔗 icon to open a clean reader view for cooking.",
-    target: null,
-  },
-  {
-    emoji: "✏️",
-    title: "Edit Recipes",
-    body: "Click the pencil ✏️ icon to edit a recipe's details — add ingredients, steps, servings, and a source URL.",
-    target: null,
-  },
-  {
-    emoji: "📅",
-    title: "Plan Your Week",
-    body: "Click 'Plan Week' to open the weekly meal planner. Drag recipes onto days of the week, view your Google Calendar, and export meals as calendar events.",
-    target: "button[onclick*='planner'], a[href*='planner']",
-  },
-  {
-    emoji: "👥",
-    title: "Share Your Library",
-    body: "Use the Share button to invite others to view or edit your library. They'll get an email invite and can sign up to access your recipes.",
-    target: "button[onclick*='ShareModal']",
-  },
-  {
-    emoji: "🎉",
-    title: "You're all set!",
-    body: "That's everything! Start by browsing your recipes, checking a few off, and generating your first grocery list. Happy cooking!",
-    target: null,
-  },
+const TUT_STEPS = [
+  { emoji:"👋", title:"Welcome!", body:"This is your personal recipe library and meal planner. Let me show you around.", sel:null },
+  { emoji:"🔍", title:"Search & Filter", body:"Search recipes by name, protein, or source. Use the dropdowns to filter by category, protein, or cooking method.", sel:"input[placeholder*='Search']" },
+  { emoji:"☑️", title:"Select Recipes", body:"Check the box next to any recipe to select it for your grocery list. Check multiple to combine their ingredients.", sel:"input[type='checkbox']" },
+  { emoji:"🛒", title:"Grocery List", body:"After selecting recipes, click 'Grocery List' to get a combined shopping list with all ingredients ready to go.", sel:"#grocery-btn" },
+  { emoji:"▶", title:"Expand a Recipe", body:"Click the ▶ arrow next to a recipe name to expand it and see ingredients and steps inline.", sel:"button.expand-btn, .expand-btn, tr .expand" },
+  { emoji:"✏️", title:"Edit Recipes", body:"Click the pencil icon on any recipe to add or update ingredients, steps, cost, servings, and a source URL.", sel:"button[onclick*='openEdit'], .edit-btn" },
+  { emoji:"📅", title:"Plan Your Week", body:"Click 'Plan Week' to drag recipes onto days of the week, view your Google Calendar, and export your meal plan.", sel:"button[onclick*='planner'], a[href*='planner']" },
+  { emoji:"👥", title:"Share Your Library", body:"Click 'Share' to invite someone by email. Give them view-only or edit access to your full recipe library.", sel:"button[onclick*='ShareModal']" },
+  { emoji:"🎉", title:"You're all set!", body:"That's everything! Start by browsing, select some recipes, and generate your first grocery list. Happy cooking!", sel:null },
 ];
 
-let tutorialStep = 0;
+let tutIdx = 0;
 
 function startTutorial() {
-  tutorialStep = 0;
-  document.getElementById("tutorial-overlay").style.display = "block";
-  showTutorialStep(0);
+  tutIdx = 0;
+  document.getElementById("tut-backdrop").style.display = "block";
+  tutShow(0);
 }
 
-function skipTutorial() {
-  document.getElementById("tutorial-overlay").style.display = "none";
-  localStorage.setItem("tutorial-seen", "1");
+function tutSkip() {
+  ["tut-backdrop","tut-highlight","tut-card"].forEach(id => {
+    document.getElementById(id).style.display = "none";
+  });
+  localStorage.setItem("tut-seen","1");
 }
 
-function nextTutorialStep() {
-  tutorialStep++;
-  if (tutorialStep >= TUTORIAL_STEPS.length) {
-    skipTutorial();
-    return;
-  }
-  showTutorialStep(tutorialStep);
+function tutNext() {
+  tutIdx++;
+  if (tutIdx >= TUT_STEPS.length) { tutSkip(); return; }
+  tutShow(tutIdx);
 }
 
-function showTutorialStep(idx) {
-  const step = TUTORIAL_STEPS[idx];
-  document.getElementById("tutorial-emoji").textContent = step.emoji;
-  document.getElementById("tutorial-title").textContent = step.title;
-  document.getElementById("tutorial-body").textContent = step.body;
-  document.getElementById("tutorial-step-label").textContent = (idx + 1) + " of " + TUTORIAL_STEPS.length;
-  document.getElementById("tutorial-next-btn").textContent = idx === TUTORIAL_STEPS.length - 1 ? "Done ✓" : "Next →";
+function tutShow(idx) {
+  const step = TUT_STEPS[idx];
+  document.getElementById("tut-emoji").textContent = step.emoji;
+  document.getElementById("tut-title").textContent = step.title;
+  document.getElementById("tut-body").textContent = step.body;
+  document.getElementById("tut-next").textContent = idx === TUT_STEPS.length - 1 ? "Done ✓" : "Next →";
 
   // Dots
-  const dots = document.getElementById("tutorial-dots");
-  dots.innerHTML = TUTORIAL_STEPS.map((_, i) =>
-    '<div style="width:6px;height:6px;border-radius:50%;background:' + (i === idx ? '#6e8efb' : '#2a2f3e') + '"></div>'
+  document.getElementById("tut-dots").innerHTML = TUT_STEPS.map((_,i) =>
+    `<div style="width:6px;height:6px;border-radius:50%;background:${i===idx?'#6e8efb':'#2a2f3e'}"></div>`
   ).join('');
 
-  // Spotlight
-  const hole = document.getElementById("spotlight-hole");
-  const tooltip = document.getElementById("tutorial-tooltip");
+  const card = document.getElementById("tut-card");
+  const hl = document.getElementById("tut-highlight");
+  card.style.display = "block";
+
   let targetEl = null;
-  if (step.target) {
-    for (const sel of step.target.split(", ")) {
-      targetEl = document.querySelector(sel.trim());
+  if (step.sel) {
+    for (const s of step.sel.split(", ")) {
+      targetEl = document.querySelector(s.trim());
       if (targetEl) break;
     }
   }
 
   if (targetEl) {
     const r = targetEl.getBoundingClientRect();
-    const pad = 8;
-    hole.setAttribute("x", r.left - pad);
-    hole.setAttribute("y", r.top - pad + window.scrollY);
-    hole.setAttribute("width", r.width + pad * 2);
-    hole.setAttribute("height", r.height + pad * 2);
-    hole.setAttribute("rx", "8");
+    const pad = 6;
+    hl.style.display = "block";
+    hl.style.left = (r.left - pad) + "px";
+    hl.style.top = (r.top - pad) + "px";
+    hl.style.width = (r.width + pad*2) + "px";
+    hl.style.height = (r.height + pad*2) + "px";
 
-    // Position tooltip below or above target
-    const tipTop = r.bottom + 16;
-    const tipLeft = Math.max(16, Math.min(r.left, window.innerWidth - 340));
-    tooltip.style.top = (tipTop + window.scrollY) + "px";
-    tooltip.style.left = tipLeft + "px";
-    tooltip.style.transform = "";
+    // Position card below target, or above if too close to bottom
+    const cardH = 160;
+    const spaceBelow = window.innerHeight - r.bottom;
+    let top = spaceBelow > cardH + 20
+      ? r.bottom + 12
+      : r.top - cardH - 12;
+    let left = Math.max(12, Math.min(r.left, window.innerWidth - 316));
+    card.style.top = top + "px";
+    card.style.left = left + "px";
+    card.style.transform = "";
   } else {
-    // Center tooltip, no spotlight
-    hole.setAttribute("width", "0");
-    hole.setAttribute("height", "0");
-    tooltip.style.top = "50%";
-    tooltip.style.left = "50%";
-    tooltip.style.transform = "translate(-50%, -50%)";
+    hl.style.display = "none";
+    card.style.top = "50%";
+    card.style.left = "50%";
+    card.style.transform = "translate(-50%, -50%)";
   }
 }
 
-// Show tutorial automatically for first-time users
 function maybeShowTutorial() {
-  if (!localStorage.getItem("tutorial-seen")) {
+  if (!localStorage.getItem("tut-seen")) {
     setTimeout(startTutorial, 800);
   }
 }
@@ -2516,34 +2472,25 @@ function maybeShowTutorial() {
 </div>
 
 
-<!-- Tutorial Overlay -->
-<div id="tutorial-overlay" style="display:none;position:fixed;inset:0;z-index:2000;pointer-events:none">
-  <!-- Dark backdrop with spotlight hole -->
-  <svg id="tutorial-backdrop" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:all" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <mask id="spotlight-mask">
-        <rect width="100%" height="100%" fill="white"/>
-        <rect id="spotlight-hole" x="0" y="0" width="0" height="0" rx="8" fill="black"/>
-      </mask>
-    </defs>
-    <rect width="100%" height="100%" fill="rgba(0,0,0,0.75)" mask="url(#spotlight-mask)"/>
-  </svg>
-  <!-- Tooltip -->
-  <div id="tutorial-tooltip" style="position:absolute;background:#1a1f2e;border:1px solid #6e8efb;border-radius:12px;padding:20px 24px;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.6);pointer-events:all;z-index:2001">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-      <span id="tutorial-emoji" style="font-size:20px"></span>
-      <h3 id="tutorial-title" style="margin:0;font-size:16px;color:#F5F0E8;font-family:'Playfair Display',serif"></h3>
+
+<!-- Tutorial -->
+<div id="tut-backdrop" onclick="tutSkip()" style="display:none;position:fixed;inset:0;z-index:3000;background:transparent;pointer-events:all"></div>
+<div id="tut-highlight" style="display:none;position:fixed;z-index:3001;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,0.72);pointer-events:none;transition:all 0.3s ease"></div>
+<div id="tut-card" style="display:none;position:fixed;z-index:3002;background:#1a1f2e;border:1px solid #6e8efb;border-radius:14px;padding:20px 22px;max-width:300px;box-shadow:0 12px 40px rgba(0,0,0,0.7);pointer-events:all">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span id="tut-emoji" style="font-size:18px"></span>
+      <strong id="tut-title" style="font-size:14px;color:#F5F0E8;font-family:'Playfair Display',serif"></strong>
     </div>
-    <p id="tutorial-body" style="margin:0 0 16px;font-size:13px;color:#b0b5c4;line-height:1.6"></p>
-    <div style="display:flex;align-items:center;justify-content:space-between">
-      <span id="tutorial-step-label" style="font-size:11px;color:#556;font-family:monospace"></span>
-      <div style="display:flex;gap:8px">
-        <button onclick="skipTutorial()" style="background:none;border:1px solid #2a2f3e;border-radius:6px;padding:6px 12px;color:#667;font-size:12px;cursor:pointer">Skip</button>
-        <button onclick="nextTutorialStep()" id="tutorial-next-btn" style="background:#6e8efb;border:none;border-radius:6px;padding:6px 16px;color:#fff;font-size:12px;cursor:pointer;font-weight:500">Next →</button>
-      </div>
+    <button onclick="tutSkip()" style="background:none;border:none;color:#556;font-size:16px;cursor:pointer;line-height:1;padding:0 0 0 8px">×</button>
+  </div>
+  <p id="tut-body" style="margin:0 0 16px;font-size:13px;color:#b0b5c4;line-height:1.6"></p>
+  <div style="display:flex;align-items:center;justify-content:space-between">
+    <div id="tut-dots" style="display:flex;gap:4px"></div>
+    <div style="display:flex;gap:6px">
+      <button onclick="tutSkip()" style="background:none;border:1px solid #2a2f3e;border-radius:6px;padding:5px 10px;color:#667;font-size:12px;cursor:pointer">Skip</button>
+      <button onclick="tutNext()" id="tut-next" style="background:#6e8efb;border:none;border-radius:6px;padding:5px 14px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">Next →</button>
     </div>
-    <!-- Progress dots -->
-    <div id="tutorial-dots" style="display:flex;gap:5px;justify-content:center;margin-top:14px"></div>
   </div>
 </div>
 </body>
