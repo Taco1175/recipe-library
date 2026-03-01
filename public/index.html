@@ -1839,25 +1839,22 @@ function calcCostFromIngredients(recipeId, servings) {
   return total * (ratio > 1 ? 1 + (ratio-1)*0.75 : ratio > 0 ? 1-(1-ratio)*0.75 : 1);
 }
 
-// Format dynamic cost as a string like "$8-12"
+// Format dynamic cost as a string like "$4" or "$8-12"
 function dynamicCostStr(r) {
   const d = details[r.id];
   if (!d || !d.ingredients || d.ingredients.length < 2) {
     return r.cost && r.cost !== 'TBD' ? r.cost : null;
   }
+  // Use the same method as the grocery list for consistency
   let total = 0, matched = 0;
   d.ingredients.forEach(ing => {
-    const cost = parseIngredientCost(ing);
-    // Cap individual ingredient at $15 to prevent runaway values
-    if (cost > 0 && cost < 15) { total += cost; matched++; }
+    const cost = estimateCost(ing);
+    if (cost > 0) { total += cost; matched++; }
   });
-  if (matched < 2) return r.cost && r.cost !== 'TBD' ? r.cost : null;
-  const adjusted = total * 1.15;
-  // Sanity check: fall back to stored cost if total looks wrong
-  if (adjusted > 60) return r.cost && r.cost !== 'TBD' ? r.cost : null;
-  const lo = Math.floor(adjusted * 0.9);
-  const hi = Math.ceil(adjusted * 1.1);
-  return `$${lo}-${hi}`;
+  if (matched < 2 || total <= 0) return r.cost && r.cost !== 'TBD' ? r.cost : null;
+  // Sanity check: if still unrealistic fall back to stored cost
+  if (total > 80) return r.cost && r.cost !== 'TBD' ? r.cost : null;
+  return `~$${Math.round(total)}`;
 }
 
 function scaledCost(r, sv, def) {
