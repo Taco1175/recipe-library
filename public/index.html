@@ -791,7 +791,7 @@ function getFiltered() {
     const d = details[r.id];
     const ingText = (d?.ingredients||[]).join(' ').toLowerCase();
     const stepText = (d?.steps||[]).join(' ').toLowerCase();
-    return (!s || r.name.toLowerCase().includes(s) || r.protein.toLowerCase().includes(s) || r.source.toLowerCase().includes(s) || ingText.includes(s) || stepText.includes(s))
+    return (!s || (r.name||'').toLowerCase().includes(s) || (r.protein||'').toLowerCase().includes(s) || (r.source||'').toLowerCase().includes(s) || ingText.includes(s) || stepText.includes(s))
       && (!fCat || r.category === fCat)
       && (!fProt || r.protein === fProt)
       && (!fMeth || r.method === fMeth)
@@ -2345,8 +2345,11 @@ async function revokeShare(id) {
   await loadShares();
 }
 
-document.getElementById("share-modal").addEventListener("click", function(e) {
-  if (e.target === document.getElementById("share-modal")) closeShareModal();
+document.addEventListener("DOMContentLoaded", function() {
+  const sm = document.getElementById("share-modal");
+  if (sm) sm.addEventListener("click", function(e) {
+    if (e.target === sm) closeShareModal();
+  });
 });
 
 
