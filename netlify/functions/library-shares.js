@@ -1,4 +1,5 @@
 const { supabase, getUserFromRequest, unauthorized, CORS, SUPABASE_URL, SUPABASE_ANON_KEY } = require("./_supabase-helper");
+const { sendEmail, shareInviteEmail } = require("./_email-helper");
 
 // Look up a user's ID by email using the service key
 async function findUserByEmail(email) {
@@ -62,6 +63,16 @@ exports.handler = async (event) => {
       permission,
     }, token);
     if (!ok) return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: "DB error", detail: data }) };
+
+    // Send invite email
+    const { subject, html } = shareInviteEmail({
+      ownerEmail: user.email,
+      recipientEmail: email,
+      permission,
+      appUrl: process.env.URL,
+    });
+    await sendEmail({ to: email, subject, html });
+
     return { statusCode: 200, headers: CORS, body: JSON.stringify({ success: true, created: true, userFound: !!sharedWithId }) };
   }
 

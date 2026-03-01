@@ -387,6 +387,12 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
           <button class="btn btn-outline" style="font-size:12px" onclick="location.href='planner.html'">📅 Plan Week</button>
           <button class="btn btn-outline" style="font-size:12px" onclick="toggleAdd()">＋ Add</button>
           <button id="backfill-btn" class="backfill-btn" onclick="backfillImages()">🖼 Backfill Images</button>
+          <button onclick="startTutorial()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text2);font-size:12px;cursor:pointer;font-family:monospace;display:flex;align-items:center;gap:5px">
+            ✨ Tutorial
+          </button>
+          <button onclick="startTutorial()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text2);font-size:12px;cursor:pointer;font-family:monospace;display:flex;align-items:center;gap:5px">
+            ✨ Tutorial
+          </button>
           <button onclick="openShareModal()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text2);font-size:12px;cursor:pointer;font-family:monospace;display:flex;align-items:center;gap:5px">
             👥 Share
           </button>
@@ -763,6 +769,7 @@ async function showApp() {
   await loadData();
   buildSelects();
   render();
+  maybeShowTutorial();
 }
 
 async function loadData() {
@@ -2247,6 +2254,144 @@ document.getElementById("edit-modal").addEventListener("click", function(e) {
   if (e.target === this) closeEditModal();
 });
 
+
+// ── Tutorial ──
+const TUTORIAL_STEPS = [
+  {
+    emoji: "👋",
+    title: "Welcome to Recipe Library!",
+    body: "This is your personal meal planning hub. Let's take a quick tour so you can get the most out of it.",
+    target: null,
+  },
+  {
+    emoji: "🔍",
+    title: "Search & Filter",
+    body: "Use the search bar to find recipes by name, protein, or source. Filter by category, protein type, or cooking method using the dropdowns.",
+    target: ".search-bar-wrap, input[placeholder*='Search']",
+  },
+  {
+    emoji: "☑️",
+    title: "Select Recipes",
+    body: "Check the checkbox next to any recipe to add it to your selection. Selected recipes show up in your grocery list.",
+    target: "thead, .table-header",
+  },
+  {
+    emoji: "🛒",
+    title: "Grocery List",
+    body: "Once you've checked recipes, click 'Grocery List' to generate a combined shopping list with all ingredients grouped and ready to go.",
+    target: "#grocery-btn, button[onclick*='grocery']",
+  },
+  {
+    emoji: "📖",
+    title: "Recipe Details",
+    body: "Click the ▶ arrow next to any recipe name to expand it and see ingredients and steps. Click the 🔗 icon to open a clean reader view for cooking.",
+    target: null,
+  },
+  {
+    emoji: "✏️",
+    title: "Edit Recipes",
+    body: "Click the pencil ✏️ icon to edit a recipe's details — add ingredients, steps, servings, and a source URL.",
+    target: null,
+  },
+  {
+    emoji: "📅",
+    title: "Plan Your Week",
+    body: "Click 'Plan Week' to open the weekly meal planner. Drag recipes onto days of the week, view your Google Calendar, and export meals as calendar events.",
+    target: "button[onclick*='planner'], a[href*='planner']",
+  },
+  {
+    emoji: "👥",
+    title: "Share Your Library",
+    body: "Use the Share button to invite others to view or edit your library. They'll get an email invite and can sign up to access your recipes.",
+    target: "button[onclick*='ShareModal']",
+  },
+  {
+    emoji: "🎉",
+    title: "You're all set!",
+    body: "That's everything! Start by browsing your recipes, checking a few off, and generating your first grocery list. Happy cooking!",
+    target: null,
+  },
+];
+
+let tutorialStep = 0;
+
+function startTutorial() {
+  tutorialStep = 0;
+  document.getElementById("tutorial-overlay").style.display = "block";
+  showTutorialStep(0);
+}
+
+function skipTutorial() {
+  document.getElementById("tutorial-overlay").style.display = "none";
+  localStorage.setItem("tutorial-seen", "1");
+}
+
+function nextTutorialStep() {
+  tutorialStep++;
+  if (tutorialStep >= TUTORIAL_STEPS.length) {
+    skipTutorial();
+    return;
+  }
+  showTutorialStep(tutorialStep);
+}
+
+function showTutorialStep(idx) {
+  const step = TUTORIAL_STEPS[idx];
+  document.getElementById("tutorial-emoji").textContent = step.emoji;
+  document.getElementById("tutorial-title").textContent = step.title;
+  document.getElementById("tutorial-body").textContent = step.body;
+  document.getElementById("tutorial-step-label").textContent = (idx + 1) + " of " + TUTORIAL_STEPS.length;
+  document.getElementById("tutorial-next-btn").textContent = idx === TUTORIAL_STEPS.length - 1 ? "Done ✓" : "Next →";
+
+  // Dots
+  const dots = document.getElementById("tutorial-dots");
+  dots.innerHTML = TUTORIAL_STEPS.map((_, i) =>
+    '<div style="width:6px;height:6px;border-radius:50%;background:' + (i === idx ? '#6e8efb' : '#2a2f3e') + '"></div>'
+  ).join('');
+
+  // Spotlight
+  const hole = document.getElementById("spotlight-hole");
+  const tooltip = document.getElementById("tutorial-tooltip");
+  let targetEl = null;
+  if (step.target) {
+    for (const sel of step.target.split(", ")) {
+      targetEl = document.querySelector(sel.trim());
+      if (targetEl) break;
+    }
+  }
+
+  if (targetEl) {
+    const r = targetEl.getBoundingClientRect();
+    const pad = 8;
+    hole.setAttribute("x", r.left - pad);
+    hole.setAttribute("y", r.top - pad + window.scrollY);
+    hole.setAttribute("width", r.width + pad * 2);
+    hole.setAttribute("height", r.height + pad * 2);
+    hole.setAttribute("rx", "8");
+
+    // Position tooltip below or above target
+    const tipTop = r.bottom + 16;
+    const tipLeft = Math.max(16, Math.min(r.left, window.innerWidth - 340));
+    tooltip.style.top = (tipTop + window.scrollY) + "px";
+    tooltip.style.left = tipLeft + "px";
+    tooltip.style.transform = "";
+  } else {
+    // Center tooltip, no spotlight
+    hole.setAttribute("width", "0");
+    hole.setAttribute("height", "0");
+    tooltip.style.top = "50%";
+    tooltip.style.left = "50%";
+    tooltip.style.transform = "translate(-50%, -50%)";
+  }
+}
+
+// Show tutorial automatically for first-time users
+function maybeShowTutorial() {
+  if (!localStorage.getItem("tutorial-seen")) {
+    setTimeout(startTutorial, 800);
+  }
+}
+
 </script>
 
 <!-- Share Modal -->
@@ -2373,5 +2518,36 @@ document.getElementById("edit-modal").addEventListener("click", function(e) {
   </div>
 </div>
 
+
+<!-- Tutorial Overlay -->
+<div id="tutorial-overlay" style="display:none;position:fixed;inset:0;z-index:2000;pointer-events:none">
+  <!-- Dark backdrop with spotlight hole -->
+  <svg id="tutorial-backdrop" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:all" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <mask id="spotlight-mask">
+        <rect width="100%" height="100%" fill="white"/>
+        <rect id="spotlight-hole" x="0" y="0" width="0" height="0" rx="8" fill="black"/>
+      </mask>
+    </defs>
+    <rect width="100%" height="100%" fill="rgba(0,0,0,0.75)" mask="url(#spotlight-mask)"/>
+  </svg>
+  <!-- Tooltip -->
+  <div id="tutorial-tooltip" style="position:absolute;background:#1a1f2e;border:1px solid #6e8efb;border-radius:12px;padding:20px 24px;max-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.6);pointer-events:all;z-index:2001">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <span id="tutorial-emoji" style="font-size:20px"></span>
+      <h3 id="tutorial-title" style="margin:0;font-size:16px;color:#F5F0E8;font-family:'Playfair Display',serif"></h3>
+    </div>
+    <p id="tutorial-body" style="margin:0 0 16px;font-size:13px;color:#b0b5c4;line-height:1.6"></p>
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <span id="tutorial-step-label" style="font-size:11px;color:#556;font-family:monospace"></span>
+      <div style="display:flex;gap:8px">
+        <button onclick="skipTutorial()" style="background:none;border:1px solid #2a2f3e;border-radius:6px;padding:6px 12px;color:#667;font-size:12px;cursor:pointer">Skip</button>
+        <button onclick="nextTutorialStep()" id="tutorial-next-btn" style="background:#6e8efb;border:none;border-radius:6px;padding:6px 16px;color:#fff;font-size:12px;cursor:pointer;font-weight:500">Next →</button>
+      </div>
+    </div>
+    <!-- Progress dots -->
+    <div id="tutorial-dots" style="display:flex;gap:5px;justify-content:center;margin-top:14px"></div>
+  </div>
+</div>
 </body>
 </html>
