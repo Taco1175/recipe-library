@@ -30,7 +30,7 @@ a { color: var(--accent); }
 /* ── HEADER ── */
 .header {
   background: linear-gradient(135deg, #1a1f2e, var(--bg));
-  border-bottom: 1px solid var(--border); padding: 20px 24px 18px;
+  border-bottom: 1px solid var(--border); padding: 14px 24px 14px;
   position: sticky; top: 0; z-index: 50;
 }
 .header-inner { max-width: 1300px; margin: 0 auto; }
@@ -50,7 +50,7 @@ a { color: var(--accent); }
 .pill.active .dot { background: var(--dot); }
 
 /* ── MAIN ── */
-.main { max-width: 1300px; margin: 0 auto; padding: 20px 24px; }
+.main { max-width: 1300px; margin: 0 auto; padding: 16px 24px; }
 
 /* ── BUTTONS ── */
 .btn {
@@ -76,7 +76,7 @@ a { color: var(--accent); }
 }
 
 /* ── TOPBAR ── */
-.topbar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+.topbar { display: flex; gap: 8px; margin-bottom: 0; flex-wrap: wrap; align-items: center; }
 .search-wrap { position: relative; flex: 1; min-width: 200px; }
 .search-wrap input {
   width: 100%; background: var(--bg4); border: 1px solid var(--border);
@@ -339,8 +339,9 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
   .recipe-modal-body { padding: 14px 16px; }
 
   /* Topbar filters */
-  .topbar { gap: 6px; flex-wrap: wrap; }
+  .topbar { gap: 6px; flex-wrap: wrap; margin-top: 8px; }
   .topbar .flt { font-size: 12px; padding: 7px 8px; }
+  .topbar .search-wrap { flex: 1 1 100%; }
   .view-toggle button { width: 28px; height: 28px; font-size: 13px; }
 }
 
@@ -413,6 +414,26 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
         </div>
       </div>
       <div class="pills" id="pills"></div>
+      <div class="topbar" style="margin-top:10px">
+        <div class="view-toggle">
+          <button id="btn-table" class="active" onclick="setView('table')" title="Table view">☰</button>
+          <button id="btn-grid" onclick="setView('grid')" title="Grid view">⊞</button>
+        </div>
+        <div class="search-wrap">
+          <input type="text" id="search" placeholder="Search recipes…" oninput="onSearch(this.value)">
+          <button class="search-clear" id="search-clear-btn" onclick="clearSearch()" title="Clear" style="display:none">×</button>
+        </div>
+        <select class="flt" id="filterProt" onchange="fProt=this.value;render()"><option value="">All Proteins</option></select>
+        <select class="flt" id="filterMeth" onchange="fMeth=this.value;render()"><option value="">All Methods</option></select>
+        <select class="flt" id="sortBy" onchange="sort=this.value;render()">
+          <option value="category">Category</option>
+          <option value="name">Name A-Z</option>
+          <option value="protein">Protein</option>
+          <option value="method">Method</option>
+          <option value="cost">Cost ↑</option>
+          <option value="match">Match %</option>
+        </select>
+      </div>
     </div>
   </div>
 
@@ -490,27 +511,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
       </div>
     </div>
 
-    <!-- Topbar -->
-    <div class="topbar">
-      <div class="view-toggle">
-        <button id="btn-table" class="active" onclick="setView('table')" title="Table view">☰</button>
-        <button id="btn-grid" onclick="setView('grid')" title="Grid view">⊞</button>
-      </div>
-      <div class="search-wrap">
-        <input type="text" id="search" placeholder="Search recipes…" oninput="onSearch(this.value)">
-        <button class="search-clear" id="search-clear-btn" onclick="clearSearch()" title="Clear" style="display:none">×</button>
-      </div>
-      <select class="flt" id="filterProt" onchange="fProt=this.value;render()"><option value="">All Proteins</option></select>
-      <select class="flt" id="filterMeth" onchange="fMeth=this.value;render()"><option value="">All Methods</option></select>
-      <select class="flt" id="sortBy" onchange="sort=this.value;render()">
-        <option value="category">Category</option>
-        <option value="name">Name A-Z</option>
-        <option value="protein">Protein</option>
-        <option value="method">Method</option>
-        <option value="cost">Cost ↑</option>
-        <option value="match">Match %</option>
-      </select>
-    </div>
+
 
     <div class="count" id="count"></div>
 
