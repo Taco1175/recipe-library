@@ -2524,8 +2524,9 @@ async function saveEdit() {
 }
 
 // Close on backdrop click
-document.getElementById("edit-modal").addEventListener("click", function(e) {
-  if (e.target === this) closeEditModal();
+document.addEventListener("DOMContentLoaded", function() {
+  const em = document.getElementById("edit-modal");
+  if (em) em.addEventListener("click", function(e) { if (e.target === this) closeEditModal(); });
 });
 
 
