@@ -1678,6 +1678,21 @@ const UNIT_CONVERSIONS = {
   "whole": 1, "clove": 1, "cloves": 1, "egg": 1, "eggs": 1,
   "can": 1, "cans": 1, "bunch": 1, "head": 1, "scoop": 1, "pack": 1,
   "slice": 1, "slices": 1,
+  // meat-specific
+  "strip": 1, "strips": 1, "piece": 1, "pieces": 1,
+  "fillet": 1, "fillets": 1, "breast": 1, "thigh": 1, "thighs": 1,
+};
+
+// Map count-based units to per-lb equivalents for proteins
+const COUNT_TO_LB = {
+  "strip": 0.05,   // 1 bacon strip ≈ 0.05 lb
+  "strips": 0.05,
+  "piece": 0.25,
+  "pieces": 0.25,
+  "breast": 0.5,   // 1 chicken breast ≈ 0.5 lb
+  "thigh": 0.25,
+  "thighs": 0.25,
+  "fillet": 0.33,
 };
 
 function parseIngredientCost(ingStr) {
@@ -1727,6 +1742,12 @@ function parseIngredientCost(ingStr) {
     return (amountInTbsp / pkgInTbsp) * pkgPrice;
   }
 
+  // Count-based meat units -> lb conversion
+  if (COUNT_TO_LB[unit] && pkgUnit === 'lb') {
+    const amountInLb = amount * COUNT_TO_LB[unit];
+    return (amountInLb / pkgSize) * pkgPrice;
+  }
+
   // Both weight (lb-based)
   const toLb = { lb:1,lbs:1,pound:1,pounds:1,oz:0.0625,ounces:0.0625,g:0.0022,gram:0.0022,grams:0.0022 };
   if (toLb[unit] && toLb[pkgUnit]) {
@@ -1735,8 +1756,9 @@ function parseIngredientCost(ingStr) {
     return (amountInLb / pkgInLb) * pkgPrice;
   }
 
-  // Fallback: assume full package cost scaled by amount
-  return (amount / pkgSize) * pkgPrice;
+  // Fallback: treat as fractional package (cap at 2x package price)
+  const fraction = Math.min(amount / pkgSize, 2);
+  return fraction * pkgPrice;
 }
 
 function estimateCost(ingredient) {
@@ -1834,17 +1856,16 @@ function dynamicCostStr(r) {
 }
 
 function scaledCost(r, sv, def) {
-  // Try dynamic calculation from ingredients first
+  // Always prefer ingredient-based calculation
   const fromIngredients = calcCostFromIngredients(r.id, sv);
-  if (fromIngredients) return fromIngredients;
+  if (fromIngredients && fromIngredients < 100) return fromIngredients; // sanity cap
   // Fall back to hardcoded cost string
-  if (!r.cost || r.cost === 'TBD') return null;
-  const nums = r.cost.replace(/[^0-9\-\.]/g,'').split('-').map(Number).filter(n=>n>0);
+  if (!r.cost || r.cost === 'TBD' || r.cost === 'null') return null;
+  const nums = r.cost.replace(/[^0-9\.]/g,' ').trim().split(/\s+/).map(Number).filter(n=>n>0&&n<200);
   if (!nums.length) return null;
   const base = nums.reduce((a,b)=>a+b,0)/nums.length;
   const ratio = def > 0 ? sv / def : 1;
-  const scaled = base * (ratio > 1 ? 1 + (ratio-1)*0.75 : ratio > 0 ? 1-(1-ratio)*0.75 : 1);
-  return scaled;
+  return base * (ratio > 1 ? 1 + (ratio-1)*0.75 : ratio > 0 ? 1-(1-ratio)*0.75 : 1);
 }
 
 function buildCartHeaderHTML(sel) {
