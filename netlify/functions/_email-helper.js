@@ -1,6 +1,6 @@
 // Email via Resend (https://resend.com) — free tier: 100 emails/day
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const FROM_EMAIL = process.env.EMAIL_FROM || "recipes@cowpushing-meals.netlify.app";
+const FROM_EMAIL = process.env.EMAIL_FROM || "onboarding@resend.dev";
 const APP_URL = process.env.URL || "https://cowpushing-meals.netlify.app";
 
 async function sendEmail({ to, subject, html }) {
