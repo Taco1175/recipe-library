@@ -390,9 +390,6 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
           <button onclick="startTutorial()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text2);font-size:12px;cursor:pointer;font-family:monospace;display:flex;align-items:center;gap:5px">
             ✨ Tutorial
           </button>
-          <button onclick="startTutorial()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text2);font-size:12px;cursor:pointer;font-family:monospace;display:flex;align-items:center;gap:5px">
-            ✨ Tutorial
-          </button>
           <button onclick="openShareModal()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text2);font-size:12px;cursor:pointer;font-family:monospace;display:flex;align-items:center;gap:5px">
             👥 Share
           </button>
@@ -1001,7 +998,7 @@ function render() {
     <div><span class="badge" style="background:${c.bg};color:${c.text}"><span class="dot" style="background:${c.dot}"></span>${r.category}</span></div>
     <div class="meta">${MI[r.method]||"🍴"} ${r.method}</div>
 
-    <div class="cost">${r.cost}</div>
+    <div class="cost">${r.cost || ''}</div>
     <div style="display:flex;align-items:center;justify-content:center">
       ${ms ? `<span class="match-badge ${ms.match==='full'?'match-full':'match-partial'}" title="${esc(ms.note)}">${ms.score}%</span>` : (matchActive ? `<span style="font-size:11px;color:#333;font-family:monospace">—</span>` : "")}
     </div>
