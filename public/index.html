@@ -14,24 +14,8 @@
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
 <link rel="stylesheet" href="/shared.css">
 <style>
-:root {
-  --bg: #0F1117;
-  --bg2: #1a1f2e;
-  --bg3: #12151f;
-  --bg4: #1e2330;
-  --border: #2a2f3e;
-  --text: #E8E4DC;
-  --text2: #9a9fae;
-  --text3: #556;
-  --accent: #6e8efb;
-  --green: #4CAF50;
-  --green-bg: #E8F5E9;
-  --green-text: #1B5E20;
-  --red: #e07070;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--bg); color: var(--text); font-family: Georgia, serif; min-height: 100vh; }
-a { color: var(--accent); }
+/* page-specific styles — base/sidebar in shared.css */
+
 
 /* ── APP ── */
 #app { display: block; }
@@ -350,74 +334,6 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
   .view-toggle button { width: 28px; height: 28px; font-size: 13px; }
 }
 
-/* Boost text contrast globally */
-:root {
-  --text2: #b0b5c4;
-}
-
-/* ── SIDEBAR NAV ── */
-.sidebar {
-  position: fixed; top: 0; left: 0; height: 100vh; width: 220px;
-  background: #0d1018; border-right: 1px solid var(--border);
-  display: flex; flex-direction: column; z-index: 200;
-  transition: transform 0.25s ease;
-}
-.sidebar-logo {
-  padding: 20px 20px 16px;
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 10px;
-}
-.sidebar-logo span { font-size: 22px; }
-.sidebar-logo h1 { font-size: 16px; font-weight: 700; color: #F5F0E8; font-family: Georgia, serif; letter-spacing: -0.3px; }
-.sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
-.nav-item {
-  display: flex; align-items: center; gap: 12px;
-  padding: 11px 20px; color: var(--text2); font-size: 14px;
-  cursor: pointer; transition: all 0.15s; text-decoration: none;
-  border-left: 3px solid transparent; font-family: 'DM Sans', Georgia, sans-serif;
-}
-.nav-item:hover { background: var(--bg2); color: var(--text); border-left-color: var(--border); }
-.nav-item.active { background: #1a2240; color: var(--accent); border-left-color: var(--accent); font-weight: 500; }
-.nav-item .nav-icon { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
-.nav-item .nav-label { flex: 1; }
-.nav-divider { height: 1px; background: var(--border); margin: 8px 16px; }
-.sidebar-footer { padding: 16px 20px; border-top: 1px solid var(--border); }
-.user-info { display: flex; align-items: center; gap: 10px; cursor: pointer; border-radius: 8px; padding: 8px; transition: background 0.15s; position: relative; }
-.user-info:hover { background: var(--bg2); }
-.user-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 13px; color: #fff; font-weight: 600; flex-shrink: 0; }
-.user-name { font-size: 12px; color: var(--text2); font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; max-width: 120px; }
-.user-dropdown {
-  display: none; position: absolute; bottom: 52px; left: 0; right: 0;
-  background: var(--bg2); border: 1px solid var(--border); border-radius: 10px;
-  padding: 8px; z-index: 50; box-shadow: 0 -8px 24px rgba(0,0,0,0.4);
-}
-.user-dropdown.show { display: block; }
-.user-dropdown button {
-  width: 100%; text-align: left; background: none; border: none;
-  color: var(--text2); font-size: 13px; padding: 8px 10px;
-  border-radius: 6px; cursor: pointer; font-family: Georgia, serif;
-  display: flex; align-items: center; gap: 8px;
-}
-.user-dropdown button:hover { background: var(--bg3); color: var(--text); }
-.user-dropdown button.danger { color: var(--red); }
-.user-dropdown button.danger:hover { background: #2a1515; }
-.user-dropdown .dd-divider { height: 1px; background: var(--border); margin: 4px 0; }
-
-/* ── SIDEBAR ADD BUTTON ── */
-.sidebar-add-btn {
-  margin: 4px 16px 8px;
-  background: var(--accent); color: #fff; border: none;
-  border-radius: 8px; padding: 11px 16px; font-size: 14px;
-  font-family: Georgia, serif; font-weight: 600; cursor: pointer;
-  display: flex; align-items: center; gap: 8px; width: calc(100% - 32px);
-  transition: opacity 0.2s;
-}
-.sidebar-add-btn:hover { opacity: 0.88; }
-
-/* ── PUSH CONTENT RIGHT ── */
-.sidebar-layout { margin-left: 220px; }
-
-/* ── TOP BAR (simplified) ── */
 
 </style>
 <script src="/auth.js"></script>
