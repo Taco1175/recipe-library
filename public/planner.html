@@ -77,7 +77,8 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
 .picker-search { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 7px 12px; color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; }
 .picker-search:focus { border-color: var(--accent); }
 .picker-recipes { max-height: 500px; overflow-y: auto; }
-.picker-recipe { padding: 10px 16px; border-bottom: 1px solid var(--bg3); cursor: pointer; transition: background 0.1s; display: flex; align-items: center; gap: 10px; }
+.picker-recipe { padding: 10px 16px; border-bottom: 1px solid var(--bg3); cursor: grab; transition: background 0.1s; display: flex; align-items: center; gap: 10px; }
+.picker-recipe.dragging { opacity: 0.4; cursor: grabbing; }
 .picker-recipe:hover { background: var(--bg3); }
 .picker-recipe img { width: 36px; height: 28px; object-fit: cover; border-radius: 4px; flex-shrink: 0; background: var(--bg4); }
 .picker-recipe .pr-placeholder { width: 36px; height: 28px; border-radius: 4px; background: var(--bg4); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; }
@@ -268,6 +269,7 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
     <div class="picker-header">
       <h3>Add a Recipe</h3>
       <input class="picker-search" id="picker-search" placeholder="Search recipes…" oninput="filterPicker(this.value)">
+      <div style="font-size:11px;color:var(--text3);font-family:monospace;margin-top:6px">↕ drag a recipe onto a calendar day</div>
     </div>
     <div class="picker-recipes" id="picker-recipes"></div>
   </div>
@@ -613,7 +615,7 @@ function recipeCard(r, isCart=false) {
   const img = r.image_url
     ? `<img src="${r.image_url}" alt="" onerror="this.style.display='none'">`
     : `<div class="pr-placeholder">${icon}</div>`;
-  return `<div class="picker-recipe${isCart?" cart-item":""}" onclick="pickRecipe(${r.id})">
+  return `<div class="picker-recipe${isCart?" cart-item":""}" draggable="true" data-id="${r.id}" onclick="pickRecipe(${r.id})" ondragstart="onPickerDragStart(event,${r.id})" ondragend="onPickerDragEnd(event)">
     ${img}
     <div>
       <div class="pr-name">${r.name}</div>
@@ -908,7 +910,33 @@ function onSuggestDragStart(e, idx) {
   draggingIdx = idx;
   e.dataTransfer.effectAllowed = "copy";
   e.currentTarget.classList.add("dragging");
-  // Enable drop on day columns
+  addDayDropListeners();
+}
+
+function onSuggestDragEnd(e) {
+  e.currentTarget.classList.remove("dragging");
+  draggingIdx = null;
+  removeDayDropListeners();
+}
+
+// ── Drag from picker panel ──
+let draggingPickerId = null;
+
+function onPickerDragStart(e, id) {
+  draggingPickerId = id;
+  draggingIdx = null; // clear suggest drag
+  e.dataTransfer.effectAllowed = "copy";
+  e.currentTarget.classList.add("dragging");
+  addDayDropListeners();
+}
+
+function onPickerDragEnd(e) {
+  e.currentTarget.classList.remove("dragging");
+  draggingPickerId = null;
+  removeDayDropListeners();
+}
+
+function addDayDropListeners() {
   document.querySelectorAll(".day-col").forEach(col => {
     col.addEventListener("dragover", onDayDragOver);
     col.addEventListener("dragleave", onDayDragLeave);
@@ -916,9 +944,7 @@ function onSuggestDragStart(e, idx) {
   });
 }
 
-function onSuggestDragEnd(e) {
-  e.currentTarget.classList.remove("dragging");
-  draggingIdx = null;
+function removeDayDropListeners() {
   document.querySelectorAll(".day-col").forEach(col => {
     col.classList.remove("drag-over");
     col.removeEventListener("dragover", onDayDragOver);
@@ -940,10 +966,17 @@ function onDayDragLeave(e) {
 function onDayDrop(e) {
   e.preventDefault();
   this.classList.remove("drag-over");
-  if (draggingIdx === null || !suggestedMeals[draggingIdx]) return;
-  const r = suggestedMeals[draggingIdx];
   const ds = this.dataset.date;
   if (!ds) return;
+
+  let r = null;
+  if (draggingIdx !== null && suggestedMeals[draggingIdx]) {
+    r = suggestedMeals[draggingIdx];
+  } else if (draggingPickerId !== null) {
+    r = recipes.find(x => x.id === draggingPickerId);
+  }
+  if (!r) return;
+
   addToPlan(ds, r.id);
   cartIds.add(r.id);
   localStorage.setItem("recipe-cart", JSON.stringify([...cartIds]));
