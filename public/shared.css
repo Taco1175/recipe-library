@@ -28,23 +28,27 @@ a { color: var(--accent); text-decoration: none; }
 .sidebar-logo {
   padding: 18px 16px; border-bottom: 1px solid var(--border);
   display: flex; align-items: center; gap: 10px; min-height: 60px;
-  overflow: hidden;
+  overflow: visible; position: relative;
 }
 .sidebar-logo-icon { font-size: 20px; flex-shrink: 0; }
 .sidebar-logo-text { font-size: 16px; font-weight: 700; color: #F5F0E8; font-family: Georgia, serif; white-space: nowrap; }
 .sidebar-collapse-btn {
-  margin-left: auto; background: none; border: none;
-  color: var(--text3); cursor: pointer; font-size: 16px;
-  padding: 2px 4px; border-radius: 4px; flex-shrink: 0;
-  transition: color 0.15s;
+  position: absolute; top: 50%; right: -12px; transform: translateY(-50%);
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--bg2); border: 1px solid var(--border);
+  color: var(--text2); cursor: pointer; font-size: 11px;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 210; transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
 }
-.sidebar-collapse-btn:hover { color: var(--text); }
+.sidebar-collapse-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
 .sidebar.collapsed .sidebar-logo-text,
 .sidebar.collapsed .nav-label,
 .sidebar.collapsed .sidebar-add-text,
 .sidebar.collapsed .user-name,
 .sidebar.collapsed .user-caret { display: none; }
 .sidebar.collapsed .sidebar-add-btn { padding: 10px 0; justify-content: center; width: 56px; margin: 4px 0 8px; border-radius: 0; }
+.sidebar.collapsed .sidebar-logo { padding: 18px 8px; justify-content: center; }
 .sidebar.collapsed .nav-item { padding: 12px 0; justify-content: center; }
 .sidebar.collapsed .nav-icon { margin: 0; }
 .sidebar-nav { flex: 1; padding: 10px 0; overflow-y: auto; overflow-x: hidden; }
