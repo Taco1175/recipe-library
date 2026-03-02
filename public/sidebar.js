@@ -1,4 +1,3 @@
-// ── Shared sidebar logic for all pages ──
 (function() {
   const COLLAPSED_KEY = 'sidebar-collapsed';
 
@@ -11,11 +10,11 @@
     if (!sb) return;
     if (collapsed) {
       sb.classList.add('collapsed');
-      sl && sl.classList.add('collapsed');
+      if (sl) sl.classList.add('collapsed');
       if (btn) btn.textContent = '▶';
     } else {
       sb.classList.remove('collapsed');
-      sl && sl.classList.remove('collapsed');
+      if (sl) sl.classList.remove('collapsed');
       if (btn) btn.textContent = '◀';
     }
   }
@@ -38,22 +37,26 @@
 
   window.toggleUserMenu = function(e) {
     if (e) e.stopPropagation();
-    document.getElementById('user-dropdown')?.classList.toggle('show');
+    const dd = document.getElementById('user-dropdown');
+    const btn = document.getElementById('user-info-btn');
+    const isOpen = dd?.classList.toggle('show');
+    btn?.classList.toggle('open', isOpen);
   };
 
   // Close dropdown on outside click
   document.addEventListener('click', function(e) {
-    if (!e.target.closest('.user-info')) {
+    if (!e.target.closest('.user-info') && !e.target.closest('.user-dropdown')) {
       document.getElementById('user-dropdown')?.classList.remove('show');
+      document.getElementById('user-info-btn')?.classList.remove('open');
     }
   });
 
-  // Apply collapsed state immediately on load
+  // Apply collapsed state on load
   document.addEventListener('DOMContentLoaded', function() {
     applyCollapsed(isCollapsed());
   });
 
-  // Force reload on browser back/forward cache
+  // Never cache HTML — force fresh on back/forward
   window.addEventListener('pageshow', function(e) {
     if (e.persisted) window.location.reload();
   });

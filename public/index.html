@@ -385,15 +385,18 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
       <div class="nav-item" onclick="startTutorial()"><span class="nav-icon">✨</span><span class="nav-label">Tutorial</span></div>
     </div>
     <div class="sidebar-footer">
-      <div class="user-info" onclick="toggleUserMenu(event)">
+      <div class="user-info" onclick="toggleUserMenu(event)" id="user-info-btn">
         <div class="user-avatar" id="user-avatar">?</div>
         <span class="user-name" id="user-email-short"></span>
-        <span class="user-caret">▴</span>
-        <div class="user-dropdown" id="user-dropdown">
-          <div class="dd-email" id="user-email-full"></div>
-          <button id="backfill-btn" onclick="event.stopPropagation();backfillImages()">🖼 Backfill Images</button>
-          <button onclick="event.stopPropagation();Auth.signOut()" class="danger">🚪 Sign out</button>
-        </div>
+        <span class="user-caret">▾</span>
+      </div>
+      <div class="user-dropdown" id="user-dropdown">
+        <div class="dd-email" id="user-email-full"></div>
+        <button id="backfill-btn" onclick="event.stopPropagation();backfillImages()">🖼 Backfill Images</button>
+      </div>
+      <div class="sidebar-signout" onclick="Auth.signOut()">
+        <span class="sign-icon">🚪</span>
+        <span class="sign-label">Sign out</span>
       </div>
     </div>
   </nav>
