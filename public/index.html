@@ -952,13 +952,16 @@ async function backfillImages() {
   let done = 0;
   for (const r of toFetch) {
     try {
-      const proxyUrl = "https://corsproxy.io/?url=" + encodeURIComponent(r.url);
-      const res = await fetch(proxyUrl);
-      const html = await res.text();
-      const parsed = parseRecipeHTML(html, r.url);
-      if (parsed.image) {
-        await api("extra-recipes", "POST", { id: r.id, image_url: parsed.image });
-        r.image_url = parsed.image;
+      const hdrs = await Auth.headers();
+      const res = await fetch("/.netlify/functions/fetch-recipe", {
+        method: "POST",
+        headers: { ...hdrs, "Content-Type": "application/json" },
+        body: JSON.stringify({ url: r.url }),
+      });
+      const data = await res.json();
+      if (data.image_url) {
+        await api("extra-recipes", "POST", { id: r.id, image_url: data.image_url });
+        r.image_url = data.image_url;
       }
     } catch(e) {}
     done++;
@@ -1333,26 +1336,26 @@ async function autoFetchRecipe(url) {
   if (!srcField.value) srcField.value = guessSourceFromUrl(url);
 
   try {
-    // Fetch via allorigins CORS proxy — uses your browser's real headers, bypasses bot blocks
-    const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(fetchUrl)}`;
-    const res = await fetch(proxyUrl);
-    const html = await res.text();
+    // Use our Netlify function — handles JustTheRecipe + fallback parsers server-side
+    const hdrs = await Auth.headers();
+    const res = await fetch("/.netlify/functions/fetch-recipe", {
+      method: "POST",
+      headers: { ...hdrs, "Content-Type": "application/json" },
+      body: JSON.stringify({ url: fetchUrl }),
+    });
+    const data = await res.json();
 
-    if (!html || html.length < 1000) {
+    if (!res.ok || data.error) {
       addMsg("⚠️ Could not load page. Try copying ingredients manually.", "error");
       return;
     }
 
-    const data = parseRecipeHTML(html, fetchUrl);
-
     if (data.name) document.getElementById("new-name").value = data.name;
     if (data.servings) document.getElementById("new-servings").value = data.servings;
-    if (data.image) pendingDetails = { ...pendingDetails, image_url: data.image };
 
-    if (data.ingredients.length) {
+    if (data.ingredients?.length) {
       pendingDetails = { ingredients: data.ingredients, steps: data.steps || [], servings: data.servings || 4 };
       addMsg(`✅ Found ${data.ingredients.length} ingredients, ${data.steps.length} steps. Review below then save.`, "success");
-      // Show preview
       const prev = document.getElementById("fetch-preview");
       const ingList = document.getElementById("preview-ingredients");
       const stepList = document.getElementById("preview-steps");
@@ -1360,7 +1363,7 @@ async function autoFetchRecipe(url) {
       stepList.innerHTML = (data.steps||[]).map(s => `<li>${s}</li>`).join("");
       prev.style.display = "block";
     } else {
-      addMsg(`⚠️ Page loaded (${html.length} chars) but couldn't find ingredients. Fill in manually.`, "error");
+      addMsg("⚠️ Page loaded but couldn't find ingredients. Fill in manually.", "error");
     }
   } catch (e) {
     addMsg("⚠️ Fetch failed: " + e.message, "error");
