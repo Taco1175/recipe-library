@@ -36,11 +36,11 @@ a { color: var(--accent); }
 
 /* ── HEADER ── */
 .header {
-  background: linear-gradient(135deg, #1a1f2e, var(--bg));
-  border-bottom: 1px solid var(--border); padding: 14px 24px 14px;
+  background: #0d1018;
+  border-bottom: 1px solid var(--border); padding: 14px 24px 12px;
   position: sticky; top: 0; z-index: 50;
 }
-.header-inner { max-width: 1300px; margin: 0 auto; }
+.header-inner { max-width: 100%; }
 .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
 .header h1 { font-size: 24px; font-weight: 700; color: #F5F0E8; display: flex; align-items: center; gap: 10px; }
 .header-actions { display: flex; gap: 8px; align-items: center; }
@@ -57,7 +57,7 @@ a { color: var(--accent); }
 .pill.active .dot { background: var(--dot); }
 
 /* ── MAIN ── */
-.main { max-width: 1300px; margin: 0 auto; padding: 16px 24px; }
+.main { max-width: 100%; padding: 16px 28px; }
 
 /* ── BUTTONS ── */
 .btn {
@@ -361,7 +361,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
 .sidebar {
   position: fixed; top: 0; left: 0; height: 100vh; width: 220px;
   background: #0d1018; border-right: 1px solid var(--border);
-  display: flex; flex-direction: column; z-index: 100;
+  display: flex; flex-direction: column; z-index: 200;
   transition: transform 0.25s ease;
 }
 .sidebar-logo {
@@ -420,23 +420,6 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
 .sidebar-layout { margin-left: 220px; }
 
 /* ── TOP BAR (simplified) ── */
-.header {
-  background: #0d1018;
-  border-bottom: 1px solid var(--border);
-  padding: 14px 28px 12px;
-  position: sticky; top: 0; z-index: 50;
-}
-
-/* ── MOBILE SIDEBAR ── */
-.sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99; }
-.sidebar-toggle { display: none; background: none; border: none; color: var(--text2); font-size: 20px; cursor: pointer; padding: 4px 8px; }
-@media (max-width: 900px) {
-  .sidebar { transform: translateX(-100%); }
-  .sidebar.open { transform: translateX(0); }
-  .sidebar-overlay.show { display: block; }
-  .sidebar-layout { margin-left: 0; }
-  .sidebar-toggle { display: flex; align-items: center; }
-}
 
 </style>
 <script src="/auth.js"></script>
