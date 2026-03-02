@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Mealplannr</title>
 <meta name="description" content="Your personal meal planning and recipe library">
@@ -41,7 +42,7 @@ a { color: var(--accent); }
   position: sticky; top: 0; z-index: 50;
 }
 .header-inner { max-width: 100%; }
-.header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+.header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0; flex-wrap: wrap; gap: 10px; }
 .header h1 { font-size: 24px; font-weight: 700; color: #F5F0E8; display: flex; align-items: center; gap: 10px; }
 .header-actions { display: flex; gap: 8px; align-items: center; }
 .count-badge { font-size: 12px; color: #888; font-family: monospace; font-weight: 400; }
@@ -294,11 +295,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
 /* ── MOBILE ── */
 @media (max-width: 700px) {
   /* Header */
-  .header { padding: 12px 14px 10px; }
-  .header h1 { font-size: 18px; }
-  .header-top { flex-wrap: wrap; gap: 8px; }
-  .header-actions { flex-wrap: wrap; gap: 6px; }
-  .header-actions .btn { font-size: 11px !important; padding: 5px 8px; }
+  .header { padding: 10px 14px; }
   .backfill-btn { display: none; } /* hide on mobile */
   .main { padding: 10px 10px; }
   .pills { gap: 4px; }
