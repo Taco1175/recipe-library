@@ -763,6 +763,22 @@ async function showApp() {
   await loadData();
   buildSelects();
   render();
+
+  // Handle ?fridge=1 from planner sidebar link
+  const params = new URLSearchParams(location.search);
+  if (params.get('fridge') === '1') {
+    document.getElementById('fridge-bar')?.classList.add('show');
+    document.getElementById('fridge-bar')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    history.replaceState({}, '', '/'); // clean URL
+  }
+  if (params.get('share') === '1') {
+    openShareModal();
+    history.replaceState({}, '', '/');
+  }
+  if (params.get('tutorial') === '1') {
+    startTutorial();
+    history.replaceState({}, '', '/');
+  }
 }
 
 async function loadData() {
