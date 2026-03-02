@@ -2,31 +2,22 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#0F1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mealplannr">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
 <title>Plan My Week</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/shared.css">
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --bg: #0F1117;
-  --bg2: #1a1f2e;
-  --bg3: #1e2330;
-  --bg4: #2a2f3e;
-  --text: #E8E4DC;
-  --text2: #b0b5c4;
-  --text3: #667;
-  --accent: #6e8efb;
-  --green: #7bcf8e;
-  --border: #2a2f3e;
-  --red: #f87171;
-}
-body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+/* page-specific — base/sidebar in shared.css */
+
 
 /* Topbar */
-.topbar { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 12px; }
-.back-btn { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px; }
-.back-btn:hover { background: var(--bg3); color: var(--text); }
-.topbar h1 { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--text); flex: 1; }
 .gcal-btn { display: inline-flex; align-items: center; gap: 8px; background: #4285f4; color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-family: 'DM Sans', sans-serif; cursor: pointer; font-weight: 500; transition: background 0.2s; }
 .gcal-btn:hover { background: #3367d6; }
 .gcal-btn:disabled { background: var(--bg4); color: var(--text3); cursor: not-allowed; }
@@ -71,7 +62,8 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
 .picker-search { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 7px 12px; color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; }
 .picker-search:focus { border-color: var(--accent); }
 .picker-recipes { max-height: 500px; overflow-y: auto; }
-.picker-recipe { padding: 10px 16px; border-bottom: 1px solid var(--bg3); cursor: pointer; transition: background 0.1s; display: flex; align-items: center; gap: 10px; }
+.picker-recipe { padding: 10px 16px; border-bottom: 1px solid var(--bg3); cursor: grab; transition: background 0.1s; display: flex; align-items: center; gap: 10px; }
+.picker-recipe.dragging { opacity: 0.4; cursor: grabbing; }
 .picker-recipe:hover { background: var(--bg3); }
 .picker-recipe img { width: 36px; height: 28px; object-fit: cover; border-radius: 4px; flex-shrink: 0; background: var(--bg4); }
 .picker-recipe .pr-placeholder { width: 36px; height: 28px; border-radius: 4px; background: var(--bg4); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; }
@@ -101,7 +93,6 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
   .main { grid-template-columns: 1fr; padding: 14px 14px 80px; }
   .days-grid { grid-template-columns: repeat(4, 1fr); gap: 6px; }
   .picker { position: static; }
-  .topbar h1 { font-size: 16px; }
   .gcal-btn { font-size: 12px; padding: 6px 10px; }
 }
 @media (max-width: 600px) {
@@ -110,8 +101,6 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
   .week-label { font-size: 13px; min-width: 160px; }
   .gcal-banner { padding: 12px 14px; flex-wrap: wrap; }
   .cal-selector { padding: 0 14px; }
-  .topbar { padding: 10px 14px; }
-  .back-btn { font-size: 12px; }
 }
 
 /* Google auth banner */
@@ -135,6 +124,39 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
 /* Cal events on day */
 .cal-event { padding: 3px 6px; border-radius: 4px; font-size: 10px; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
 .cal-events-section { padding: 4px 6px 0; border-bottom: 1px solid var(--border); }
+
+/* ── Suggest a Week ── */
+.suggest-bar { max-width: 1100px; margin: 16px auto 0; padding: 0 24px; }
+.suggest-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 4px; }
+.suggest-header { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.suggest-header h3 { font-size: 14px; color: var(--text); margin-right: auto; }
+.suggest-select { background: var(--bg3); border: 1px solid var(--border); color: var(--text2); border-radius: 7px; padding: 6px 10px; font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; cursor: pointer; }
+.suggest-select:focus { border-color: var(--accent); }
+.suggest-btn { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-family: 'DM Sans', sans-serif; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: opacity 0.2s; white-space: nowrap; }
+.suggest-btn:hover { opacity: 0.85; }
+.suggest-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.suggest-actions { padding: 0 20px 16px; display: flex; gap: 10px; flex-wrap: wrap; }
+.add-all-btn { background: #0f2a1a; color: var(--green); border: 1px solid var(--green); border-radius: 8px; padding: 8px 18px; font-size: 13px; font-family: 'DM Sans', sans-serif; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+.add-all-btn:hover { background: #1a3a2a; }
+.grocery-week-btn { background: var(--bg3); color: var(--accent); border: 1px solid var(--accent); border-radius: 8px; padding: 8px 18px; font-size: 13px; font-family: 'DM Sans', sans-serif; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+.grocery-week-btn:hover { background: #1e2a4a; }
+.suggest-cards { display: flex; gap: 10px; padding: 14px 20px; flex-wrap: wrap; }
+.suggest-card { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; flex: 1; min-width: 160px; max-width: 260px; position: relative; transition: border-color 0.15s; cursor: grab; }
+.suggest-card:hover { border-color: var(--accent); }
+.suggest-card.dragging { opacity: 0.4; cursor: grabbing; }
+.suggest-card .sc-num { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); font-family: monospace; margin-bottom: 5px; }
+.suggest-card .sc-name { font-size: 13px; color: var(--text); font-weight: 500; line-height: 1.4; padding-right: 22px; margin-bottom: 3px; }
+.suggest-card .sc-meta { font-size: 11px; color: var(--text3); font-family: monospace; }
+.suggest-card .sc-drag { font-size: 10px; color: var(--text3); font-family: monospace; margin-top: 8px; opacity: 0.6; }
+.suggest-card .sc-swap { position: absolute; top: 8px; right: 8px; background: none; border: none; color: var(--text3); cursor: pointer; font-size: 15px; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
+.suggest-card .sc-swap:hover { background: var(--bg4); color: var(--accent); }
+.suggest-empty { padding: 24px 20px; color: var(--text3); font-size: 13px; }
+.day-col.drag-over { border-color: var(--accent) !important; background: #1e2a4a33; }
+
+/* ── Grocery from week ── */
+@media (max-width: 900px) { .suggest-bar { padding: 0 14px; } .suggest-cards { padding: 12px 14px; } .suggest-card { min-width: 140px; } .suggest-actions { padding: 0 14px 14px; } }
+
+
 </style>
 <script>
 (async () => {
@@ -161,9 +183,40 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
 })();
 </script>
 
-<div class="topbar">
-  <button class="back-btn" onclick="location.href='/'">← Back</button>
-  <h1>📅 Plan My Week</h1>
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span class="sidebar-logo-icon">🍽</span>
+      <span class="sidebar-logo-text">Mealplannr</span>
+      <button class="sidebar-collapse-btn" id="sidebar-collapse-btn" onclick="toggleSidebarCollapse()" title="Collapse sidebar">◀</button>
+    </div>
+    <div class="sidebar-nav">
+      <a class="nav-item" href="/"><span class="nav-icon">📚</span><span class="nav-label">Recipe Library</span></a>
+      <a class="nav-item active" href="/planner.html"><span class="nav-icon">📅</span><span class="nav-label">Plan Week</span></a>
+      <div class="nav-divider"></div>
+      <div class="nav-item" onclick="location.href='/?fridge=1'"><span class="nav-icon">🥦</span><span class="nav-label">What's in my fridge?</span></div>
+      <div class="nav-item" onclick="location.href='/?share=1'"><span class="nav-icon">👥</span><span class="nav-label">Share Library</span></div>
+      <div class="nav-item" onclick="location.href='/?tutorial=1'"><span class="nav-icon">✨</span><span class="nav-label">Tutorial</span></div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-info" onclick="toggleUserMenu(event)" id="user-info-btn">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <span class="user-name" id="user-email-short"></span>
+        <span class="user-caret">▾</span>
+      </div>
+      <div class="user-dropdown" id="user-dropdown">
+        <div class="dd-email" id="user-email-full"></div>
+      </div>
+      <div class="sidebar-signout" onclick="Auth.signOut()">
+        <span class="sign-icon">🚪</span>
+        <span class="sign-label">Sign out</span>
+      </div>
+    </div>
+  </nav>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+  <div class="sidebar-layout" id="sidebar-layout">
+<div class="page-header">
+  <button class="sidebar-toggle" onclick="openSidebar()">☰</button>
+  <h1>Plan My Week</h1>
   <button class="gcal-btn" id="gcal-btn" onclick="exportToGCal()">📆 Export to Google Calendar</button>
 </div>
 
@@ -189,6 +242,40 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
   <button onclick="changeWeek(1)">Next →</button>
 </div>
 
+<div class="suggest-bar">
+  <div class="suggest-panel">
+    <div class="suggest-header">
+      <h3>✨ Suggest Meals</h3>
+      <select class="suggest-select" id="suggest-category">
+        <option value="Lunch/Dinner" selected>Lunch / Dinner</option>
+        <option value="All">All Categories</option>
+        <option value="Breakfast">Breakfast</option>
+        <option value="Salad">Salad</option>
+        <option value="Side">Side</option>
+        <option value="Dessert">Dessert</option>
+      </select>
+      <select class="suggest-select" id="suggest-count">
+        <option value="1">1 meal</option>
+        <option value="2">2 meals</option>
+        <option value="3">3 meals</option>
+        <option value="4">4 meals</option>
+        <option value="5" selected>5 meals</option>
+        <option value="6">6 meals</option>
+        <option value="7">7 meals</option>
+        <option value="8">8 meals</option>
+        <option value="9">9 meals</option>
+        <option value="10">10 meals</option>
+      </select>
+      <button class="suggest-btn" id="suggest-go-btn" onclick="suggestMeals()">🎲 Suggest</button>
+    </div>
+    <div id="suggest-cards-area"></div>
+    <div class="suggest-actions" id="suggest-actions" style="display:none">
+      <button class="add-all-btn" onclick="addAllToCalendar()">📅 Add All to Calendar + Cart</button>
+      <button class="grocery-week-btn" onclick="groceryFromWeek()">🛒 Grocery List from This Week</button>
+    </div>
+  </div>
+</div>
+
 <div class="main">
   <div>
     <div class="days-grid" id="days-grid"></div>
@@ -197,6 +284,7 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
     <div class="picker-header">
       <h3>Add a Recipe</h3>
       <input class="picker-search" id="picker-search" placeholder="Search recipes…" oninput="filterPicker(this.value)">
+      <div style="font-size:11px;color:var(--text3);font-family:monospace;margin-top:6px">↕ drag a recipe onto a calendar day</div>
     </div>
     <div class="picker-recipes" id="picker-recipes"></div>
   </div>
@@ -413,6 +501,15 @@ async function init() {
   } catch(e) {}
   const ok = await Auth.require();
   if (!ok) return;
+  const _u = Auth.getUser();
+  if (_u?.email) {
+    const _av = document.getElementById('user-avatar');
+    const _sh = document.getElementById('user-email-short');
+    const _fl = document.getElementById('user-email-full');
+    if (_av) _av.textContent = _u.email[0].toUpperCase();
+    if (_sh) _sh.textContent = _u.email.split('@')[0];
+    if (_fl) _fl.textContent = _u.email;
+  }
   try {
     recipes = await apiFetch("extra-recipes");
     // Load cart from localStorage (set by main page)
@@ -525,7 +622,7 @@ function renderWeek() {
       : "";
 
     grid.innerHTML += `
-      <div class="day-col${isToday?" today":""}">
+      <div class="day-col${isToday?" today":""}" data-date="${ds}">
         <div class="day-header">
           <div class="day-name">${DAYS[d.getDay()]}</div>
           <div class="day-date">${d.getDate()}</div>
@@ -542,7 +639,7 @@ function recipeCard(r, isCart=false) {
   const img = r.image_url
     ? `<img src="${r.image_url}" alt="" onerror="this.style.display='none'">`
     : `<div class="pr-placeholder">${icon}</div>`;
-  return `<div class="picker-recipe${isCart?" cart-item":""}" onclick="pickRecipe(${r.id})">
+  return `<div class="picker-recipe${isCart?" cart-item":""}" draggable="true" data-id="${r.id}" onclick="pickRecipe(${r.id})" ondragstart="onPickerDragStart(event,${r.id})" ondragend="onPickerDragEnd(event)">
     ${img}
     <div>
       <div class="pr-name">${r.name}</div>
@@ -711,7 +808,218 @@ function showToast(msg) {
 
 document.addEventListener("keydown", e => { if (e.key === "Escape") { closeDayPick(); pendingDay = null; } });
 
+// ── Suggest a Week ──
+let suggestedMeals = [];
+
+function suggestMeals() {
+  const category = document.getElementById("suggest-category").value;
+  const count = parseInt(document.getElementById("suggest-count").value);
+  const area = document.getElementById("suggest-cards-area");
+  const actions = document.getElementById("suggest-actions");
+
+  // Filter by category, exclude already-suggested
+  let pool = recipes.filter(r => !r.archived);
+  if (category !== "All") pool = pool.filter(r => r.category === category);
+
+  if (!pool.length) {
+    area.innerHTML = '<div class="suggest-empty">No recipes found for that category.</div>';
+    actions.style.display = "none";
+    suggestedMeals = [];
+    return;
+  }
+
+  // Pick random unique meals, keeping any that were already suggested if user re-clicks
+  suggestedMeals = pickRandom(pool, count);
+  renderSuggestCards();
+  actions.style.display = "flex";
+}
+
+function pickRandom(pool, count) {
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, Math.min(count, pool.length));
+}
+
+function renderSuggestCards() {
+  const area = document.getElementById("suggest-cards-area");
+  if (!suggestedMeals.length) { area.innerHTML = ''; return; }
+  const MI_ICONS = {"Slow Cooker":"🥘","Oven":"🔥","Stovetop":"🍳","Air Fryer":"💨","No Cook":"🥗","Microwave":"📡"};
+  area.innerHTML = '<div class="suggest-cards">' + suggestedMeals.map((r, i) => {
+    const icon = MI_ICONS[r.method] || MI_ICONS[r.method?.split(" / ")[0]] || "🍴";
+    return `<div class="suggest-card" draggable="true" data-idx="${i}" data-id="${r.id}"
+      ondragstart="onSuggestDragStart(event,${i})"
+      ondragend="onSuggestDragEnd(event)">
+      <div class="sc-num">Meal ${i+1}</div>
+      <div class="sc-name">${r.name}</div>
+      <div class="sc-meta">${icon} ${r.category} · ${r.method}</div>
+      <div class="sc-drag">drag to calendar ↓</div>
+      <button class="sc-swap" onclick="swapSuggested(${i})" title="Swap this meal">🔄</button>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+function swapSuggested(idx) {
+  const category = document.getElementById("suggest-category").value;
+  let pool = recipes.filter(r => !r.archived);
+  if (category !== "All") pool = pool.filter(r => r.category === category);
+
+  // Exclude currently suggested meals
+  const currentIds = suggestedMeals.map(r => r.id);
+  const available = pool.filter(r => !currentIds.includes(r.id));
+
+  if (!available.length) {
+    // If no others available, just re-shuffle from full pool excluding only this one
+    const fallback = pool.filter(r => r.id !== suggestedMeals[idx].id);
+    if (!fallback.length) return;
+    suggestedMeals[idx] = fallback[Math.floor(Math.random() * fallback.length)];
+  } else {
+    suggestedMeals[idx] = available[Math.floor(Math.random() * available.length)];
+  }
+  renderSuggestCards();
+}
+
+function addAllToCalendar() {
+  if (!suggestedMeals.length) return;
+  const start = getWeekStart(weekOffset);
+  // Spread meals across Mon-Sun, skipping days that already have meals
+  const weekDates = Array.from({length:7}, (_,i) => { const d = new Date(start); d.setDate(start.getDate()+i); return dateStr(d); });
+  
+  // Prefer empty days first, then fill
+  const emptyDays = weekDates.filter(ds => !plan[ds] || !plan[ds].length);
+  const fillOrder = [...emptyDays, ...weekDates.filter(ds => !emptyDays.includes(ds))];
+
+  suggestedMeals.forEach((r, i) => {
+    const ds = fillOrder[i % fillOrder.length];
+    addToPlan(ds, r.id);
+    // Also add to cart
+    cartIds.add(r.id);
+  });
+
+  // Save cart
+  localStorage.setItem("recipe-cart", JSON.stringify([...cartIds]));
+  renderPicker(recipes);
+  showToast(`✓ ${suggestedMeals.length} meals added to calendar & cart!`);
+  
+  // Clear suggestions
+  suggestedMeals = [];
+  document.getElementById("suggest-cards-area").innerHTML = '<div class="suggest-empty" style="padding:12px 20px;font-size:12px;color:var(--green)">✓ Added to your week! Scroll down to see your plan.</div>';
+  document.getElementById("suggest-actions").style.display = "none";
+}
+
+function groceryFromWeek() {
+  // Collect all recipe IDs from the current week
+  const start = getWeekStart(weekOffset);
+  const weekIds = new Set();
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start); d.setDate(start.getDate() + i);
+    const ds = dateStr(d);
+    (plan[ds] || []).forEach(id => weekIds.add(id));
+  }
+
+  if (!weekIds.size) {
+    showToast("No meals planned this week!");
+    return;
+  }
+
+  // Add all to cart and navigate to main page grocery list
+  weekIds.forEach(id => cartIds.add(id));
+  localStorage.setItem("recipe-cart", JSON.stringify([...cartIds]));
+  showToast(`Adding ${weekIds.size} meals to cart — opening grocery list…`);
+  setTimeout(() => { location.href = "/?grocery=1"; }, 1200);
+}
+
+// ── Drag from suggest cards to calendar ──
+let draggingIdx = null;
+
+function onSuggestDragStart(e, idx) {
+  draggingIdx = idx;
+  e.dataTransfer.effectAllowed = "copy";
+  e.currentTarget.classList.add("dragging");
+  addDayDropListeners();
+}
+
+function onSuggestDragEnd(e) {
+  e.currentTarget.classList.remove("dragging");
+  draggingIdx = null;
+  removeDayDropListeners();
+}
+
+// ── Drag from picker panel ──
+let draggingPickerId = null;
+
+function onPickerDragStart(e, id) {
+  draggingPickerId = id;
+  draggingIdx = null; // clear suggest drag
+  e.dataTransfer.effectAllowed = "copy";
+  e.currentTarget.classList.add("dragging");
+  addDayDropListeners();
+}
+
+function onPickerDragEnd(e) {
+  e.currentTarget.classList.remove("dragging");
+  draggingPickerId = null;
+  removeDayDropListeners();
+}
+
+function addDayDropListeners() {
+  document.querySelectorAll(".day-col").forEach(col => {
+    col.addEventListener("dragover", onDayDragOver);
+    col.addEventListener("dragleave", onDayDragLeave);
+    col.addEventListener("drop", onDayDrop);
+  });
+}
+
+function removeDayDropListeners() {
+  document.querySelectorAll(".day-col").forEach(col => {
+    col.classList.remove("drag-over");
+    col.removeEventListener("dragover", onDayDragOver);
+    col.removeEventListener("dragleave", onDayDragLeave);
+    col.removeEventListener("drop", onDayDrop);
+  });
+}
+
+function onDayDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "copy";
+  this.classList.add("drag-over");
+}
+
+function onDayDragLeave(e) {
+  this.classList.remove("drag-over");
+}
+
+function onDayDrop(e) {
+  e.preventDefault();
+  this.classList.remove("drag-over");
+  const ds = this.dataset.date;
+  if (!ds) return;
+
+  let r = null;
+  if (draggingIdx !== null && suggestedMeals[draggingIdx]) {
+    r = suggestedMeals[draggingIdx];
+  } else if (draggingPickerId !== null) {
+    r = recipes.find(x => x.id === draggingPickerId);
+  }
+  if (!r) return;
+
+  addToPlan(ds, r.id);
+  cartIds.add(r.id);
+  localStorage.setItem("recipe-cart", JSON.stringify([...cartIds]));
+  showToast(`${r.name} added to ${new Date(ds+"T12:00").toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})}`);
+  renderPicker(recipes);
+}
+
 init();
 </script>
+<script>
+if ("serviceWorker" in navigator && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(err => console.warn("SW failed:", err));
+  });
+}
+</script>
+</div><!-- /sidebar-layout -->
+
+
+<script src="/sidebar.js"></script>
 </body>
 </html>

@@ -1,8 +1,12 @@
+const { getUserFromRequest, unauthorized, CORS } = require("./_supabase-helper");
 
 exports.handler = async (event) => {
-  const headers = { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" };
+  const headers = CORS;
   if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers };
   if (event.httpMethod !== "POST") return { statusCode: 405, headers, body: "Method Not Allowed" };
+
+  const auth = await getUserFromRequest(event);
+  if (!auth) return unauthorized();
 
   const { userIngredients, recipes } = JSON.parse(event.body || "{}");
   if (!userIngredients || !recipes) return { statusCode: 400, headers, body: JSON.stringify({ error: "Missing fields" }) };

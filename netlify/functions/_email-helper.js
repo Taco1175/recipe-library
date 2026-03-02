@@ -1,6 +1,6 @@
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const FROM_EMAIL = process.env.EMAIL_FROM || "onboarding@resend.dev";
-const APP_URL = process.env.URL || "https://cowpushing-meals.netlify.app";
+const FROM_EMAIL = process.env.EMAIL_FROM;
+const APP_URL = process.env.URL || "https://mealplannr.xyz"; // URL is auto-set by Netlify
 
 async function sendEmail({ to, subject, html }) {
   if (!RESEND_API_KEY) {
@@ -19,6 +19,7 @@ async function sendEmail({ to, subject, html }) {
     });
     const data = await res.json();
     console.log(`[Email] Resend ${res.status}:`, JSON.stringify(data));
+    if (!res.ok) console.error(`[Email] FAILED: from=${FROM_EMAIL} to=${to} error=${JSON.stringify(data)}`);
     return { ok: res.ok, data };
   } catch(e) {
     console.error("[Email] Fetch error:", e.message);
