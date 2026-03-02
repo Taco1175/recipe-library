@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="theme-color" content="#0F1117">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -11,28 +12,12 @@
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
 <title>Plan My Week</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/shared.css">
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --bg: #0F1117;
-  --bg2: #1a1f2e;
-  --bg3: #1e2330;
-  --bg4: #2a2f3e;
-  --text: #E8E4DC;
-  --text2: #b0b5c4;
-  --text3: #667;
-  --accent: #6e8efb;
-  --green: #7bcf8e;
-  --border: #2a2f3e;
-  --red: #f87171;
-}
-body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+/* page-specific — base/sidebar in shared.css */
+
 
 /* Topbar */
-.topbar { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 12px; }
-.back-btn { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px; }
-.back-btn:hover { background: var(--bg3); color: var(--text); }
-.topbar h1 { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--text); flex: 1; }
 .gcal-btn { display: inline-flex; align-items: center; gap: 8px; background: #4285f4; color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-family: 'DM Sans', sans-serif; cursor: pointer; font-weight: 500; transition: background 0.2s; }
 .gcal-btn:hover { background: #3367d6; }
 .gcal-btn:disabled { background: var(--bg4); color: var(--text3); cursor: not-allowed; }
@@ -108,7 +93,6 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
   .main { grid-template-columns: 1fr; padding: 14px 14px 80px; }
   .days-grid { grid-template-columns: repeat(4, 1fr); gap: 6px; }
   .picker { position: static; }
-  .topbar h1 { font-size: 16px; }
   .gcal-btn { font-size: 12px; padding: 6px 10px; }
 }
 @media (max-width: 600px) {
@@ -117,8 +101,6 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
   .week-label { font-size: 13px; min-width: 160px; }
   .gcal-banner { padding: 12px 14px; flex-wrap: wrap; }
   .cal-selector { padding: 0 14px; }
-  .topbar { padding: 10px 14px; }
-  .back-btn { font-size: 12px; }
 }
 
 /* Google auth banner */
@@ -173,6 +155,8 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
 
 /* ── Grocery from week ── */
 @media (max-width: 900px) { .suggest-bar { padding: 0 14px; } .suggest-cards { padding: 12px 14px; } .suggest-card { min-width: 140px; } .suggest-actions { padding: 0 14px 14px; } }
+
+
 </style>
 <script>
 (async () => {
@@ -199,9 +183,40 @@ body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-s
 })();
 </script>
 
-<div class="topbar">
-  <button class="back-btn" onclick="location.href='/'">← Back</button>
-  <h1>📅 Plan My Week</h1>
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span class="sidebar-logo-icon">🍽</span>
+      <span class="sidebar-logo-text">Mealplannr</span>
+      <button class="sidebar-collapse-btn" id="sidebar-collapse-btn" onclick="toggleSidebarCollapse()" title="Collapse sidebar">◀</button>
+    </div>
+    <div class="sidebar-nav">
+      <a class="nav-item" href="/"><span class="nav-icon">📚</span><span class="nav-label">Recipe Library</span></a>
+      <a class="nav-item active" href="/planner.html"><span class="nav-icon">📅</span><span class="nav-label">Plan Week</span></a>
+      <div class="nav-divider"></div>
+      <div class="nav-item" onclick="location.href='/?fridge=1'"><span class="nav-icon">🥦</span><span class="nav-label">What's in my fridge?</span></div>
+      <div class="nav-item" onclick="location.href='/?share=1'"><span class="nav-icon">👥</span><span class="nav-label">Share Library</span></div>
+      <div class="nav-item" onclick="location.href='/?tutorial=1'"><span class="nav-icon">✨</span><span class="nav-label">Tutorial</span></div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-info" onclick="toggleUserMenu(event)" id="user-info-btn">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <span class="user-name" id="user-email-short"></span>
+        <span class="user-caret">▾</span>
+      </div>
+      <div class="user-dropdown" id="user-dropdown">
+        <div class="dd-email" id="user-email-full"></div>
+      </div>
+      <div class="sidebar-signout" onclick="Auth.signOut()">
+        <span class="sign-icon">🚪</span>
+        <span class="sign-label">Sign out</span>
+      </div>
+    </div>
+  </nav>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+  <div class="sidebar-layout" id="sidebar-layout">
+<div class="page-header">
+  <button class="sidebar-toggle" onclick="openSidebar()">☰</button>
+  <h1>Plan My Week</h1>
   <button class="gcal-btn" id="gcal-btn" onclick="exportToGCal()">📆 Export to Google Calendar</button>
 </div>
 
@@ -486,6 +501,15 @@ async function init() {
   } catch(e) {}
   const ok = await Auth.require();
   if (!ok) return;
+  const _u = Auth.getUser();
+  if (_u?.email) {
+    const _av = document.getElementById('user-avatar');
+    const _sh = document.getElementById('user-email-short');
+    const _fl = document.getElementById('user-email-full');
+    if (_av) _av.textContent = _u.email[0].toUpperCase();
+    if (_sh) _sh.textContent = _u.email.split('@')[0];
+    if (_fl) _fl.textContent = _u.email;
+  }
   try {
     recipes = await apiFetch("extra-recipes");
     // Load cart from localStorage (set by main page)
@@ -987,11 +1011,15 @@ function onDayDrop(e) {
 init();
 </script>
 <script>
-if ("serviceWorker" in navigator) {
+if ("serviceWorker" in navigator && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("/sw.js").catch(err => console.warn("SW failed:", err));
   });
 }
 </script>
+</div><!-- /sidebar-layout -->
+
+
+<script src="/sidebar.js"></script>
 </body>
 </html>

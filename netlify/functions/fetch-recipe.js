@@ -265,55 +265,56 @@ exports.handler = async (event) => {
     let fetchUrl2 = url.replace(/[/]print[/]\d+[/]?$/, "/").replace(/[/]print[/]?$/, "/");
     fetchUrl2 = fetchUrl2.replace(/[?&](print|amp|format)=[^&]*/g, "").replace(/[?]$/, "");
 
-    const html = await fetchUrl(fetchUrl2);
-
-    // Try parsers in order of reliability
-    let result = parseJsonLd(html);
-    if (!result.ingredients.length) result = { ...result, ...parseWPRM(html) };
-    if (!result.ingredients.length) result = { ...result, ...parseTasty(html) };
-    if (!result.ingredients.length) result = { ...result, ...parsePrintPage(html) };
-    if (!result.ingredients.length) result = { ...result, ...parseGeneric(html) };
-
-    // Fallback: hit justtherecipe.app API
-    if (!result.ingredients.length) {
-      try {
-        const jtrRes = await fetch("https://justtherecipe.com/extractRecipeAtUrl?url=" + encodeURIComponent(url), {
-          headers: { "User-Agent": "Mozilla/5.0" }
-        });
-        if (jtrRes.ok) {
-          const jtr = await jtrRes.json();
-          if (jtr.ingredients?.length) {
-            result.ingredients = jtr.ingredients.map(i => {
-              if (typeof i === "string") return i;
-              return [i.quantity, i.unit, i.name, i.comment].filter(Boolean).join(" ").trim();
-            }).filter(Boolean);
-          }
-          if (jtr.instructions?.length && !result.steps.length) {
-            result.steps = jtr.instructions.map(s => typeof s === "string" ? s : s.text || "").filter(Boolean);
-          }
-          if (jtr.name && !result.name) result.name = jtr.name;
-          if (jtr.yields && !result.servings) {
-            const num = parseInt(String(jtr.yields).match(/\d+/)?.[0]);
-            if (num) result.servings = num;
-          }
+    // Step 1: Try JustTheRecipe first — best coverage across all sites
+    let result = { name: null, ingredients: [], steps: [], servings: null };
+    try {
+      const jtrRes = await fetch("https://justtherecipe.com/extractRecipeAtUrl?url=" + encodeURIComponent(url), {
+        headers: { "User-Agent": "Mozilla/5.0" },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (jtrRes.ok) {
+        const jtr = await jtrRes.json();
+        if (jtr.ingredients?.length) {
+          result.ingredients = jtr.ingredients.map(i => {
+            if (typeof i === "string") return i;
+            return [i.quantity, i.unit, i.name, i.comment].filter(Boolean).join(" ").trim();
+          }).filter(Boolean);
         }
-      } catch(e) { /* justtherecipe failed, continue with empty */ }
+        if (jtr.instructions?.length) {
+          result.steps = jtr.instructions.map(s => typeof s === "string" ? s : (s.text || "")).filter(Boolean);
+        }
+        if (jtr.name) result.name = jtr.name;
+        if (jtr.yields) {
+          const num = parseInt(String(jtr.yields).match(/\d+/)?.[0]);
+          if (num) result.servings = num;
+        }
+      }
+    } catch(e) {
+      console.warn("[fetch-recipe] JustTheRecipe failed:", e.message);
     }
 
-    // Debug info to help diagnose parse failures
+    // Step 2: If JTR didn't get ingredients, fall back to our own parsers
+    if (!result.ingredients.length) {
+      console.log("[fetch-recipe] JTR returned no ingredients, trying own parsers");
+      const html = await fetchUrl(fetchUrl2);
+      let parsed = parseJsonLd(html);
+      if (!parsed.ingredients.length) parsed = { ...parsed, ...parseWPRM(html) };
+      if (!parsed.ingredients.length) parsed = { ...parsed, ...parseTasty(html) };
+      if (!parsed.ingredients.length) parsed = { ...parsed, ...parsePrintPage(html) };
+      if (!parsed.ingredients.length) parsed = { ...parsed, ...parseGeneric(html) };
+      // Merge — prefer JTR name if we got one, otherwise use parsed
+      result = {
+        name: result.name || parsed.name,
+        ingredients: parsed.ingredients,
+        steps: result.steps.length ? result.steps : parsed.steps,
+        servings: result.servings || parsed.servings,
+      };
+    }
+
+    // Debug info when everything failed
     const debug = result.ingredients.length === 0 ? {
-      htmlLength: html.length,
-      hasLdJson: html.includes("ld+json"),
-      hasWPRM: html.includes("wprm-recipe"),
-      hasTasty: html.includes("tasty-recipes"),
-      hasIngredientWord: html.toLowerCase().includes("ingredient"),
-      hasUL: html.includes("<ul"),
-      hasOL: html.includes("<ol"),
-      // Snippet around "ingredient" keyword
-      snippet: (() => {
-        const idx = html.toLowerCase().indexOf("ingredient");
-        return idx > -1 ? html.slice(Math.max(0,idx-50), idx+300).replace(/<[^>]+>/g," ").replace(/\s+/g," ") : "not found";
-      })(),
+      message: "JustTheRecipe and all fallback parsers returned no ingredients",
+      url,
     } : null;
 
     return {

@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Mealplannr</title>
 <meta name="description" content="Your personal meal planning and recipe library">
@@ -11,37 +12,25 @@
 <meta name="apple-mobile-web-app-title" content="Mealplannr">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="stylesheet" href="/shared.css">
 <style>
-:root {
-  --bg: #0F1117;
-  --bg2: #1a1f2e;
-  --bg3: #12151f;
-  --bg4: #1e2330;
-  --border: #2a2f3e;
-  --text: #E8E4DC;
-  --text2: #9a9fae;
-  --text3: #556;
-  --accent: #6e8efb;
-  --green: #4CAF50;
-  --green-bg: #E8F5E9;
-  --green-text: #1B5E20;
-  --red: #e07070;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--bg); color: var(--text); font-family: Georgia, serif; min-height: 100vh; }
-a { color: var(--accent); }
+/* page-specific styles — base/sidebar in shared.css */
+.subheader { padding: 10px 24px; background: #0d1018; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+.topbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+
 
 /* ── APP ── */
 #app { display: block; }
 
 /* ── HEADER ── */
 .header {
-  background: linear-gradient(135deg, #1a1f2e, var(--bg));
-  border-bottom: 1px solid var(--border); padding: 14px 24px 14px;
+  background: #0d1018;
+  border-bottom: 1px solid var(--border); padding: 14px 24px 12px;
   position: sticky; top: 0; z-index: 50;
 }
-.header-inner { max-width: 1300px; margin: 0 auto; }
-.header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+.header-inner { max-width: 100%; }
+.header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0; flex-wrap: wrap; gap: 10px; }
 .header h1 { font-size: 24px; font-weight: 700; color: #F5F0E8; display: flex; align-items: center; gap: 10px; }
 .header-actions { display: flex; gap: 8px; align-items: center; }
 .count-badge { font-size: 12px; color: #888; font-family: monospace; font-weight: 400; }
@@ -57,7 +46,7 @@ a { color: var(--accent); }
 .pill.active .dot { background: var(--dot); }
 
 /* ── MAIN ── */
-.main { max-width: 1300px; margin: 0 auto; padding: 16px 24px; }
+.main { max-width: 100%; padding: 16px 28px; }
 
 /* ── BUTTONS ── */
 .btn {
@@ -129,7 +118,7 @@ select.flt {
 /* ── TABLE ── */
 .table { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
 .thead {
-  display: grid; grid-template-columns: 28px minmax(0,1fr) 90px 110px 54px 44px 80px 30px;
+  display: grid; grid-template-columns: 28px minmax(180px,2fr) 80px 100px 130px 60px 50px 90px 30px;
   padding: 10px 14px; background: var(--bg3); border-bottom: 1px solid var(--border);
   font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
   color: var(--text3); font-family: monospace; gap: 8px; align-items: center;
@@ -137,12 +126,12 @@ select.flt {
 .trow-wrap { border-bottom: 1px solid var(--bg4); }
 .trow-wrap:last-child { border-bottom: none; }
 .trow {
-  display: grid; grid-template-columns: 28px minmax(0,1fr) 90px 110px 54px 44px 80px 30px;
-  padding: 11px 14px; align-items: center; gap: 8px; cursor: pointer;
+  display: grid; grid-template-columns: 28px minmax(180px,2fr) 80px 100px 130px 60px 50px 90px 30px;
+  padding: 16px 20px; align-items: center; gap: 10px; cursor: pointer;
   transition: background .15s;
 }
 .trow:hover { background: var(--bg4); }
-.recipe-name { font-size: 13px; font-weight: 500; color: var(--text); display: flex; align-items: center; gap: 6px; min-width: 0; }
+.recipe-name { font-size: 15px; font-weight: 500; color: var(--text); display: flex; align-items: center; gap: 6px; min-width: 0; }
 .recipe-name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .expand-icon { font-size: 8px; color: #445; transition: transform .2s; flex-shrink: 0; }
 .trow-wrap.open .expand-icon { transform: rotate(90deg); }
@@ -294,11 +283,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
 /* ── MOBILE ── */
 @media (max-width: 700px) {
   /* Header */
-  .header { padding: 12px 14px 10px; }
-  .header h1 { font-size: 18px; }
-  .header-top { flex-wrap: wrap; gap: 8px; }
-  .header-actions { flex-wrap: wrap; gap: 6px; }
-  .header-actions .btn { font-size: 11px !important; padding: 5px 8px; }
+  .header { padding: 10px 14px; }
   .backfill-btn { display: none; } /* hide on mobile */
   .main { padding: 10px 10px; }
   .pills { gap: 4px; }
@@ -320,8 +305,9 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
   .trow > *:nth-child(5),
   .trow > *:nth-child(6),
   .trow > *:nth-child(7),
-  .trow > *:nth-child(8) { display: none !important; }
-  .trow > *:nth-child(9) { grid-column: 3; grid-row: 1; display: flex; justify-content: center; }
+  .trow > *:nth-child(8),
+  .trow > *:nth-child(9) { display: none !important; }
+  .trow > *:nth-child(10) { grid-column: 3; grid-row: 1; display: flex; justify-content: center; }
 
   /* Recipe name */
   .recipe-name { font-size: 14px; flex-wrap: nowrap; gap: 4px; }
@@ -352,10 +338,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
   .view-toggle button { width: 28px; height: 28px; font-size: 13px; }
 }
 
-/* Boost text contrast globally */
-:root {
-  --text2: #b0b5c4;
-}
+
 </style>
 <script src="/auth.js"></script>
 </head>
@@ -386,61 +369,68 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
 })();
 </script>
 <div id="app">
-  <div class="header">
-    <div class="header-inner">
-      <div class="header-top">
-        <h1>🍽 My Recipe Library <span class="count-badge" id="total-badge"></span></h1>
-        <div class="header-actions">
-          <button class="btn btn-outline" style="font-size:12px" onclick="toggleFridge()">🥦 What's in my fridge?</button>
-          <button class="btn btn-outline" style="font-size:12px" onclick="location.href='planner.html'">📅 Plan Week</button>
-          <button class="btn btn-outline" style="font-size:12px" onclick="toggleAdd()">＋ Add</button>
-          <button id="backfill-btn" class="backfill-btn" onclick="backfillImages()">🖼 Backfill Images</button>
-          <button onclick="startTutorial()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text2);font-size:12px;cursor:pointer;font-family:monospace;display:flex;align-items:center;gap:5px">
-            ✨ Tutorial
-          </button>
-          <button onclick="openShareModal()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text2);font-size:12px;cursor:pointer;font-family:monospace;display:flex;align-items:center;gap:5px">
-            👥 Share
-          </button>
-          <div id="user-menu" style="position:relative;display:inline-flex;align-items:center">
-            <button onclick="toggleUserMenu()" style="background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:4px 12px 4px 6px;display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--text2);font-size:12px;font-family:monospace">
-              <span style="width:24px;height:24px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff" id="user-avatar">?</span>
-              <span id="user-email-short"></span>
-            </button>
-            <div id="user-dropdown" style="display:none;position:absolute;top:36px;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:8px;min-width:180px;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,0.4)">
-              <div id="user-email-full" style="font-size:11px;color:var(--text3);font-family:monospace;padding:4px 8px 8px;border-bottom:1px solid var(--border);margin-bottom:6px"></div>
-              <button onclick="Auth.signOut()" style="width:100%;text-align:left;background:none;border:none;color:var(--red);font-size:13px;padding:6px 8px;border-radius:6px;cursor:pointer;font-family:DM Sans,sans-serif">Sign out</button>
-            </div>
-          </div>
-          <button class="btn btn-success" id="grocery-btn" onclick="openGrocery()" style="display:none">
-            🛒 <span class="grocery-badge" id="grocery-count">0</span>
-          </button>
-          <div id="user-menu" style="display:flex;align-items:center;gap:8px;margin-left:4px">
-            <span id="user-email" style="font-size:11px;color:var(--text3);font-family:monospace;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
-            <button class="btn btn-outline" style="font-size:11px;padding:4px 8px" onclick="Auth.signOut()">Sign Out</button>
-          </div>
-        </div>
+  <!-- SIDEBAR -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span class="sidebar-logo-icon">🍽</span>
+      <span class="sidebar-logo-text">Mealplannr</span>
+      <button class="sidebar-collapse-btn" id="sidebar-collapse-btn" onclick="toggleSidebarCollapse()" title="Collapse sidebar">◀</button>
+    </div>
+    <div class="sidebar-nav">
+      <button class="sidebar-add-btn" onclick="toggleAdd()"><span>＋</span><span class="sidebar-add-text"> Add Recipe</span></button>
+      <a class="nav-item active" href="/"><span class="nav-icon">📚</span><span class="nav-label">Recipe Library</span><span id="total-badge" style="font-size:11px;color:#556;font-family:monospace;margin-left:auto;padding-right:4px"></span></a>
+      <a class="nav-item" href="/planner.html"><span class="nav-icon">📅</span><span class="nav-label">Plan Week</span></a>
+      <div class="nav-divider"></div>
+      <div class="nav-item" onclick="toggleFridge()"><span class="nav-icon">🥦</span><span class="nav-label">What's in my fridge?</span></div>
+      <div class="nav-item" onclick="openShareModal()"><span class="nav-icon">👥</span><span class="nav-label">Share Library</span></div>
+      <div class="nav-item" onclick="startTutorial()"><span class="nav-icon">✨</span><span class="nav-label">Tutorial</span></div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-info" onclick="toggleUserMenu(event)" id="user-info-btn">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <span class="user-name" id="user-email-short"></span>
+        <span class="user-caret">▾</span>
       </div>
-      <div class="pills" id="pills"></div>
-      <div class="topbar" style="margin-top:10px">
-        <div class="view-toggle">
-          <button id="btn-table" class="active" onclick="setView('table')" title="Table view">☰</button>
-          <button id="btn-grid" onclick="setView('grid')" title="Grid view">⊞</button>
-        </div>
-        <div class="search-wrap">
-          <input type="text" id="search" placeholder="Search recipes…" oninput="onSearch(this.value)">
-          <button class="search-clear" id="search-clear-btn" onclick="clearSearch()" title="Clear" style="display:none">×</button>
-        </div>
-        <select class="flt" id="filterProt" onchange="fProt=this.value;render()"><option value="">All Proteins</option></select>
-        <select class="flt" id="filterMeth" onchange="fMeth=this.value;render()"><option value="">All Methods</option></select>
-        <select class="flt" id="sortBy" onchange="sort=this.value;render()">
-          <option value="category">Category</option>
-          <option value="name">Name A-Z</option>
-          <option value="protein">Protein</option>
-          <option value="method">Method</option>
-          <option value="cost">Cost ↑</option>
-          <option value="match">Match %</option>
-        </select>
+      <div class="user-dropdown" id="user-dropdown">
+        <div class="dd-email" id="user-email-full"></div>
+        <button id="backfill-btn" onclick="event.stopPropagation();backfillImages()">🖼 Backfill Images</button>
       </div>
+      <div class="sidebar-signout" onclick="Auth.signOut()">
+        <span class="sign-icon">🚪</span>
+        <span class="sign-label">Sign out</span>
+      </div>
+    </div>
+  </nav>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+  <div class="sidebar-layout" id="sidebar-layout">
+  <div class="page-header">
+    <button class="sidebar-toggle" onclick="openSidebar()">☰</button>
+    <h1>Recipe Library</h1>
+    <button class="btn btn-success" id="grocery-btn" onclick="openGrocery()" style="display:none">
+      🛒 <span class="grocery-badge" id="grocery-count">0</span> in cart
+    </button>
+  </div>
+  <div class="subheader">
+    <div class="pills" id="pills"></div>
+    <div class="topbar">
+      <div class="view-toggle">
+        <button id="btn-table" class="active" onclick="setView('table')" title="Table view">☰</button>
+        <button id="btn-grid" onclick="setView('grid')" title="Grid view">⊞</button>
+      </div>
+      <div class="search-wrap">
+        <input type="text" id="search" placeholder="Search recipes…" oninput="onSearch(this.value)">
+        <button class="search-clear" id="search-clear-btn" onclick="clearSearch()" title="Clear" style="display:none">×</button>
+      </div>
+      <select class="flt" id="filterProt" onchange="fProt=this.value;render()"><option value="">All Proteins</option></select>
+      <select class="flt" id="filterMeth" onchange="fMeth=this.value;render()"><option value="">All Methods</option></select>
+      <select class="flt" id="sortBy" onchange="sort=this.value;render()">
+        <option value="category">Category</option>
+        <option value="name">Name A-Z</option>
+        <option value="protein">Protein</option>
+        <option value="method">Method</option>
+        <option value="cost">Cost ↑</option>
+        <option value="match">Match %</option>
+      </select>
     </div>
   </div>
 
@@ -527,6 +517,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
       <div class="thead">
         <div></div>
         <div class="sort-hdr" onclick="setSort('name')"><span id="shdr-name">Recipe</span></div>
+        <div id="owner-col-header">From</div>
         <div class="sort-hdr" onclick="setSort('category')"><span id="shdr-category">Category</span></div>
         <div class="sort-hdr" onclick="setSort('method')"><span id="shdr-method">Method</span></div>
 
@@ -774,6 +765,34 @@ async function showApp() {
   await loadData();
   buildSelects();
   render();
+
+  // Show/hide owner column based on whether any shared recipes exist
+  function updateOwnerCol() {
+    const hasShared = recipes.some(r => r._owner_label);
+    const hdr = document.getElementById('owner-col-header');
+    if (hdr) hdr.style.display = hasShared ? '' : 'none';
+    document.querySelectorAll('.trow, .thead').forEach(row => {
+      const cell = row.children[2]; // 3rd cell = owner
+      if (cell) cell.style.display = hasShared ? '' : 'none';
+    });
+  }
+
+  // Handle ?fridge=1 from planner sidebar link
+  const params = new URLSearchParams(location.search);
+  if (params.get('fridge') === '1') {
+    document.getElementById('fridge-bar')?.classList.add('show');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => document.getElementById('fridge-search')?.focus(), 300);
+    history.replaceState({}, '', '/'); // clean URL
+  }
+  if (params.get('share') === '1') {
+    openShareModal();
+    history.replaceState({}, '', '/');
+  }
+  if (params.get('tutorial') === '1') {
+    startTutorial();
+    history.replaceState({}, '', '/');
+  }
 }
 
 async function loadData() {
@@ -946,34 +965,37 @@ async function backfillImages() {
   if (!toFetch.length) { alert("All recipes with URLs already have images!"); return; }
   
   const btn = document.getElementById("backfill-btn");
-  btn.disabled = true;
-  btn.textContent = `Fetching 0/${toFetch.length}...`;
+  if(btn){ btn.disabled = true; btn.textContent = `Fetching 0/${toFetch.length}...`; }
 
   let done = 0;
   for (const r of toFetch) {
     try {
-      const proxyUrl = "https://corsproxy.io/?url=" + encodeURIComponent(r.url);
-      const res = await fetch(proxyUrl);
-      const html = await res.text();
-      const parsed = parseRecipeHTML(html, r.url);
-      if (parsed.image) {
-        await api("extra-recipes", "POST", { id: r.id, image_url: parsed.image });
-        r.image_url = parsed.image;
+      const hdrs = await Auth.headers();
+      const res = await fetch("/.netlify/functions/fetch-recipe", {
+        method: "POST",
+        headers: { ...hdrs, "Content-Type": "application/json" },
+        body: JSON.stringify({ url: r.url }),
+      });
+      const data = await res.json();
+      if (data.image_url) {
+        await api("extra-recipes", "POST", { id: r.id, image_url: data.image_url });
+        r.image_url = data.image_url;
       }
     } catch(e) {}
     done++;
-    btn.textContent = `Fetching ${done}/${toFetch.length}...`;
+    if(btn) btn.textContent = `Fetching ${done}/${toFetch.length}...`;
     await new Promise(res => setTimeout(res, 500)); // rate limit
   }
-  btn.textContent = "Done!";
+  if(btn){ btn.textContent = "Done!"; setTimeout(() => { btn.disabled = false; btn.textContent = "🖼 Backfill Images"; }, 2000); }
   render();
-  setTimeout(() => { btn.disabled = false; btn.textContent = "🖼 Backfill Images"; }, 2000);
 }
 
 function render() {
+  // (updateOwnerCol called after first render from showApp)
+
   buildPills();
   const list = getFiltered();
-  document.getElementById("total-badge").textContent = recipes.length+" recipes";
+  const _tb = document.getElementById("total-badge"); if(_tb) _tb.textContent = recipes.length;
   const hasFilter = fCat||fProt||fMeth||q||matchActive;
   const selStr = checked.size > 0 ? ` · <span style="color:#6e8efb;font-weight:600">${checked.size} selected</span>` : "";
   document.getElementById("count").innerHTML = `Showing ${list.length} of ${recipes.length} recipes${hasFilter?'<span class="clear-link" onclick="clearAll()">Clear</span>':""}${selStr}`;
@@ -1003,6 +1025,7 @@ function render() {
       ${r.url ? `<a href="${r.url}" target="_blank" class="link-btn" onclick="event.stopPropagation()" title="Open recipe" style="flex-shrink:0;width:22px;height:22px;font-size:10px;margin-left:4px">↗</a>` : ""}
       <div class="recipe-mobile-meta" style="display:none">${r.category} · ${MI[r.method]||"🍴"} ${r.method}</div>
     </div>
+    <div style="font-size:11px;color:var(--accent);font-family:monospace;display:flex;align-items:center">${r._owner_label ? `<span title="Shared library">${esc(r._owner_label)}</span>` : ""}</div>
     <div><span class="badge" style="background:${c.bg};color:${c.text}"><span class="dot" style="background:${c.dot}"></span>${r.category}</span></div>
     <div class="meta">${MI[r.method]||"🍴"} ${r.method}</div>
 
@@ -1108,12 +1131,12 @@ function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").
 function rowClick(e,id){if(e.target.type==="checkbox"||e.target.tagName==="A")return;document.getElementById("wrap-"+id)?.classList.toggle("open");}
 function toggleUserMenu() {
   const dd = document.getElementById("user-dropdown");
-  dd.style.display = dd.style.display === "none" ? "block" : "none";
+  dd.classList.toggle("show");
 }
 document.addEventListener("click", e => {
-  if (!e.target.closest("#user-menu")) {
+  if (!e.target.closest(".user-info")) {
     const dd = document.getElementById("user-dropdown");
-    if (dd) dd.style.display = "none";
+    if (dd) dd.classList.remove("show");
   }
 });
 
@@ -1333,26 +1356,26 @@ async function autoFetchRecipe(url) {
   if (!srcField.value) srcField.value = guessSourceFromUrl(url);
 
   try {
-    // Fetch via allorigins CORS proxy — uses your browser's real headers, bypasses bot blocks
-    const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(fetchUrl)}`;
-    const res = await fetch(proxyUrl);
-    const html = await res.text();
+    // Use our Netlify function — handles JustTheRecipe + fallback parsers server-side
+    const hdrs = await Auth.headers();
+    const res = await fetch("/.netlify/functions/fetch-recipe", {
+      method: "POST",
+      headers: { ...hdrs, "Content-Type": "application/json" },
+      body: JSON.stringify({ url: fetchUrl }),
+    });
+    const data = await res.json();
 
-    if (!html || html.length < 1000) {
+    if (!res.ok || data.error) {
       addMsg("⚠️ Could not load page. Try copying ingredients manually.", "error");
       return;
     }
 
-    const data = parseRecipeHTML(html, fetchUrl);
-
     if (data.name) document.getElementById("new-name").value = data.name;
     if (data.servings) document.getElementById("new-servings").value = data.servings;
-    if (data.image) pendingDetails = { ...pendingDetails, image_url: data.image };
 
-    if (data.ingredients.length) {
+    if (data.ingredients?.length) {
       pendingDetails = { ingredients: data.ingredients, steps: data.steps || [], servings: data.servings || 4 };
       addMsg(`✅ Found ${data.ingredients.length} ingredients, ${data.steps.length} steps. Review below then save.`, "success");
-      // Show preview
       const prev = document.getElementById("fetch-preview");
       const ingList = document.getElementById("preview-ingredients");
       const stepList = document.getElementById("preview-steps");
@@ -1360,7 +1383,7 @@ async function autoFetchRecipe(url) {
       stepList.innerHTML = (data.steps||[]).map(s => `<li>${s}</li>`).join("");
       prev.style.display = "block";
     } else {
-      addMsg(`⚠️ Page loaded (${html.length} chars) but couldn't find ingredients. Fill in manually.`, "error");
+      addMsg("⚠️ Page loaded but couldn't find ingredients. Fill in manually.", "error");
     }
   } catch (e) {
     addMsg("⚠️ Fetch failed: " + e.message, "error");
@@ -2807,11 +2830,25 @@ document.addEventListener("DOMContentLoaded", function() {
 })();
 </script>
 <script>
-if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(err => console.warn('SW registration failed:', err));
   });
 }
+
+// ── Sidebar functions ──
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebar-overlay').classList.add('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('show');
+}
+
 </script>
+
+</div><!-- /sidebar-layout -->
+<script src="/sidebar.js"></script>
 </body>
 </html>

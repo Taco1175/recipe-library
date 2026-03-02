@@ -1,19 +1,12 @@
-const CACHE_NAME = 'mealplannr-v1';
+const CACHE_NAME = 'mealplannr-v4';
 
-// Core assets to cache on install
 const PRECACHE_URLS = [
-  '/',
-  '/index.html',
-  '/login.html',
-  '/planner.html',
-  '/recipe.html',
-  '/auth.js',
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
 ];
 
-// Install — cache core assets
+// Install — only cache non-HTML assets
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_URLS))
@@ -21,50 +14,49 @@ self.addEventListener('install', event => {
   self.skipWaiting();
 });
 
-// Activate — clean up old caches
+// Activate — nuke ALL old caches
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => {
+        console.log('[SW] Deleting old cache:', k);
+        return caches.delete(k);
+      }))
     )
   );
   self.clients.claim();
 });
 
-// Fetch — network first for API calls, cache first for static assets
+// Fetch strategy:
+// - API calls: network only
+// - HTML pages: network ALWAYS (never cache HTML)
+// - CSS/JS/images: network first, fall back to cache
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Always go network-first for API/function calls
-  if (url.pathname.startsWith('/.netlify/functions/') || url.pathname.startsWith('/api/')) {
+  // API — network only
+  if (url.pathname.startsWith('/.netlify/') || url.pathname.startsWith('/api/')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // HTML — always network, never cache
+  if (event.request.headers.get('accept')?.includes('text/html') || 
+      url.pathname.endsWith('.html') || url.pathname === '/') {
     event.respondWith(
-      fetch(event.request).catch(() =>
-        new Response(JSON.stringify({ error: 'You are offline' }), {
-          status: 503,
-          headers: { 'Content-Type': 'application/json' }
-        })
-      )
+      fetch(event.request).catch(() => caches.match('/index.html'))
     );
     return;
   }
 
-  // Cache-first for static assets (HTML, JS, CSS, images)
+  // CSS/JS/images — network first, cache fallback
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-      return fetch(event.request).then(response => {
-        // Cache successful GET responses for static assets
-        if (event.request.method === 'GET' && response.status === 200) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-        }
-        return response;
-      }).catch(() => {
-        // Offline fallback for HTML pages
-        if (event.request.headers.get('accept')?.includes('text/html')) {
-          return caches.match('/index.html');
-        }
-      });
-    })
+    fetch(event.request).then(response => {
+      if (response.status === 200) {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
+      }
+      return response;
+    }).catch(() => caches.match(event.request))
   );
 });
