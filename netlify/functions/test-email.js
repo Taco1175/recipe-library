@@ -9,7 +9,7 @@ exports.handler = async (event) => {
 
   const to = auth.user.email;
   const RESEND_API_KEY = process.env.RESEND_API_KEY;
-  const FROM_EMAIL = process.env.EMAIL_FROM || "noreply@mealplannr.xyz";
+  const FROM_EMAIL = process.env.EMAIL_FROM;
 
   // Log env state
   const envInfo = {
