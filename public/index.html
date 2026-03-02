@@ -12,6 +12,7 @@
 <meta name="apple-mobile-web-app-title" content="Mealplannr">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="stylesheet" href="/shared.css">
 <style>
 :root {
   --bg: #0F1117;
@@ -451,65 +452,42 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
   <!-- SIDEBAR -->
   <nav class="sidebar" id="sidebar">
     <div class="sidebar-logo">
-      <span>🍽</span>
-      <h1>Mealplannr</h1>
+      <span class="sidebar-logo-icon">🍽</span>
+      <span class="sidebar-logo-text">Mealplannr</span>
+      <button class="sidebar-collapse-btn" id="sidebar-collapse-btn" onclick="toggleSidebarCollapse()" title="Collapse sidebar">◀</button>
     </div>
     <div class="sidebar-nav">
-      <button class="sidebar-add-btn" onclick="toggleAdd()">＋ Add Recipe</button>
-      <a class="nav-item active" href="/">
-        <span class="nav-icon">📚</span>
-        <span class="nav-label">Recipe Library</span>
-        <span class="count-badge" id="total-badge" style="font-size:11px;color:#556;font-family:monospace"></span>
-      </a>
-      <a class="nav-item" href="/planner.html">
-        <span class="nav-icon">📅</span>
-        <span class="nav-label">Plan Week</span>
-      </a>
+      <button class="sidebar-add-btn" onclick="toggleAdd()"><span>＋</span><span class="sidebar-add-text"> Add Recipe</span></button>
+      <a class="nav-item active" href="/"><span class="nav-icon">📚</span><span class="nav-label">Recipe Library</span></a>
+      <a class="nav-item" href="/planner.html"><span class="nav-icon">📅</span><span class="nav-label">Plan Week</span></a>
       <div class="nav-divider"></div>
-      <div class="nav-item" onclick="toggleFridge()">
-        <span class="nav-icon">🥦</span>
-        <span class="nav-label">What's in my fridge?</span>
-      </div>
-      <div class="nav-item" onclick="openShareModal()">
-        <span class="nav-icon">👥</span>
-        <span class="nav-label">Share Library</span>
-      </div>
-      <div class="nav-item" onclick="startTutorial()">
-        <span class="nav-icon">✨</span>
-        <span class="nav-label">Tutorial</span>
-      </div>
+      <div class="nav-item" onclick="toggleFridge()"><span class="nav-icon">🥦</span><span class="nav-label">What's in my fridge?</span></div>
+      <div class="nav-item" onclick="openShareModal()"><span class="nav-icon">👥</span><span class="nav-label">Share Library</span></div>
+      <div class="nav-item" onclick="startTutorial()"><span class="nav-icon">✨</span><span class="nav-label">Tutorial</span></div>
     </div>
     <div class="sidebar-footer">
-      <div class="user-info" onclick="toggleUserMenu()">
+      <div class="user-info" onclick="toggleUserMenu(event)">
         <div class="user-avatar" id="user-avatar">?</div>
         <span class="user-name" id="user-email-short"></span>
-        <span style="color:#445;font-size:12px">▴</span>
+        <span class="user-caret">▴</span>
         <div class="user-dropdown" id="user-dropdown">
-          <div style="font-size:11px;color:var(--text3);font-family:monospace;padding:4px 8px 8px;border-bottom:1px solid var(--border);margin-bottom:6px" id="user-email-full"></div>
-          <button onclick="backfillImages()">🖼 Backfill Images</button>
-          <div class="dd-divider"></div>
-          <button class="danger" onclick="Auth.signOut()">Sign out</button>
+          <div class="dd-email" id="user-email-full"></div>
+          <button onclick="event.stopPropagation();backfillImages()">🖼 Backfill Images</button>
+          <button onclick="event.stopPropagation();Auth.signOut()" class="danger">🚪 Sign out</button>
         </div>
       </div>
     </div>
   </nav>
   <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
-
-  <!-- MAIN CONTENT -->
-  <div class="sidebar-layout">
-  <div class="header">
-    <div class="header-inner">
-      <div class="header-top">
-        <div style="display:flex;align-items:center;gap:12px">
-          <button class="sidebar-toggle" onclick="openSidebar()">☰</button>
-          <h1 style="font-size:20px;font-weight:700;color:#F5F0E8;font-family:Georgia,serif">Recipe Library</h1>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <button class="btn btn-success" id="grocery-btn" onclick="openGrocery()" style="display:none">
-            🛒 <span class="grocery-badge" id="grocery-count">0</span> in cart
-          </button>
-        </div>
-      </div>
+  <div class="sidebar-layout" id="sidebar-layout">
+  <div class="page-header">
+    <button class="sidebar-toggle" onclick="openSidebar()">☰</button>
+    <h1>Recipe Library</h1>
+    <button class="btn btn-success" id="grocery-btn" onclick="openGrocery()" style="display:none">
+      🛒 <span class="grocery-badge" id="grocery-count">0</span> in cart
+    </button>
+  </div>
+  <div>
       <div class="pills" id="pills"></div>
       <div class="topbar" style="margin-top:10px">
         <div class="view-toggle">
@@ -2919,5 +2897,6 @@ function closeSidebar() {
 </script>
 
 </div><!-- /sidebar-layout -->
+<script src="/sidebar.js"></script>
 </body>
 </html>
