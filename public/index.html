@@ -768,7 +768,8 @@ async function showApp() {
   const params = new URLSearchParams(location.search);
   if (params.get('fridge') === '1') {
     document.getElementById('fridge-bar')?.classList.add('show');
-    document.getElementById('fridge-bar')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => document.getElementById('fridge-search')?.focus(), 300);
     history.replaceState({}, '', '/'); // clean URL
   }
   if (params.get('share') === '1') {
