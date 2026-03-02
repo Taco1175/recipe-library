@@ -1,6 +1,6 @@
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const FROM_EMAIL = process.env.EMAIL_FROM || "noreply@mealplannr.xyz";
-const APP_URL = process.env.URL || "https://mealplannr.xyz";
+const FROM_EMAIL = process.env.EMAIL_FROM;
+const APP_URL = process.env.URL || "https://mealplannr.xyz"; // URL is auto-set by Netlify
 
 async function sendEmail({ to, subject, html }) {
   if (!RESEND_API_KEY) {
