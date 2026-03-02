@@ -15,8 +15,8 @@
 <link rel="stylesheet" href="/shared.css">
 <style>
 /* page-specific styles — base/sidebar in shared.css */
-.subheader { padding: 12px 24px 0; background: #0d1018; border-bottom: 1px solid var(--border); }
-.topbar { display: flex; gap: 8px; padding-bottom: 12px; flex-wrap: wrap; align-items: center; }
+.subheader { padding: 10px 24px; background: #0d1018; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+.topbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
 
 
@@ -118,7 +118,7 @@ select.flt {
 /* ── TABLE ── */
 .table { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
 .thead {
-  display: grid; grid-template-columns: 28px minmax(0,1fr) 90px 110px 54px 44px 80px 30px;
+  display: grid; grid-template-columns: 28px minmax(180px,2fr) 100px 130px 60px 50px 90px 30px;
   padding: 10px 14px; background: var(--bg3); border-bottom: 1px solid var(--border);
   font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
   color: var(--text3); font-family: monospace; gap: 8px; align-items: center;
@@ -126,7 +126,7 @@ select.flt {
 .trow-wrap { border-bottom: 1px solid var(--bg4); }
 .trow-wrap:last-child { border-bottom: none; }
 .trow {
-  display: grid; grid-template-columns: 28px minmax(0,1fr) 90px 110px 54px 44px 80px 30px;
+  display: grid; grid-template-columns: 28px minmax(180px,2fr) 100px 130px 60px 50px 90px 30px;
   padding: 16px 20px; align-items: center; gap: 10px; cursor: pointer;
   transition: background .15s;
 }
