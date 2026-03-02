@@ -15,6 +15,9 @@
 <link rel="stylesheet" href="/shared.css">
 <style>
 /* page-specific styles — base/sidebar in shared.css */
+.subheader { padding: 12px 24px 0; background: #0d1018; border-bottom: 1px solid var(--border); }
+.topbar { display: flex; gap: 8px; padding-bottom: 12px; flex-wrap: wrap; align-items: center; }
+
 
 
 /* ── APP ── */
@@ -374,7 +377,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
     </div>
     <div class="sidebar-nav">
       <button class="sidebar-add-btn" onclick="toggleAdd()"><span>＋</span><span class="sidebar-add-text"> Add Recipe</span></button>
-      <a class="nav-item active" href="/"><span class="nav-icon">📚</span><span class="nav-label">Recipe Library</span></a>
+      <a class="nav-item active" href="/"><span class="nav-icon">📚</span><span class="nav-label">Recipe Library</span><span id="total-badge" style="font-size:11px;color:#556;font-family:monospace;margin-left:auto;padding-right:4px"></span></a>
       <a class="nav-item" href="/planner.html"><span class="nav-icon">📅</span><span class="nav-label">Plan Week</span></a>
       <div class="nav-divider"></div>
       <div class="nav-item" onclick="toggleFridge()"><span class="nav-icon">🥦</span><span class="nav-label">What's in my fridge?</span></div>
@@ -388,7 +391,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
         <span class="user-caret">▴</span>
         <div class="user-dropdown" id="user-dropdown">
           <div class="dd-email" id="user-email-full"></div>
-          <button onclick="event.stopPropagation();backfillImages()">🖼 Backfill Images</button>
+          <button id="backfill-btn" onclick="event.stopPropagation();backfillImages()">🖼 Backfill Images</button>
           <button onclick="event.stopPropagation();Auth.signOut()" class="danger">🚪 Sign out</button>
         </div>
       </div>
@@ -403,28 +406,27 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
       🛒 <span class="grocery-badge" id="grocery-count">0</span> in cart
     </button>
   </div>
-  <div>
-      <div class="pills" id="pills"></div>
-      <div class="topbar" style="margin-top:10px">
-        <div class="view-toggle">
-          <button id="btn-table" class="active" onclick="setView('table')" title="Table view">☰</button>
-          <button id="btn-grid" onclick="setView('grid')" title="Grid view">⊞</button>
-        </div>
-        <div class="search-wrap">
-          <input type="text" id="search" placeholder="Search recipes…" oninput="onSearch(this.value)">
-          <button class="search-clear" id="search-clear-btn" onclick="clearSearch()" title="Clear" style="display:none">×</button>
-        </div>
-        <select class="flt" id="filterProt" onchange="fProt=this.value;render()"><option value="">All Proteins</option></select>
-        <select class="flt" id="filterMeth" onchange="fMeth=this.value;render()"><option value="">All Methods</option></select>
-        <select class="flt" id="sortBy" onchange="sort=this.value;render()">
-          <option value="category">Category</option>
-          <option value="name">Name A-Z</option>
-          <option value="protein">Protein</option>
-          <option value="method">Method</option>
-          <option value="cost">Cost ↑</option>
-          <option value="match">Match %</option>
-        </select>
+  <div class="subheader">
+    <div class="pills" id="pills"></div>
+    <div class="topbar">
+      <div class="view-toggle">
+        <button id="btn-table" class="active" onclick="setView('table')" title="Table view">☰</button>
+        <button id="btn-grid" onclick="setView('grid')" title="Grid view">⊞</button>
       </div>
+      <div class="search-wrap">
+        <input type="text" id="search" placeholder="Search recipes…" oninput="onSearch(this.value)">
+        <button class="search-clear" id="search-clear-btn" onclick="clearSearch()" title="Clear" style="display:none">×</button>
+      </div>
+      <select class="flt" id="filterProt" onchange="fProt=this.value;render()"><option value="">All Proteins</option></select>
+      <select class="flt" id="filterMeth" onchange="fMeth=this.value;render()"><option value="">All Methods</option></select>
+      <select class="flt" id="sortBy" onchange="sort=this.value;render()">
+        <option value="category">Category</option>
+        <option value="name">Name A-Z</option>
+        <option value="protein">Protein</option>
+        <option value="method">Method</option>
+        <option value="cost">Cost ↑</option>
+        <option value="match">Match %</option>
+      </select>
     </div>
   </div>
 
@@ -930,8 +932,7 @@ async function backfillImages() {
   if (!toFetch.length) { alert("All recipes with URLs already have images!"); return; }
   
   const btn = document.getElementById("backfill-btn");
-  btn.disabled = true;
-  btn.textContent = `Fetching 0/${toFetch.length}...`;
+  if(btn){ btn.disabled = true; btn.textContent = `Fetching 0/${toFetch.length}...`; }
 
   let done = 0;
   for (const r of toFetch) {
@@ -949,18 +950,17 @@ async function backfillImages() {
       }
     } catch(e) {}
     done++;
-    btn.textContent = `Fetching ${done}/${toFetch.length}...`;
+    if(btn) btn.textContent = `Fetching ${done}/${toFetch.length}...`;
     await new Promise(res => setTimeout(res, 500)); // rate limit
   }
-  btn.textContent = "Done!";
+  if(btn){ btn.textContent = "Done!"; setTimeout(() => { btn.disabled = false; btn.textContent = "🖼 Backfill Images"; }, 2000); }
   render();
-  setTimeout(() => { btn.disabled = false; btn.textContent = "🖼 Backfill Images"; }, 2000);
 }
 
 function render() {
   buildPills();
   const list = getFiltered();
-  document.getElementById("total-badge").textContent = recipes.length+" recipes";
+  const _tb = document.getElementById("total-badge"); if(_tb) _tb.textContent = recipes.length;
   const hasFilter = fCat||fProt||fMeth||q||matchActive;
   const selStr = checked.size > 0 ? ` · <span style="color:#6e8efb;font-weight:600">${checked.size} selected</span>` : "";
   document.getElementById("count").innerHTML = `Showing ${list.length} of ${recipes.length} recipes${hasFilter?'<span class="clear-link" onclick="clearAll()">Clear</span>':""}${selStr}`;
