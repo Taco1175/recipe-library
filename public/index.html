@@ -118,7 +118,7 @@ select.flt {
 /* ── TABLE ── */
 .table { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
 .thead {
-  display: grid; grid-template-columns: 28px minmax(180px,2fr) 100px 130px 60px 50px 90px 30px;
+  display: grid; grid-template-columns: 28px minmax(180px,2fr) 80px 100px 130px 60px 50px 90px 30px;
   padding: 10px 14px; background: var(--bg3); border-bottom: 1px solid var(--border);
   font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
   color: var(--text3); font-family: monospace; gap: 8px; align-items: center;
@@ -126,7 +126,7 @@ select.flt {
 .trow-wrap { border-bottom: 1px solid var(--bg4); }
 .trow-wrap:last-child { border-bottom: none; }
 .trow {
-  display: grid; grid-template-columns: 28px minmax(180px,2fr) 100px 130px 60px 50px 90px 30px;
+  display: grid; grid-template-columns: 28px minmax(180px,2fr) 80px 100px 130px 60px 50px 90px 30px;
   padding: 16px 20px; align-items: center; gap: 10px; cursor: pointer;
   transition: background .15s;
 }
@@ -305,8 +305,9 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
   .trow > *:nth-child(5),
   .trow > *:nth-child(6),
   .trow > *:nth-child(7),
-  .trow > *:nth-child(8) { display: none !important; }
-  .trow > *:nth-child(9) { grid-column: 3; grid-row: 1; display: flex; justify-content: center; }
+  .trow > *:nth-child(8),
+  .trow > *:nth-child(9) { display: none !important; }
+  .trow > *:nth-child(10) { grid-column: 3; grid-row: 1; display: flex; justify-content: center; }
 
   /* Recipe name */
   .recipe-name { font-size: 14px; flex-wrap: nowrap; gap: 4px; }
@@ -516,6 +517,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
       <div class="thead">
         <div></div>
         <div class="sort-hdr" onclick="setSort('name')"><span id="shdr-name">Recipe</span></div>
+        <div id="owner-col-header">From</div>
         <div class="sort-hdr" onclick="setSort('category')"><span id="shdr-category">Category</span></div>
         <div class="sort-hdr" onclick="setSort('method')"><span id="shdr-method">Method</span></div>
 
@@ -764,6 +766,17 @@ async function showApp() {
   buildSelects();
   render();
 
+  // Show/hide owner column based on whether any shared recipes exist
+  function updateOwnerCol() {
+    const hasShared = recipes.some(r => r._owner_label);
+    const hdr = document.getElementById('owner-col-header');
+    if (hdr) hdr.style.display = hasShared ? '' : 'none';
+    document.querySelectorAll('.trow, .thead').forEach(row => {
+      const cell = row.children[2]; // 3rd cell = owner
+      if (cell) cell.style.display = hasShared ? '' : 'none';
+    });
+  }
+
   // Handle ?fridge=1 from planner sidebar link
   const params = new URLSearchParams(location.search);
   if (params.get('fridge') === '1') {
@@ -978,6 +991,8 @@ async function backfillImages() {
 }
 
 function render() {
+  // (updateOwnerCol called after first render from showApp)
+
   buildPills();
   const list = getFiltered();
   const _tb = document.getElementById("total-badge"); if(_tb) _tb.textContent = recipes.length;
@@ -1010,6 +1025,7 @@ function render() {
       ${r.url ? `<a href="${r.url}" target="_blank" class="link-btn" onclick="event.stopPropagation()" title="Open recipe" style="flex-shrink:0;width:22px;height:22px;font-size:10px;margin-left:4px">↗</a>` : ""}
       <div class="recipe-mobile-meta" style="display:none">${r.category} · ${MI[r.method]||"🍴"} ${r.method}</div>
     </div>
+    <div style="font-size:11px;color:var(--accent);font-family:monospace;display:flex;align-items:center">${r._owner_label ? `<span title="Shared library">${esc(r._owner_label)}</span>` : ""}</div>
     <div><span class="badge" style="background:${c.bg};color:${c.text}"><span class="dot" style="background:${c.dot}"></span>${r.category}</span></div>
     <div class="meta">${MI[r.method]||"🍴"} ${r.method}</div>
 
