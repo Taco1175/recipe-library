@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Mealplannr</title>
 <meta name="description" content="Your personal meal planning and recipe library">
-<meta name="theme-color" content="#0F1117">
+<meta name="theme-color" content="var(--bg)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Mealplannr">
@@ -14,331 +14,299 @@
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
 <link rel="stylesheet" href="/shared.css">
 <style>
-/* page-specific styles — base/sidebar in shared.css */
-.subheader { padding: 10px 24px; background: #0d1018; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
-.topbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+/* ── INDEX PAGE STYLES ── */
 
-
-
-/* ── APP ── */
+/* Layout */
 #app { display: block; }
-
-/* ── HEADER ── */
-.header {
-  background: #0d1018;
-  border-bottom: 1px solid var(--border); padding: 14px 24px 12px;
-  position: sticky; top: 0; z-index: 50;
+.subheader {
+  padding: 0 24px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex; flex-direction: column;
 }
-.header-inner { max-width: 100%; }
-.header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0; flex-wrap: wrap; gap: 10px; }
-.header h1 { font-size: 24px; font-weight: 700; color: #F5F0E8; display: flex; align-items: center; gap: 10px; }
-.header-actions { display: flex; gap: 8px; align-items: center; }
-.count-badge { font-size: 12px; color: #888; font-family: monospace; font-weight: 400; }
-.pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.topbar {
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  padding: 10px 0;
+}
+.main { padding: 20px 24px; }
+
+/* Pills / category filters */
+.pills { display: flex; gap: 5px; flex-wrap: wrap; padding: 10px 0 0; }
 .pill {
-  display: inline-flex; align-items: center; gap: 5px; border-radius: 20px;
-  padding: 4px 12px; font-size: 11px; cursor: pointer; font-family: monospace;
-  border: 1px solid var(--border); background: var(--bg4); color: #aaa;
-  transition: all .2s; user-select: none;
+  display: inline-flex; align-items: center; gap: 5px; border-radius: 4px;
+  padding: 3px 10px; font-size: 11px; cursor: pointer; font-family: var(--mono);
+  border: 1px solid var(--border); background: transparent; color: var(--text3);
+  transition: all .15s; user-select: none; letter-spacing: 0.03em;
 }
-.pill.active { border-color: var(--dot); background: var(--bg); color: var(--text); }
-.pill .dot { width: 6px; height: 6px; border-radius: 50%; background: #555; display: inline-block; flex-shrink: 0; }
-.pill.active .dot { background: var(--dot); }
+.pill:hover { color: var(--text2); border-color: var(--border2); }
+.pill.active { border-color: var(--accent); color: var(--accent); background: rgba(200,169,110,0.07); }
+.pill .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--text3); display: inline-block; flex-shrink: 0; }
+.pill.active .dot { background: var(--accent); }
 
-/* ── MAIN ── */
-.main { max-width: 100%; padding: 16px 28px; }
-
-/* ── BUTTONS ── */
+/* Buttons */
 .btn {
-  border: none; border-radius: 8px; padding: 9px 16px; font-size: 13px;
-  font-family: Georgia, serif; cursor: pointer; transition: all .2s;
-  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  border: 1px solid transparent; border-radius: var(--radius); padding: 7px 14px;
+  font-size: 12px; font-family: var(--sans); cursor: pointer; transition: all .15s;
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; letter-spacing: 0.01em;
 }
-.btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: #5a7df0; }
-.btn-primary:disabled { background: #3a4060; color: #666; cursor: default; }
-.btn-success { background: #2d6a4f; color: #7bcf8e; border: 1px solid #3a8a65; }
-.btn-success:hover { background: #3a7a5f; }
-.btn-danger { background: #4a1a1a; color: var(--red); border: 1px solid #6a3030; font-size: 12px; padding: 6px 11px; }
-.btn-danger:hover { background: #5a2a2a; }
-.btn-outline { background: transparent; border: 1px solid var(--border); color: #aaa; }
-.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
-.btn-ghost { background: transparent; border: none; color: var(--text2); padding: 8px 10px; }
+.btn-primary { background: var(--accent); color: #0a0a0b; border-color: var(--accent); font-weight: 500; }
+.btn-primary:hover { background: var(--accent2); border-color: var(--accent2); }
+.btn-primary:disabled { opacity: 0.4; cursor: default; }
+.btn-success { background: transparent; color: var(--green); border-color: var(--green); }
+.btn-success:hover { background: rgba(90,158,111,0.1); }
+.btn-danger { background: transparent; color: var(--red); border-color: var(--red); font-size: 11px; padding: 5px 10px; }
+.btn-danger:hover { background: rgba(192,103,90,0.1); }
+.btn-outline { background: transparent; border-color: var(--border2); color: var(--text2); }
+.btn-outline:hover { border-color: var(--text2); color: var(--text); }
+.btn-ghost { background: transparent; border-color: transparent; color: var(--text2); padding: 7px 10px; }
 .btn-ghost:hover { color: var(--text); }
 .grocery-badge {
-  background: var(--red); color: #fff; border-radius: 50%;
-  width: 18px; height: 18px; display: inline-flex; align-items: center;
-  justify-content: center; font-size: 10px; font-family: monospace;
+  background: var(--accent); color: #0a0a0b; border-radius: 3px;
+  padding: 0 5px; font-size: 10px; font-family: var(--mono); font-weight: 600;
+  display: inline-flex; align-items: center;
 }
 
-/* ── TOPBAR ── */
-.topbar { display: flex; gap: 8px; margin-bottom: 0; flex-wrap: wrap; align-items: center; }
-.search-wrap { position: relative; flex: 1; min-width: 200px; }
+/* Search + filters */
+.search-wrap { position: relative; flex: 1; min-width: 180px; }
 .search-wrap input {
-  width: 100%; background: var(--bg4); border: 1px solid var(--border);
-  border-radius: 8px; padding: 9px 36px 9px 14px; color: var(--text);
-  font-size: 14px; outline: none; font-family: Georgia, serif;
-  transition: border-color .2s;
+  width: 100%; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 7px 32px 7px 12px; color: var(--text);
+  font-size: 13px; outline: none; font-family: var(--sans); transition: border-color .15s;
 }
-.search-wrap input:focus { border-color: var(--accent); }
-.search-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #556; cursor: pointer; font-size: 16px; padding: 2px; }
+.search-wrap input::placeholder { color: var(--text3); }
+.search-wrap input:focus { border-color: var(--border2); }
+.search-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text3); cursor: pointer; font-size: 14px; padding: 2px; line-height: 1; }
+.search-clear:hover { color: var(--text2); }
 select.flt {
-  background: var(--bg4); border: 1px solid var(--border); border-radius: 8px;
-  padding: 9px 10px; color: var(--text); font-size: 12px; outline: none;
-  font-family: Georgia, serif; cursor: pointer;
+  background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 7px 10px; color: var(--text); font-size: 12px; outline: none;
+  font-family: var(--sans); cursor: pointer; transition: border-color .15s;
 }
+select.flt:focus { border-color: var(--border2); }
 
-/* ── INGREDIENT MATCHER ── */
+/* View toggle */
+.view-toggle { display: flex; gap: 3px; }
+.view-toggle button {
+  background: transparent; border: 1px solid var(--border); color: var(--text3);
+  border-radius: var(--radius); width: 30px; height: 30px; cursor: pointer;
+  font-size: 13px; display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s;
+}
+.view-toggle button.active { border-color: var(--border2); color: var(--text2); }
+.view-toggle button:hover { color: var(--text); }
+
+/* Count line */
+.count { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-bottom: 14px; letter-spacing: 0.03em; }
+.clear-link { cursor: pointer; margin-left: 10px; color: var(--accent); }
+.clear-link:hover { text-decoration: underline; }
+.footer-note { margin-top: 16px; font-size: 11px; color: var(--text3); text-align: center; font-family: var(--mono); letter-spacing: 0.04em; }
+
+/* Fridge bar */
 .fridge-bar {
-  background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
-  padding: 16px; margin-bottom: 16px; display: none;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius2);
+  padding: 16px 18px; margin-bottom: 18px; display: none;
 }
 .fridge-bar.show { display: block; }
-.fridge-bar h3 { font-size: 13px; color: #F5F0E8; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
-.fridge-row { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
-.fridge-row textarea {
-  flex: 1; min-width: 200px; background: var(--bg3); border: 1px solid var(--border);
-  border-radius: 8px; padding: 10px 12px; color: var(--text); font-size: 13px;
-  outline: none; font-family: Georgia, serif; resize: vertical; min-height: 60px;
-  transition: border-color .2s;
-}
-.fridge-row textarea:focus { border-color: var(--accent); }
-.fridge-info { font-size: 11px; color: var(--text3); margin-top: 8px; font-family: monospace; }
+.fridge-info { font-size: 11px; color: var(--text3); margin-top: 8px; font-family: var(--mono); }
 .match-badge {
-  display: inline-flex; align-items: center; gap: 4px; border-radius: 10px;
-  padding: 2px 8px; font-size: 10px; font-family: monospace; font-weight: 600;
+  display: inline-flex; align-items: center; border-radius: 3px;
+  padding: 2px 6px; font-size: 10px; font-family: var(--mono); font-weight: 500; letter-spacing: 0.03em;
 }
-.match-full { background: #1a3a1a; color: #7bcf8e; border: 1px solid #2a5a2a; }
-.match-partial { background: #2a2a10; color: #d4b84a; border: 1px solid #4a4a20; }
+.match-full { background: rgba(90,158,111,0.12); color: var(--green); border: 1px solid rgba(90,158,111,0.3); }
+.match-partial { background: rgba(200,169,110,0.1); color: var(--accent); border: 1px solid rgba(200,169,110,0.25); }
 
-/* ── COUNT ── */
-.count { font-size: 12px; color: #666; font-family: monospace; margin-bottom: 12px; }
-.clear-link { cursor: pointer; margin-left: 10px; color: var(--accent); text-decoration: underline; }
+/* Add panel */
+.add-panel {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius2);
+  padding: 20px; margin-bottom: 18px; display: none;
+}
+.add-panel.show { display: block; }
+.add-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.field label {
+  display: block; font-size: 10px; color: var(--text3); font-family: var(--mono);
+  text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px;
+}
+.field input, .field select {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 8px 10px; color: var(--text); font-size: 13px;
+  outline: none; font-family: var(--sans); transition: border-color .15s;
+}
+.field input::placeholder { color: var(--text3); }
+.field input:focus, .field select:focus { border-color: var(--border2); }
+.field.full { grid-column: 1/-1; }
+.add-msg { font-size: 11px; font-family: var(--mono); padding: 7px 10px; border-radius: var(--radius); margin-top: 8px; }
+.add-msg.error { background: rgba(192,103,90,0.08); color: var(--red); border: 1px solid rgba(192,103,90,0.2); }
+.add-msg.success { background: rgba(90,158,111,0.08); color: var(--green); border: 1px solid rgba(90,158,111,0.2); }
+.add-msg.loading { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
 
-/* ── TABLE ── */
-.table { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+/* Table */
+.table { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius2); overflow: hidden; }
 .thead {
   display: grid; grid-template-columns: 28px minmax(180px,2fr) 80px 100px 130px 60px 50px 90px 30px;
-  padding: 10px 14px; background: var(--bg3); border-bottom: 1px solid var(--border);
+  padding: 8px 16px; background: var(--bg3); border-bottom: 1px solid var(--border);
   font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
-  color: var(--text3); font-family: monospace; gap: 8px; align-items: center;
+  color: var(--text3); font-family: var(--mono); gap: 8px; align-items: center;
 }
-.trow-wrap { border-bottom: 1px solid var(--bg4); }
+.trow-wrap { border-bottom: 1px solid var(--border); }
 .trow-wrap:last-child { border-bottom: none; }
 .trow {
   display: grid; grid-template-columns: 28px minmax(180px,2fr) 80px 100px 130px 60px 50px 90px 30px;
-  padding: 16px 20px; align-items: center; gap: 10px; cursor: pointer;
-  transition: background .15s;
+  padding: 12px 16px; align-items: center; gap: 8px; cursor: pointer; transition: background .1s;
 }
-.trow:hover { background: var(--bg4); }
-.recipe-name { font-size: 15px; font-weight: 500; color: var(--text); display: flex; align-items: center; gap: 6px; min-width: 0; }
+.trow:hover { background: var(--bg3); }
+.recipe-name { font-size: 13px; font-weight: 400; color: var(--text); display: flex; align-items: center; gap: 6px; min-width: 0; }
 .recipe-name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.expand-icon { font-size: 8px; color: #445; transition: transform .2s; flex-shrink: 0; }
+.expand-icon { font-size: 7px; color: var(--text3); transition: transform .2s; flex-shrink: 0; }
 .trow-wrap.open .expand-icon { transform: rotate(90deg); }
-.has-details .recipe-name { color: #b8d8ff; }
-.no-details-hint { font-size: 9px; color: #334; font-family: monospace; flex-shrink: 0; }
-
-/* Recipe detail modal */
-.recipe-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; align-items:center; justify-content:center; padding:16px; }
-.recipe-modal-overlay.show { display:flex; }
-.recipe-modal { background:#1a1f2e; border:1px solid #2a2f3e; border-radius:14px; width:100%; max-width:720px; max-height:90vh; overflow:hidden; display:flex; flex-direction:column; position:relative; }
-.recipe-modal-header { padding:20px 24px 16px; border-bottom:1px solid #2a2f3e; display:flex; align-items:flex-start; gap:16px; }
-.recipe-modal-img { width:100px; height:75px; object-fit:cover; border-radius:8px; flex-shrink:0; }
-.recipe-modal-title { flex:1; }
-.recipe-modal-title h2 { font-size:18px; color:#F5F0E8; margin:0 0 6px; line-height:1.3; }
-.recipe-modal-body { overflow-y:auto; padding:20px 24px; display:grid; grid-template-columns:1fr 1.4fr; gap:24px; }
-.recipe-modal-close { position:absolute; top:12px; right:12px; background:none; border:none; color:#666; font-size:20px; cursor:pointer; width:30px; height:30px; display:flex; align-items:center; justify-content:center; border-radius:6px; }
-.recipe-modal-close:hover { background:var(--border); color:var(--text); }
-.modal-section-title { font-size:10px; letter-spacing:0.08em; text-transform:uppercase; color:#556; font-family:monospace; margin-bottom:10px; }
-.modal-ing-list { list-style:none; padding:0; margin:0; }
-.modal-ing-list li { padding:5px 0; border-bottom:1px solid #1e2330; font-size:13px; color:#c8d0e0; line-height:1.4; }
-.modal-ing-list li:last-child { border-bottom:none; }
-.modal-step-list { list-style:none; padding:0; margin:0; counter-reset:steps; }
-.modal-step-list li { counter-increment:steps; padding:8px 0 8px 36px; border-bottom:1px solid #1e2330; font-size:13px; color:#c8d0e0; line-height:1.5; position:relative; }
-.modal-step-list li::before { content:counter(steps); position:absolute; left:0; top:8px; width:24px; height:24px; background:#2a3050; color:#6e8efb; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-family:monospace; font-weight:600; }
-.modal-step-list li:last-child { border-bottom:none; }
-.reader-btn { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#6e8efb; background:#1e2a4a; border:1px solid #2a3a6a; border-radius:6px; padding:5px 10px; text-decoration:none; cursor:pointer; margin-top:8px; }
-.reader-btn:hover { background:#2a3a6a; }
-@media(max-width:600px) { .recipe-modal-body { grid-template-columns:1fr; } .recipe-modal-img { display:none; } }
-
-/* Backfill button */
-.backfill-btn { font-size:11px; background:#1e2330; border:1px solid #2a2f3e; color:#888; border-radius:6px; padding:4px 10px; cursor:pointer; font-family:monospace; }
-.backfill-btn:hover { color:#aaa; border-color:#3a4050; }
-
-/* Grid view */
-.view-toggle { display:flex; gap:4px; }
-.view-toggle button { background:#1e2330; border:1px solid #2a2f3e; color:#666; border-radius:6px; width:30px; height:30px; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
-.view-toggle button.active { background:#2a3050; border-color:#6e8efb; color:#6e8efb; }
-.recipe-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:16px; }
-.recipe-card { background:#1a1f2e; border:1px solid #2a2f3e; border-radius:10px; overflow:hidden; cursor:pointer; transition:all 0.2s; position:relative; }
-.recipe-card:hover { border-color:#6e8efb; transform:translateY(-2px); box-shadow:0 4px 20px rgba(0,0,0,0.3); }
-.recipe-card.no-details { opacity:0.6; }
-.recipe-card .card-img { width:100%; aspect-ratio:4/3; object-fit:cover; background:#12151f; display:block; }
-.recipe-card .card-img-placeholder { width:100%; aspect-ratio:4/3; background:#12151f; display:flex; align-items:center; justify-content:center; font-size:36px; }
-.recipe-card .card-body { padding:10px 12px 12px; }
-.recipe-card .card-name { font-size:13px; font-weight:600; color:#e8e4dc; margin-bottom:5px; line-height:1.3; }
-.recipe-card .card-name.dim { color:#555; }
-.recipe-card .card-meta { display:flex; align-items:center; justify-content:space-between; }
-.recipe-card .card-cost { font-size:12px; color:#7bcf8e; font-family:monospace; font-weight:600; }
-.recipe-card .card-check { position:absolute; top:8px; left:8px; width:20px; height:20px; accent-color:#6e8efb; cursor:pointer; }
-.recipe-card .card-badge { position:absolute; top:8px; right:8px; }
-@media (max-width:700px) { .recipe-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:10px; } }
-.trow.no-details .recipe-name-text { color: #555; }
-.badge { display: inline-flex; align-items: center; gap: 3px; border-radius: 10px; padding: 2px 8px; font-size: 10px; font-family: monospace; white-space: nowrap; }
+.has-details .recipe-name { color: var(--text); }
+.trow.no-details .recipe-name-text { color: var(--text3); }
+.no-details-hint { font-size: 9px; color: var(--text3); font-family: var(--mono); flex-shrink: 0; }
+.badge {
+  display: inline-flex; align-items: center; gap: 3px; border-radius: 3px;
+  padding: 2px 7px; font-size: 10px; font-family: var(--mono); white-space: nowrap;
+  letter-spacing: 0.02em;
+}
 .badge .dot { width: 4px; height: 4px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
 .meta { font-size: 11px; color: var(--text2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cost { font-size: 11px; color: #7bcf8e; font-family: monospace; font-weight: 600; }
+.cost { font-size: 11px; color: var(--green); font-family: var(--mono); }
 .sort-hdr { cursor: pointer; user-select: none; white-space: nowrap; }
-.sort-hdr:hover span { color: #c8d0e0; }
-.sort-hdr span.active { color: #6e8efb; }
+.sort-hdr:hover span { color: var(--text2); }
+.sort-hdr span.active { color: var(--accent); }
 .sort-hdr span.active::after { content: " ↓"; }
 .sort-hdr span.active.asc::after { content: " ↑"; }
 .link-btn {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 26px; height: 26px; border-radius: 6px; background: #1e2a3a;
-  border: 1px solid #2a3f5e; color: var(--accent); font-size: 11px;
-  text-decoration: none; transition: all .15s; flex-shrink: 0;
+  width: 22px; height: 22px; border-radius: 4px;
+  border: 1px solid var(--border2); color: var(--text3); font-size: 10px;
+  text-decoration: none; transition: all .12s; flex-shrink: 0;
 }
-.link-btn:hover { background: #2a3f5e; }
-input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
+.link-btn:hover { color: var(--accent); border-color: var(--accent); }
+input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--accent); cursor: pointer; }
 
-/* ── DETAIL PANEL ── */
-.detail-panel { display: none; padding: 0 14px 18px 46px; background: #0e1118; border-top: 1px solid var(--bg4); }
+/* Detail panel */
+.detail-panel { display: none; padding: 0 16px 16px 42px; background: var(--bg); border-top: 1px solid var(--border); }
 .trow-wrap.open .detail-panel { display: block; }
-.detail-inner { display: grid; grid-template-columns: 1fr 1.6fr; gap: 24px; padding-top: 18px; }
-.detail-section h3 { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); font-family: monospace; margin-bottom: 8px; }
+.detail-inner { display: grid; grid-template-columns: 1fr 1.6fr; gap: 24px; padding-top: 16px; }
+.detail-section h3 { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); font-family: var(--mono); margin-bottom: 8px; }
 .ing-list { list-style: none; }
-.ing-list li { font-size: 12px; color: #c0c8da; padding: 3px 0 3px 12px; border-bottom: 1px solid #1a1f2e; position: relative; line-height: 1.4; }
+.ing-list li { font-size: 12px; color: var(--text2); padding: 3px 0 3px 12px; border-bottom: 1px solid var(--border); position: relative; line-height: 1.5; }
 .ing-list li:last-child { border-bottom: none; }
-.ing-list li::before { content: "·"; color: var(--accent); position: absolute; left: 0; }
+.ing-list li::before { content: "—"; color: var(--accent); position: absolute; left: 0; font-size: 10px; }
 .steps-list { list-style: none; counter-reset: steps; }
-.steps-list li { font-size: 12px; color: #c0c8da; padding: 6px 0 6px 28px; border-bottom: 1px solid #1a1f2e; position: relative; counter-increment: steps; line-height: 1.5; }
+.steps-list li { font-size: 12px; color: var(--text2); padding: 6px 0 6px 28px; border-bottom: 1px solid var(--border); position: relative; counter-increment: steps; line-height: 1.5; }
 .steps-list li:last-child { border-bottom: none; }
 .steps-list li::before {
-  content: counter(steps); position: absolute; left: 0; top: 6px;
-  width: 18px; height: 18px; background: #1e2a3a; border: 1px solid #2a3f5e;
-  border-radius: 50%; font-size: 9px; color: var(--accent); font-family: monospace;
+  content: counter(steps); position: absolute; left: 0; top: 7px;
+  width: 18px; height: 18px; background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 50%; font-size: 9px; color: var(--accent); font-family: var(--mono);
   text-align: center; line-height: 18px;
 }
 .detail-actions { margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
-.detail-loading { display: flex; align-items: center; gap: 10px; color: var(--text2); font-size: 13px; padding: 18px 0; }
-.spinner { width: 15px; height: 15px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
+.detail-loading { display: flex; align-items: center; gap: 10px; color: var(--text2); font-size: 12px; padding: 16px 0; }
+.spinner { width: 14px; height: 14px; border: 1.5px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── ADD PANEL ── */
-.add-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 18px; display: none; }
-.add-panel.show { display: block; }
-.add-panel h2 { font-size: 15px; color: #F5F0E8; margin-bottom: 14px; }
-.add-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-.field label { display: block; font-size: 10px; color: var(--text3); font-family: monospace; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
-.field input, .field select {
-  width: 100%; background: var(--bg3); border: 1px solid var(--border);
-  border-radius: 8px; padding: 8px 10px; color: var(--text); font-size: 13px;
-  outline: none; font-family: Georgia, serif; transition: border-color .2s;
-}
-.field input:focus, .field select:focus { border-color: var(--accent); }
-.field.full { grid-column: 1/-1; }
-.url-row { display: flex; gap: 8px; align-items: flex-end; }
-.url-row .field { flex: 1; margin: 0; }
-.add-msg { font-size: 12px; font-family: monospace; padding: 8px 10px; border-radius: 6px; margin-top: 8px; display: flex; align-items: center; gap: 8px; }
-.add-msg.error { background: #2a1515; color: var(--red); border: 1px solid #4a2020; }
-.add-msg.success { background: #152a1e; color: #7bcf8e; border: 1px solid #2a5a3e; }
-.add-msg.loading { background: var(--bg2); color: var(--text2); border: 1px solid var(--border); }
+/* Recipe modals */
+.recipe-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:400; align-items:center; justify-content:center; padding:16px; }
+.recipe-modal-overlay.show { display:flex; }
+.recipe-modal { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius2); width:100%; max-width:700px; max-height:90vh; overflow:hidden; display:flex; flex-direction:column; position:relative; }
+.recipe-modal-header { padding:18px 22px 14px; border-bottom:1px solid var(--border); display:flex; align-items:flex-start; gap:14px; }
+.recipe-modal-img { width:80px; height:60px; object-fit:cover; border-radius:var(--radius); flex-shrink:0; }
+.recipe-modal-title { flex:1; }
+.recipe-modal-title h2 { font-size:16px; font-weight:400; color:var(--text); margin:0 0 5px; line-height:1.3; font-family:var(--serif); }
+.recipe-modal-body { overflow-y:auto; padding:18px 22px; display:grid; grid-template-columns:1fr 1.4fr; gap:20px; }
+.recipe-modal-close { position:absolute; top:10px; right:10px; background:none; border:none; color:var(--text3); font-size:18px; cursor:pointer; width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:4px; }
+.recipe-modal-close:hover { background:var(--bg3); color:var(--text); }
+.modal-section-title { font-size:10px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text3); font-family:var(--mono); margin-bottom:8px; }
+.modal-ing-list { list-style:none; padding:0; margin:0; }
+.modal-ing-list li { padding:4px 0; border-bottom:1px solid var(--border); font-size:12px; color:var(--text2); line-height:1.4; }
+.modal-ing-list li:last-child { border-bottom:none; }
+.modal-step-list { list-style:none; padding:0; margin:0; counter-reset:steps; }
+.modal-step-list li { counter-increment:steps; padding:7px 0 7px 30px; border-bottom:1px solid var(--border); font-size:12px; color:var(--text2); line-height:1.5; position:relative; }
+.modal-step-list li::before { content:counter(steps); position:absolute; left:0; top:8px; width:20px; height:20px; background:var(--bg3); border:1px solid var(--border2); color:var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; font-family:var(--mono); }
+.modal-step-list li:last-child { border-bottom:none; }
+.reader-btn { display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--accent); background:rgba(200,169,110,0.08); border:1px solid rgba(200,169,110,0.2); border-radius:var(--radius); padding:4px 9px; text-decoration:none; cursor:pointer; margin-top:8px; }
+.reader-btn:hover { background:rgba(200,169,110,0.14); }
+@media(max-width:600px) { .recipe-modal-body { grid-template-columns:1fr; } .recipe-modal-img { display:none; } }
 
-/* ── MODALS ── */
-.modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,.8); z-index: 100;
-  display: none; align-items: flex-start; justify-content: center;
-  padding: 24px 16px; overflow-y: auto;
-}
-.modal-overlay.show { display: flex; }
-.modal {
-  background: var(--bg2); border: 1px solid var(--border); border-radius: 16px;
-  width: 100%; max-width: 640px; padding: 28px; position: relative;
-  margin: auto;
-}
-.modal h2 { font-size: 20px; color: #F5F0E8; margin-bottom: 4px; }
-.modal .subtitle { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
-.modal-close { position: absolute; top: 14px; right: 14px; background: none; border: none; color: #666; font-size: 20px; cursor: pointer; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 6px; }
-.modal-close:hover { background: var(--border); color: var(--text); }
-.g-section { margin-bottom: 18px; }
-.g-section h3 { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); font-family: monospace; margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
-.g-item { display: flex; align-items: baseline; gap: 8px; padding: 5px 0; font-size: 14px; color: #c8d0e0; border-bottom: 1px solid #141820; }
-.g-item:last-child { border-bottom: none; }
-.g-item::before { content: "☐"; color: #4a5070; font-size: 12px; flex-shrink: 0; }
-.g-from { font-size: 10px; color: #445; font-family: monospace; margin-left: auto; flex-shrink: 0; padding-left: 8px; }
-.modal-footer { margin-top: 20px; display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+/* Grid view */
+.recipe-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap:12px; }
+.recipe-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius2); overflow:hidden; cursor:pointer; transition:border-color .15s; position:relative; }
+.recipe-card:hover { border-color:var(--border2); }
+.recipe-card.no-details { opacity:0.5; }
+.recipe-card .card-img { width:100%; aspect-ratio:4/3; object-fit:cover; background:var(--bg3); display:block; }
+.recipe-card .card-img-placeholder { width:100%; aspect-ratio:4/3; background:var(--bg3); display:flex; align-items:center; justify-content:center; color:var(--text3); font-size:11px; font-family:var(--mono); }
+.recipe-card .card-body { padding:10px 12px 12px; }
+.recipe-card .card-name { font-size:12px; font-weight:500; color:var(--text); margin-bottom:4px; line-height:1.3; }
+.recipe-card .card-name.dim { color:var(--text3); }
+.recipe-card .card-meta { display:flex; align-items:center; justify-content:space-between; }
+.recipe-card .card-cost { font-size:11px; color:var(--green); font-family:var(--mono); }
+.recipe-card .card-check { position:absolute; top:7px; left:7px; width:16px; height:16px; accent-color:var(--accent); cursor:pointer; }
+.recipe-card .card-badge { position:absolute; top:7px; right:7px; }
+@media (max-width:700px) { .recipe-grid { grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); gap:8px; } }
 
-/* ── MATCH RESULTS ── */
-.match-result-header { font-size: 12px; color: var(--text2); margin-bottom: 10px; font-family: monospace; }
-.match-score-bar { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
-.score-track { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
-.score-fill { height: 100%; border-radius: 2px; transition: width .4s; }
-.score-pct { font-size: 10px; font-family: monospace; color: var(--text3); width: 28px; text-align: right; }
+/* Modals (grocery, share, etc.) */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:300; display:none; align-items:flex-start; justify-content:center; padding:32px 16px; overflow-y:auto; }
+.modal-overlay.show { display:flex; }
+.modal { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius2); width:100%; max-width:600px; padding:24px; position:relative; margin:auto; }
+.modal h2 { font-size:17px; font-weight:400; color:var(--text); margin-bottom:3px; font-family:var(--serif); }
+.modal .subtitle { font-size:12px; color:var(--text2); margin-bottom:18px; font-family:var(--mono); }
+.modal-close { position:absolute; top:12px; right:12px; background:none; border:none; color:var(--text3); font-size:18px; cursor:pointer; width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:4px; }
+.modal-close:hover { background:var(--bg3); color:var(--text); }
+.g-section { margin-bottom:16px; }
+.g-section h3 { font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent); font-family:var(--mono); margin-bottom:5px; padding-bottom:4px; border-bottom:1px solid var(--border); }
+.g-item { display:flex; align-items:baseline; gap:7px; padding:4px 0; font-size:13px; color:var(--text2); border-bottom:1px solid var(--border); }
+.g-item:last-child { border-bottom:none; }
+.g-item::before { content:"—"; color:var(--text3); font-size:11px; flex-shrink:0; }
+.g-from { font-size:10px; color:var(--text3); font-family:var(--mono); margin-left:auto; flex-shrink:0; padding-left:8px; }
+.modal-footer { margin-top:18px; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
 
-/* ── EMPTY ── */
-.empty { padding: 40px; text-align: center; color: #555; font-size: 14px; }
-.footer-note { margin-top: 12px; font-size: 11px; color: #444; text-align: center; font-family: monospace; }
+/* Match results */
+.match-result-header { font-size:11px; color:var(--text2); margin-bottom:10px; font-family:var(--mono); }
+.score-track { flex:1; height:3px; background:var(--border); border-radius:2px; overflow:hidden; }
+.score-fill { height:100%; border-radius:2px; }
+.score-pct { font-size:10px; font-family:var(--mono); color:var(--text3); width:28px; text-align:right; }
 
-/* ── MOBILE ── */
-@media (max-width: 700px) {
-  /* Header */
-  .header { padding: 10px 14px; }
-  .backfill-btn { display: none; } /* hide on mobile */
-  .main { padding: 10px 10px; }
+/* Empty state */
+.empty { padding:48px; text-align:center; color:var(--text3); font-size:13px; }
+
+/* Edit modal */
+.edit-modal-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+
+/* Backfill */
+.backfill-btn { font-size:11px; background:transparent; border:1px solid var(--border); color:var(--text2); border-radius:var(--radius); padding:4px 9px; cursor:pointer; font-family:var(--mono); }
+.backfill-btn:hover { color:var(--text); border-color:var(--border2); }
+
+/* Mobile */
+@media (max-width:700px) {
+  .main { padding: 10px 12px; }
   .pills { gap: 4px; }
-
-  /* Hide table header */
   .thead { display: none; }
-
-  /* Mobile row: checkbox | name+meta | archive */
   .trow {
     grid-template-columns: 28px 1fr 32px;
-    grid-template-rows: auto;
-    padding: 10px 10px;
-    gap: 0;
-    align-items: center;
+    padding: 10px 10px; gap: 0;
   }
-  /* Hide all columns except checkbox(1), name(2), archive(9) */
-  .trow > *:nth-child(3),
-  .trow > *:nth-child(4),
-  .trow > *:nth-child(5),
-  .trow > *:nth-child(6),
-  .trow > *:nth-child(7),
-  .trow > *:nth-child(8),
+  .trow > *:nth-child(3), .trow > *:nth-child(4), .trow > *:nth-child(5),
+  .trow > *:nth-child(6), .trow > *:nth-child(7), .trow > *:nth-child(8),
   .trow > *:nth-child(9) { display: none !important; }
   .trow > *:nth-child(10) { grid-column: 3; grid-row: 1; display: flex; justify-content: center; }
-
-  /* Recipe name */
-  .recipe-name { font-size: 14px; flex-wrap: nowrap; gap: 4px; }
-  .recipe-name-text { color: #e8e4dc; font-size: 13px; }
+  .recipe-name { font-size: 13px; }
   .no-details-hint { display: none; }
-
-  /* Mobile meta subtitle */
-  .recipe-mobile-meta { display: block !important; font-size: 11px; color: #778; margin-top: 2px; }
-
-  /* Detail panel */
-  .detail-panel { padding: 0 10px 16px 10px; }
-  .detail-inner { grid-template-columns: 1fr; gap: 16px; }
-
-  /* Add form */
+  .recipe-mobile-meta { display: block !important; font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .detail-inner { grid-template-columns: 1fr; }
   .add-grid { grid-template-columns: 1fr; }
-  .field.full { grid-column: 1; }
-
-  /* Modals */
-  .modal { padding: 16px 14px; }
-  .recipe-modal { margin: 8px; max-height: calc(100vh - 16px); }
-  .recipe-modal-header { padding: 14px 16px 12px; flex-wrap: wrap; }
-  .recipe-modal-body { padding: 14px 16px; }
-
-  /* Topbar filters */
-  .topbar { gap: 6px; flex-wrap: wrap; margin-top: 8px; }
-  .topbar .flt { font-size: 12px; padding: 7px 8px; }
-  .topbar .search-wrap { flex: 1 1 100%; }
-  .view-toggle button { width: 28px; height: 28px; font-size: 13px; }
+  .modal { padding: 16px; }
 }
 
-
+/* Toast notification */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--bg3); border: 1px solid var(--border2); color: var(--text);
+  font-size: 12px; font-family: var(--mono); padding: 9px 18px; border-radius: var(--radius);
+  z-index: 9999; opacity: 0; transition: opacity .2s; pointer-events: none;
+  letter-spacing: 0.03em;
+}
+.toast.show { opacity: 1; }
 </style>
 <script src="/auth.js"></script>
 </head>
@@ -372,19 +340,42 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
   <!-- SIDEBAR -->
   <nav class="sidebar" id="sidebar">
     <div class="sidebar-logo">
-      <span class="sidebar-logo-icon">🍽</span>
+      <div class="sidebar-logo-mark"></div>
       <span class="sidebar-logo-text">Mealplannr</span>
-      <button class="sidebar-collapse-btn" id="sidebar-collapse-btn" onclick="toggleSidebarCollapse()" title="Collapse sidebar">◀</button>
+      <button class="sidebar-collapse-btn" id="sidebar-collapse-btn" onclick="toggleSidebarCollapse()" title="Collapse"></button>
     </div>
     <div class="sidebar-nav">
-      <button class="sidebar-add-btn" onclick="toggleAdd()"><span>＋</span><span class="sidebar-add-text"> Add Recipe</span></button>
-      <button class="sidebar-add-btn" onclick="openBulkModal()" style="background:#1e2a3e;border:1px solid #2a3f5e;color:#7eb8f7;margin-top:4px"><span>📦</span><span class="sidebar-add-text"> Bulk Add</span></button>
-      <a class="nav-item active" href="/"><span class="nav-icon">📚</span><span class="nav-label">Recipe Library</span><span id="total-badge" style="font-size:11px;color:#556;font-family:monospace;margin-left:auto;padding-right:4px"></span></a>
-      <a class="nav-item" href="/planner.html"><span class="nav-icon">📅</span><span class="nav-label">Plan Week</span></a>
+      <button class="sidebar-add-btn" onclick="toggleAdd()">
+        <span class="nav-icon" data-icon="add" style="opacity:1"></span>
+        <span class="sidebar-add-text">Add Recipe</span>
+      </button>
+      <button class="sidebar-add-btn secondary" onclick="openBulkModal()">
+        <span class="nav-icon" data-icon="bulk" style="opacity:1"></span>
+        <span class="sidebar-add-text">Bulk Import</span>
+      </button>
+      <div class="nav-divider" style="margin-top:8px"></div>
+      <a class="nav-item active" href="/">
+        <span class="nav-icon" data-icon="library"></span>
+        <span class="nav-label">Library</span>
+        <span id="total-badge" style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-left:auto;padding-right:2px"></span>
+      </a>
+      <a class="nav-item" href="/planner.html">
+        <span class="nav-icon" data-icon="planner"></span>
+        <span class="nav-label">Plan Week</span>
+      </a>
       <div class="nav-divider"></div>
-      <div class="nav-item" onclick="toggleFridge()"><span class="nav-icon">🥦</span><span class="nav-label">What's in my fridge?</span></div>
-      <div class="nav-item" onclick="openShareModal()"><span class="nav-icon">👥</span><span class="nav-label">Share Library</span></div>
-      <div class="nav-item" onclick="startTutorial()"><span class="nav-icon">✨</span><span class="nav-label">Tutorial</span></div>
+      <div class="nav-item" onclick="toggleFridge()">
+        <span class="nav-icon" data-icon="fridge"></span>
+        <span class="nav-label">In my fridge</span>
+      </div>
+      <div class="nav-item" onclick="openShareModal()">
+        <span class="nav-icon" data-icon="share"></span>
+        <span class="nav-label">Share Library</span>
+      </div>
+      <div class="nav-item" onclick="startTutorial()">
+        <span class="nav-icon" data-icon="tutorial"></span>
+        <span class="nav-label">Tutorial</span>
+      </div>
     </div>
     <div class="sidebar-footer">
       <div class="user-info" onclick="toggleUserMenu(event)" id="user-info-btn">
@@ -394,10 +385,10 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
       </div>
       <div class="user-dropdown" id="user-dropdown">
         <div class="dd-email" id="user-email-full"></div>
-        <button id="backfill-btn" onclick="event.stopPropagation();backfillImages()">🖼 Backfill Images</button>
+        <button id="backfill-btn" onclick="event.stopPropagation();backfillImages()">Backfill Images</button>
       </div>
       <div class="sidebar-signout" onclick="Auth.signOut()">
-        <span class="sign-icon">🚪</span>
+        <span class="sign-icon"></span>
         <span class="sign-label">Sign out</span>
       </div>
     </div>
@@ -405,10 +396,10 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
   <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
   <div class="sidebar-layout" id="sidebar-layout">
   <div class="page-header">
-    <button class="sidebar-toggle" onclick="openSidebar()">☰</button>
+    <button class="sidebar-toggle" onclick="openSidebar()"></button>
     <h1>Recipe Library</h1>
     <button class="btn btn-success" id="grocery-btn" onclick="openGrocery()" style="display:none">
-      🛒 <span class="grocery-badge" id="grocery-count">0</span> in cart
+      <span class="grocery-badge" id="grocery-count">0</span> in cart
     </button>
   </div>
   <div class="subheader">
@@ -439,18 +430,18 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
 
     <!-- Fridge bar -->
     <div class="fridge-bar" id="fridge-bar">
-      <h3>🥦 What's in my fridge? <span style="font-size:11px;color:var(--text3);font-family:monospace;font-weight:400">— find recipes you can make</span></h3>
+      <h3 style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:12px;font-family:var(--sans)">In my fridge <span style="font-size:12px;color:var(--text3);font-weight:400">— find recipes you can make</span></h3>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <!-- Searchable dropdown trigger -->
         <div style="position:relative;flex:1;min-width:220px;" id="fridge-dropdown-wrap">
           <input id="fridge-search" type="text" placeholder="Search ingredients to add..."
             oninput="fridgeDropdownFilter(this.value)" onfocus="showFridgeDropdown()" onblur="setTimeout(()=>{document.getElementById('fridge-dropdown').style.display='none'},200)" onkeydown="fridgeKeyNav(event)"
             autocomplete="off"
-            style="width:100%;background:#12151f;border:1px solid #2a2f3e;border-radius:8px;padding:9px 14px;color:#E8E4DC;font-size:13px;outline:none;font-family:Georgia,serif;">
-          <div id="fridge-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#1a1f2e;border:1px solid #2a2f3e;border-radius:8px;max-height:220px;overflow-y:auto;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.4);">
+            style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 14px;color:var(--text);font-size:13px;outline:none;font-family:var(--serif);">
+          <div id="fridge-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:8px;max-height:220px;overflow-y:auto;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.4);">
           </div>
         </div>
-        <button class="btn btn-primary" onclick="runFridgeMatch()">🔍 Find Recipes</button>
+        <button class="btn btn-primary" onclick="runFridgeMatch()">Find Recipes</button>
         <button class="btn btn-outline" onclick="clearMatch()">Clear</button>
       </div>
       <!-- Selected ingredient chips -->
@@ -460,7 +451,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
 
     <!-- Add panel -->
     <div class="add-panel" id="add-panel">
-      <h2>➕ Add New Recipe</h2>
+      <h2 style="font-size:15px;font-weight:500;color:var(--text);margin-bottom:14px">Add Recipe</h2>
       <div class="add-grid">
         <div class="field full url-row">
           <label>Recipe URL</label>
@@ -468,9 +459,9 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
             <input type="url" id="new-url" placeholder="Paste URL here..."
               onblur="autoFetchRecipe(this.value)" autocomplete="off" style="flex:1">
             <button type="button" onclick="autoFetchRecipe(document.getElementById('new-url').value)"
-              style="background:#2a3f5e;border:1px solid #3a5a8e;color:#7eb8f7;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:12px;font-family:monospace;white-space:nowrap;flex-shrink:0"
+              style="background:#2a3f5e;border:1px solid #3a5a8e;color:#7eb8f7;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:12px;font-family:var(--mono);white-space:nowrap;flex-shrink:0"
               onmouseover="this.style.background='#3a5070'" onmouseout="this.style.background='#2a3f5e'">
-              🔍 Fetch
+              Fetch
             </button>
           </div>
         </div>
@@ -491,14 +482,14 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
         <div class="field"><label>Servings</label><input type="number" id="new-servings" placeholder="e.g. 4" min="1" max="24"></div>
       </div>
       <div id="add-msg" style="display:none" class="add-msg"></div>
-      <div id="fetch-preview" style="display:none;margin-top:12px;border:1px solid #2a2f3e;border-radius:8px;overflow:hidden">
+      <div id="fetch-preview" style="display:none;margin-top:12px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
-          <div style="padding:12px 14px;border-right:1px solid #2a2f3e">
-            <div style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#556;font-family:monospace;margin-bottom:8px">Ingredients</div>
+          <div style="padding:12px 14px;border-right:1px solid var(--border)">
+            <div style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);font-family:var(--mono);margin-bottom:8px">Ingredients</div>
             <ul id="preview-ingredients" style="margin:0;padding:0 0 0 16px;font-size:12px;color:#b0b5c4;line-height:1.8"></ul>
           </div>
           <div style="padding:12px 14px">
-            <div style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#556;font-family:monospace;margin-bottom:8px">Steps</div>
+            <div style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);font-family:var(--mono);margin-bottom:8px">Steps</div>
             <ol id="preview-steps" style="margin:0;padding:0 0 0 16px;font-size:12px;color:#b0b5c4;line-height:1.8"></ol>
           </div>
         </div>
@@ -529,7 +520,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
       </div>
       <div id="rows"></div>
     </div>
-    <div class="footer-note">Blue = has saved details · Click row to expand · ✓ to add to grocery list · <a href="/privacy.html" style="color:#556;text-decoration:none">Privacy Policy</a></div>
+    <div class="footer-note">Blue = has saved details · Click row to expand · ✓ to add to grocery list · <a href="/privacy.html" style="color:var(--text3);text-decoration:none">Privacy Policy</a></div>
   </div>
 </div>
 
@@ -544,7 +535,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
         <h2 id="rmodal-name"></h2>
         <div id="rmodal-meta" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>
         <div style="display:flex;gap:8px;margin-top:8px">
-          <a id="rmodal-reader" class="reader-btn" target="_blank">📖 Full Recipe View</a>
+          <a id="rmodal-reader" class="reader-btn" target="_blank"> Full Recipe View</a>
           <a id="rmodal-source" class="reader-btn" target="_blank" style="display:none">↗ Original</a>
         </div>
       </div>
@@ -565,7 +556,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
 <div class="modal-overlay" id="grocery-modal" onclick="if(event.target===this)closeGrocery()">
   <div class="modal" style="max-width:700px;max-height:90vh;display:flex;flex-direction:column;">
     <button class="modal-close" onclick="closeGrocery()">✕</button>
-    <h2>🛒 Grocery List</h2>
+    <h2> Grocery List</h2>
     <p class="subtitle" id="g-subtitle"></p>
 
     <!-- Cart summary header - always visible at top -->
@@ -573,12 +564,12 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
 
     <!-- Search bar -->
     <input id="g-search" type="text" placeholder="Search ingredients..." oninput="filterGrocery(this.value)"
-      style="width:100%;background:#12151f;border:1px solid #2a2f3e;border-radius:8px;padding:9px 14px;color:#E8E4DC;font-size:13px;outline:none;margin-bottom:8px;font-family:Georgia,serif;">
+      style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 14px;color:var(--text);font-size:13px;outline:none;margin-bottom:8px;font-family:var(--serif);">
 
     <!-- Select all / none -->
-    <div style="display:flex;gap:10px;margin-bottom:10px;font-size:12px;font-family:monospace;">
-      <span onclick="selectAllGrocery(true)" style="color:#6e8efb;cursor:pointer;text-decoration:underline">Select all</span>
-      <span onclick="selectAllGrocery(false)" style="color:#6e8efb;cursor:pointer;text-decoration:underline">Deselect all</span>
+    <div style="display:flex;gap:10px;margin-bottom:10px;font-size:12px;font-family:var(--mono);">
+      <span onclick="selectAllGrocery(true)" style="color:var(--accent);cursor:pointer;text-decoration:underline">Select all</span>
+      <span onclick="selectAllGrocery(false)" style="color:var(--accent);cursor:pointer;text-decoration:underline">Deselect all</span>
       <span id="g-selected-count" style="color:#666;margin-left:auto"></span>
     </div>
 
@@ -586,7 +577,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
     <div id="g-body" style="overflow-y:auto;flex:1;min-height:0;"></div>
 
     <div class="modal-footer">
-      <button class="btn btn-outline" onclick="copyCheckedGrocery()">📋 Copy checked</button>
+      <button class="btn btn-outline" onclick="copyCheckedGrocery()"> Copy checked</button>
       <button class="btn btn-primary" onclick="closeGrocery()">Done</button>
     </div>
   </div>
@@ -674,7 +665,7 @@ const BASE = [
 ];
 
 const CC={"Breakfast":{bg:"#FFF3E0",text:"#E65100",dot:"#FF9800"},"Lunch/Dinner":{bg:"#E8F5E9",text:"#1B5E20",dot:"#4CAF50"},"Salad":{bg:"#E3F2FD",text:"#0D47A1",dot:"#2196F3"},"Side":{bg:"#F3E5F5",text:"#4A148C",dot:"#9C27B0"},"Dessert":{bg:"#FCE4EC",text:"#880E4F",dot:"#E91E63"}};
-const MI={"Slow Cooker":"🥘","Oven":"🔥","Stovetop":"🍳","Air Fryer":"💨","No Cook":"🥗","Microwave":"📡","Stovetop / Air Fryer":"🍳","Stovetop / Oven":"🍳","Oven / Stovetop":"🔥","Slow Cooker / Stovetop":"🥘"};
+const MI={"Slow Cooker":"","Oven":"","Stovetop":"","Air Fryer":"","No Cook":"","Microwave":"","Stovetop / Air Fryer":"","Stovetop / Oven":"","Oven / Stovetop":"","Slow Cooker / Stovetop":""};
 
 // ── State ──
 let recipes = [...BASE];  // replaced by DB data in loadData()
@@ -875,7 +866,7 @@ function renderGrid(list) {
   container.innerHTML = list.map(r => {
     const hd = !!details[r.id];
     const c = CC[r.category] || { bg:"#333", text:"#ccc", dot:"#888" };
-    const icon = MI[r.method] || "🍴";
+    const icon = MI[r.method] || "";
     const isChecked = checked.has(r.id);
     const isArchived = archivedRecipes.has(r.id);
     if (isArchived) return "";
@@ -891,7 +882,7 @@ function renderGrid(list) {
       <div class="card-body">
         <div class="card-name${hd?"":" dim"}">${esc(r.name)}</div>
         <div class="card-meta">
-          <span style="font-size:11px;color:${c.text};background:${c.bg};padding:2px 7px;border-radius:10px;font-family:monospace">${r.category}</span>
+          <span style="font-size:11px;color:${c.text};background:${c.bg};padding:2px 7px;border-radius:10px;font-family:var(--mono)">${r.category}</span>
           ${dynamicCostStr(r) ? `<span class="card-cost">${dynamicCostStr(r)}</span>` : ""}
         </div>
       </div>
@@ -919,10 +910,10 @@ function openRecipeModal(id) {
 
   // Meta badges
   document.getElementById("rmodal-meta").innerHTML = `
-    <span style="font-size:12px;background:${c.bg};color:${c.text};padding:2px 10px;border-radius:10px;font-family:monospace">${r.category}</span>
-    <span style="font-size:12px;color:#9a9fae">${MI[r.method]||"🍴"} ${r.method}</span>
-    ${dynamicCostStr(r) ? `<span style="font-size:12px;color:#7bcf8e;font-family:monospace;font-weight:600">${dynamicCostStr(r)}</span>` : ""}
-    ${r.servings ? `<span style="font-size:12px;color:#556;font-family:monospace">${r.servings} servings</span>` : ""}
+    <span style="font-size:12px;background:${c.bg};color:${c.text};padding:2px 10px;border-radius:10px;font-family:var(--mono)">${r.category}</span>
+    <span style="font-size:12px;color:var(--text2)">${MI[r.method]||""} ${r.method}</span>
+    ${dynamicCostStr(r) ? `<span style="font-size:12px;color:#7bcf8e;font-family:var(--mono);font-weight:600">${dynamicCostStr(r)}</span>` : ""}
+    ${r.servings ? `<span style="font-size:12px;color:var(--text3);font-family:var(--mono)">${r.servings} servings</span>` : ""}
   `;
 
   // Reader + source links
@@ -942,12 +933,12 @@ function openRecipeModal(id) {
   if (d?.ingredients?.length) {
     ingList.innerHTML = d.ingredients.map(i => `<li>${esc(i)}</li>`).join("");
   } else {
-    ingList.innerHTML = `<li style="color:#445;font-family:monospace">No ingredients saved yet</li>`;
+    ingList.innerHTML = `<li style="color:#445;font-family:var(--mono)">No ingredients saved yet</li>`;
   }
   if (d?.steps?.length) {
     stepList.innerHTML = d.steps.map(s => `<li>${esc(s)}</li>`).join("");
   } else {
-    stepList.innerHTML = `<li style="color:#445;font-family:monospace">No steps saved yet</li>`;
+    stepList.innerHTML = `<li style="color:#445;font-family:var(--mono)">No steps saved yet</li>`;
   }
 
   document.getElementById("recipe-modal").classList.add("show");
@@ -987,7 +978,7 @@ async function backfillImages() {
     if(btn) btn.textContent = `Fetching ${done}/${toFetch.length}...`;
     await new Promise(res => setTimeout(res, 500)); // rate limit
   }
-  if(btn){ btn.textContent = "Done!"; setTimeout(() => { btn.disabled = false; btn.textContent = "🖼 Backfill Images"; }, 2000); }
+  if(btn){ btn.textContent = "Done!"; setTimeout(() => { btn.disabled = false; btn.textContent = " Backfill Images"; }, 2000); }
   render();
 }
 
@@ -998,7 +989,7 @@ function render() {
   const list = getFiltered();
   const _tb = document.getElementById("total-badge"); if(_tb) _tb.textContent = recipes.length;
   const hasFilter = fCat||fProt||fMeth||q||matchActive;
-  const selStr = checked.size > 0 ? ` · <span style="color:#6e8efb;font-weight:600">${checked.size} selected</span>` : "";
+  const selStr = checked.size > 0 ? ` · <span style="color:var(--accent);font-weight:600">${checked.size} selected</span>` : "";
   document.getElementById("count").innerHTML = `Showing ${list.length} of ${recipes.length} recipes${hasFilter?'<span class="clear-link" onclick="clearAll()">Clear</span>':""}${selStr}`;
   const gb = document.getElementById("grocery-btn");
   gb.style.display = checked.size > 0 ? "inline-flex" : "none";
@@ -1024,38 +1015,38 @@ function render() {
       <span class="expand-icon">▶</span>
       <span class="recipe-name-text" onclick="event.stopPropagation();openRecipeModal(${r.id})" style="cursor:pointer" title="Click to view recipe">${esc(r.name)}</span>
       ${r.url ? `<a href="${r.url}" target="_blank" class="link-btn" onclick="event.stopPropagation()" title="Open recipe" style="flex-shrink:0;width:22px;height:22px;font-size:10px;margin-left:4px">↗</a>` : ""}
-      <div class="recipe-mobile-meta" style="display:none">${r.category} · ${MI[r.method]||"🍴"} ${r.method}</div>
+      <div class="recipe-mobile-meta" style="display:none">${r.category} · ${MI[r.method]||""} ${r.method}</div>
     </div>
-    <div style="font-size:11px;color:var(--accent);font-family:monospace;display:flex;align-items:center">${r._owner_label ? `<span title="Shared library">${esc(r._owner_label)}</span>` : ""}</div>
+    <div style="font-size:11px;color:var(--accent);font-family:var(--mono);display:flex;align-items:center">${r._owner_label ? `<span title="Shared library">${esc(r._owner_label)}</span>` : ""}</div>
     <div><span class="badge" style="background:${c.bg};color:${c.text}"><span class="dot" style="background:${c.dot}"></span>${r.category}</span></div>
-    <div class="meta">${MI[r.method]||"🍴"} ${r.method}</div>
+    <div class="meta">${MI[r.method]||""} ${r.method}</div>
 
-    <div class="cost" style="color:${dynamicCostStr(r) ? '#7bcf8e' : '#556'}">${dynamicCostStr(r) || ''}</div>
+    <div class="cost" style="color:${dynamicCostStr(r) ? '#7bcf8e' : 'var(--text3)'}">${dynamicCostStr(r) || ''}</div>
     <div style="display:flex;align-items:center;justify-content:center">
-      ${ms ? `<span class="match-badge ${ms.match==='full'?'match-full':'match-partial'}" title="${esc(ms.note)}">${ms.score}%</span>` : (matchActive ? `<span style="font-size:11px;color:#333;font-family:monospace">—</span>` : "")}
+      ${ms ? `<span class="match-badge ${ms.match==='full'?'match-full':'match-partial'}" title="${esc(ms.note)}">${ms.score}%</span>` : (matchActive ? `<span style="font-size:11px;color:#333;font-family:var(--mono)">—</span>` : "")}
     </div>
     <div style="display:flex;align-items:center;gap:5px;justify-content:center">
-      <button onclick="changeServings(event,${r.id},-1)" style="background:#1e2330;border:1px solid #2a2f3e;color:#aaa;border-radius:4px;width:20px;height:20px;cursor:pointer;font-size:13px;line-height:1;padding:0">−</button>
-      <span class="srv-count-${r.id}" style="font-size:13px;color:#c8d0e0;font-family:monospace;min-width:18px;text-align:center">${getServings(r.id)}</span>
-      <button onclick="changeServings(event,${r.id},+1)" style="background:#1e2330;border:1px solid #2a2f3e;color:#aaa;border-radius:4px;width:20px;height:20px;cursor:pointer;font-size:13px;line-height:1;padding:0">+</button>
+      <button onclick="changeServings(event,${r.id},-1)" style="background:var(--bg4);border:1px solid var(--border);color:#aaa;border-radius:4px;width:20px;height:20px;cursor:pointer;font-size:13px;line-height:1;padding:0">−</button>
+      <span class="srv-count-${r.id}" style="font-size:13px;color:#c8d0e0;font-family:var(--mono);min-width:18px;text-align:center">${getServings(r.id)}</span>
+      <button onclick="changeServings(event,${r.id},+1)" style="background:var(--bg4);border:1px solid var(--border);color:#aaa;border-radius:4px;width:20px;height:20px;cursor:pointer;font-size:13px;line-height:1;padding:0">+</button>
     </div>
     <div style="pointer-events:all;display:flex;align-items:center;justify-content:center">
       ${isArchived
         ? `<button onclick="event.stopPropagation();unarchiveRecipe(${r.id})" title="Restore"
-            style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:#1e2330;border:1px solid #2a4a2a;color:#4a8a4a;font-size:13px;cursor:pointer"
-            onmouseover="this.style.background='#1a3a1a'" onmouseout="this.style.background='#1e2330'">↩</button>`
+            style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:var(--bg4);border:1px solid #2a4a2a;color:#4a8a4a;font-size:13px;cursor:pointer"
+            onmouseover="this.style.background='#1a3a1a'" onmouseout="this.style.background='var(--bg4)'">↩</button>`
         : `<button onclick="event.stopPropagation();archiveRecipe(${r.id})" title="Archive"
             style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:transparent;border:none;color:#3a3a4a;font-size:16px;font-weight:700;cursor:pointer;line-height:1"
             onmouseover="this.style.color='#cc4444'" onmouseout="this.style.color='#3a3a4a'">✕</button>
           <button onclick="event.stopPropagation();openEditModal(${r.id})" title="Edit recipe"
             style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:transparent;border:none;color:#3a3a4a;font-size:13px;cursor:pointer"
-            onmouseover="this.style.color='#6e8efb'" onmouseout="this.style.color='#3a3a4a'">✏</button>`
+            onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='#3a3a4a'"></button>`
       }
     </div>
   </div>
   <div class="detail-panel" id="dp-${r.id}">
     ${hd ? detailHTML(r) : fetchPromptHTML(r)}
-    ${ms ? `<div style="font-size:12px;color:#9a9fae;margin-top:12px;padding:8px;background:#1a1f2e;border-radius:6px">🥦 <strong>Matched:</strong> ${esc(ms.note)}</div>` : ""}
+    ${ms ? `<div style="font-size:12px;color:var(--text2);margin-top:12px;padding:8px;background:var(--bg2);border-radius:6px"> <strong>Matched:</strong> ${esc(ms.note)}</div>` : ""}
   </div>
 </div>`;
   }
@@ -1063,12 +1054,12 @@ function render() {
   let html = activeList.map(r => rowHTML(r, false)).join("");
 
   if (archivedList.length) {
-    html += `<div style="border-top:2px solid #1e2330">
+    html += `<div style="border-top:2px solid var(--bg4)">
       <div id="archived-toggle" onclick="toggleArchived()"
-        style="padding:11px 14px;cursor:pointer;font-size:11px;font-family:monospace;color:#445;display:flex;align-items:center;gap:8px;user-select:none"
+        style="padding:11px 14px;cursor:pointer;font-size:11px;font-family:var(--mono);color:#445;display:flex;align-items:center;gap:8px;user-select:none"
         onmouseover="this.style.color='#778'" onmouseout="this.style.color='#445'">
         <span id="archived-arrow" style="font-size:9px;display:inline-block;transition:transform .2s">▶</span>
-        📦 Archived · ${archivedList.length} recipe${archivedList.length>1?"s":""}
+         Archived · ${archivedList.length} recipe${archivedList.length>1?"s":""}
         <span style="color:#334;font-size:10px">click to expand</span>
       </div>
       <div id="archived-rows" style="display:none">
@@ -1108,7 +1099,7 @@ function detailHTML(r) {
   const sv = getServings(r.id);
   const def = getDefaultServings(r.id);
   const mult = def > 0 ? sv / def : 1;
-  const scaledNote = mult !== 1 ? `<span style="font-size:10px;color:#6a9a6a;font-family:monospace;margin-left:6px">(scaled for ${sv})</span>` : "";
+  const scaledNote = mult !== 1 ? `<span style="font-size:10px;color:#6a9a6a;font-family:var(--mono);margin-left:6px">(scaled for ${sv})</span>` : "";
   return `<div class="detail-inner">
     <div class="detail-section">
       <h3>Ingredients ${scaledNote}</h3>
@@ -1123,7 +1114,7 @@ function detailHTML(r) {
 }
 
 function fetchPromptHTML(r) {
-  return `<div style="padding:14px 0"><p style="font-size:12px;color:#445;font-family:monospace">No ingredients saved yet — paste a URL above and click Fetch, or add a URL to this recipe and re-open it.</p></div>`;
+  return `<div style="padding:14px 0"><p style="font-size:12px;color:#445;font-family:var(--mono)">No ingredients saved yet — paste a URL above and click Fetch, or add a URL to this recipe and re-open it.</p></div>`;
 }
 
 function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
@@ -1150,7 +1141,7 @@ function chk(e,id){
   gb.style.display = checked.size > 0 ? "inline-flex" : "none";
   document.getElementById("grocery-count").textContent = checked.size;
   const countEl = document.getElementById("count");
-  const selStr = checked.size > 0 ? ` · <span style="color:#6e8efb;font-weight:600">${checked.size} selected</span>` : "";
+  const selStr = checked.size > 0 ? ` · <span style="color:var(--accent);font-weight:600">${checked.size} selected</span>` : "";
   // Replace only the selected part — preserve the "Showing X of Y" text
   countEl.innerHTML = countEl.innerHTML.replace(/ · <span[^>]*>\d+ selected<\/span>/, "") + selStr;
 }
@@ -1343,7 +1334,7 @@ async function autoFetchRecipe(url) {
   if (url === _lastFetchedUrl && pendingDetails) return;
   _lastFetchedUrl = url;
 
-  addMsg("🔍 Fetching recipe details...", "loading");
+  addMsg("Fetching recipe details...", "loading");
 
   // Normalize URL - strip print query params but KEEP /print/NNNNN/ paths (they work fine)
   let fetchUrl = url
@@ -1367,7 +1358,7 @@ async function autoFetchRecipe(url) {
     const data = await res.json();
 
     if (!res.ok || data.error) {
-      addMsg("⚠️ Could not load page. Try copying ingredients manually.", "error");
+      addMsg("Could not load page. Try copying ingredients manually.", "error");
       return;
     }
 
@@ -1376,7 +1367,7 @@ async function autoFetchRecipe(url) {
 
     if (data.ingredients?.length) {
       pendingDetails = { ingredients: data.ingredients, steps: data.steps || [], servings: data.servings || 4 };
-      addMsg(`✅ Found ${data.ingredients.length} ingredients, ${data.steps.length} steps. Review below then save.`, "success");
+      addMsg(`Found ${data.ingredients.length} ingredients, ${data.steps.length} steps. Review below then save.`, "success");
       const prev = document.getElementById("fetch-preview");
       const ingList = document.getElementById("preview-ingredients");
       const stepList = document.getElementById("preview-steps");
@@ -1384,10 +1375,10 @@ async function autoFetchRecipe(url) {
       stepList.innerHTML = (data.steps||[]).map(s => `<li>${s}</li>`).join("");
       prev.style.display = "block";
     } else {
-      addMsg("⚠️ Page loaded but couldn't find ingredients. Fill in manually.", "error");
+      addMsg("Page loaded but couldn't find ingredients. Fill in manually.", "error");
     }
   } catch (e) {
-    addMsg("⚠️ Fetch failed: " + e.message, "error");
+    addMsg("Fetch failed: " + e.message, "error");
   }
 }
 
@@ -1471,7 +1462,7 @@ function fridgeDropdownFilter(q) {
   window._fridgeDdIndex = -1;
   dd.innerHTML = filtered.map((ing, idx) => `
     <div id="fdd-${idx}" onmousedown="event.preventDefault();fridgeAddIngredient(_fridgeDdItems[${idx}])"
-      style="padding:9px 14px;font-size:13px;color:#c8d0e0;cursor:pointer;border-bottom:1px solid #12151f"
+      style="padding:9px 14px;font-size:13px;color:#c8d0e0;cursor:pointer;border-bottom:1px solid var(--bg3)"
       onmouseover="fridgeSetIndex(${idx})" onmouseout="">
       ${esc(ing)}
     </div>`).join("");
@@ -1522,7 +1513,7 @@ function fridgeAddIngredient(ing) {
 function renderFridgeChips() {
   const wrap = document.getElementById("fridge-chips");
   wrap.innerHTML = Array.from(fridgeSelected).map(ing => `
-    <span style="display:inline-flex;align-items:center;gap:5px;background:#2a3550;border:1px solid #3d5a8a;border-radius:16px;padding:5px 12px;font-size:12px;color:#7eb8f7;font-family:monospace">
+    <span style="display:inline-flex;align-items:center;gap:5px;background:#2a3550;border:1px solid #3d5a8a;border-radius:16px;padding:5px 12px;font-size:12px;color:#7eb8f7;font-family:var(--mono)">
       ${esc(ing)}
       <span onclick="fridgeRemoveIngredient(${JSON.stringify(ing)})" style="cursor:pointer;color:#5a7aaa;font-size:15px;line-height:1;margin-left:2px" title="Remove">✕</span>
     </span>`).join("");
@@ -1553,7 +1544,7 @@ function runFridgeMatch() {
   sort = "match";
   document.getElementById("sortBy").value = "match";
   const total = Object.keys(matchScores).length;
-  document.getElementById("fridge-info").textContent = `✅ Found ${total} recipes using your ingredients`;
+  document.getElementById("fridge-info").textContent = `Found ${total} recipes using your ingredients`;
   render();
 }
 
@@ -1920,10 +1911,10 @@ function buildCartHeaderHTML(sel) {
     const c = scaledCost(r, getServings(r.id), getDefaultServings(r.id));
     return sum + (c || 0);
   }, 0);
-  return `<div style="margin-bottom:12px;padding:12px 16px;background:#12151f;border:1px solid #2a2f3e;border-radius:10px">
+  return `<div style="margin-bottom:12px;padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:10px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#556;font-family:monospace">🛒 In your cart</div>
-      ${totalCost > 0 ? `<div id="cart-header-total" style="font-size:12px;color:#6aaa6a;font-family:monospace">~$${totalCost.toFixed(0)} est.</div>` : ''}
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:var(--mono)"> In your cart</div>
+      ${totalCost > 0 ? `<div id="cart-header-total" style="font-size:12px;color:#6aaa6a;font-family:var(--mono)">~$${totalCost.toFixed(0)} est.</div>` : ''}
     </div>
     <div style="display:flex;flex-direction:column;gap:6px">
       ${sel.map(r => {
@@ -1931,14 +1922,14 @@ function buildCartHeaderHTML(sel) {
         const def = getDefaultServings(r.id);
         const cost = scaledCost(r, sv, def);
         const costStr = cost ? `~$${cost.toFixed(0)}` : '';
-        return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#1a1f2e;border:1px solid #2a2f3e;border-radius:8px">
-          <span style="flex:1;font-size:13px;color:#E8E4DC">${esc(r.name)}</span>
-          <span style="display:flex;align-items:center;gap:3px;background:#1e2330;border:1px solid #3a4060;border-radius:4px;padding:2px 6px">
+        return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px">
+          <span style="flex:1;font-size:13px;color:var(--text)">${esc(r.name)}</span>
+          <span style="display:flex;align-items:center;gap:3px;background:var(--bg4);border:1px solid #3a4060;border-radius:4px;padding:2px 6px">
             <button onmousedown="event.preventDefault();event.stopPropagation();adjustCartServings(${r.id},-1)" style="background:none;border:none;color:#aaa;cursor:pointer;font-size:14px;padding:0 2px;line-height:1">−</button>
-            <span style="font-size:12px;color:#7eb8f7;font-family:monospace;min-width:20px;text-align:center">${sv}<span style="color:#445;font-size:10px"> /${def}</span></span>
+            <span style="font-size:12px;color:#7eb8f7;font-family:var(--mono);min-width:20px;text-align:center">${sv}<span style="color:#445;font-size:10px"> /${def}</span></span>
             <button onmousedown="event.preventDefault();event.stopPropagation();adjustCartServings(${r.id},+1)" style="background:none;border:none;color:#aaa;cursor:pointer;font-size:14px;padding:0 2px;line-height:1">+</button>
           </span>
-          ${costStr ? `<span style="font-size:11px;color:#6aaa6a;font-family:monospace;min-width:32px;text-align:right">${costStr}</span>` : ''}
+          ${costStr ? `<span style="font-size:11px;color:#6aaa6a;font-family:var(--mono);min-width:32px;text-align:right">${costStr}</span>` : ''}
           <button onmousedown="event.preventDefault();event.stopPropagation();removeFromCart(${r.id})"
             title="Remove from cart"
             style="background:none;border:none;color:#445;cursor:pointer;font-size:16px;padding:0 2px;line-height:1;opacity:0.5" onmouseover="this.style.opacity=1;this.style.color='#cc6666'" onmouseout="this.style.opacity=0.5;this.style.color='#445'">✕</button>
@@ -1954,7 +1945,7 @@ async function openGrocery() {
   recipes.forEach(r => { if (r.archived) archivedRecipes.add(r.id); });
   document.getElementById("grocery-modal").classList.add("show");
   const body = document.getElementById("g-body");
-  body.innerHTML = `<div style="padding:24px;text-align:center;color:#556;font-family:monospace">Loading ingredients...</div>`;
+  body.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text3);font-family:var(--mono)">Loading ingredients...</div>`;
   document.getElementById("g-search").value = "";
 
   const sel = recipes.filter(r => checked.has(r.id));
@@ -2061,14 +2052,14 @@ async function openGrocery() {
   if (totalCost > 0) {
     const bnr = document.createElement("div");
     bnr.className = "cost-banner";
-    bnr.style.cssText = "margin-top:14px;padding:10px 14px;background:#0f1f0f;border:1px solid #2a4a2a;border-radius:8px;font-size:12px;color:#6aaa6a;font-family:monospace";
-    bnr.innerHTML = `💰 Estimated total: <strong style="font-size:14px">~$${totalCost.toFixed(0)}</strong> <span style="color:#3a6a3a">(rough estimate, prices vary)</span>`;
+    bnr.style.cssText = "margin-top:14px;padding:10px 14px;background:#0f1f0f;border:1px solid #2a4a2a;border-radius:8px;font-size:12px;color:#6aaa6a;font-family:var(--mono)";
+    bnr.innerHTML = ` Estimated total: <strong style="font-size:14px">~$${totalCost.toFixed(0)}</strong> <span style="color:#3a6a3a">(rough estimate, prices vary)</span>`;
     body.appendChild(bnr);
   }
 
   if (noDataRecipes.length) {
-    body.innerHTML += `<div style="margin-top:10px;padding:10px;background:#1a1f2e;border:1px solid var(--border);border-radius:8px;font-size:12px;color:#8a8f9e">
-      <strong style="color:#aaa">⚠ No ingredient data for:</strong> ${noDataRecipes.map(r => esc(r.name)).join(", ")}
+    body.innerHTML += `<div style="margin-top:10px;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;font-size:12px;color:#8a8f9e">
+      <strong style="color:#aaa">! No ingredient data for:</strong> ${noDataRecipes.map(r => esc(r.name)).join(", ")}
     </div>`;
   }
 }
@@ -2165,24 +2156,24 @@ function rerenderGrocery() {
   if (totalCost > 0) {
     const banner = document.createElement("div");
     banner.className = "cost-banner";
-    banner.style.cssText = "margin-top:14px;padding:10px 14px;background:#0f1f0f;border:1px solid #2a4a2a;border-radius:8px;font-size:12px;color:#6aaa6a;font-family:monospace";
-    banner.innerHTML = `💰 Estimated total: <strong style="font-size:14px">~$${totalCost.toFixed(0)}</strong> <span style="color:#3a6a3a">(rough estimate, prices vary)</span>`;
+    banner.style.cssText = "margin-top:14px;padding:10px 14px;background:#0f1f0f;border:1px solid #2a4a2a;border-radius:8px;font-size:12px;color:#6aaa6a;font-family:var(--mono)";
+    banner.innerHTML = ` Estimated total: <strong style="font-size:14px">~$${totalCost.toFixed(0)}</strong> <span style="color:#3a6a3a">(rough estimate, prices vary)</span>`;
     body.appendChild(banner);
   }
 
   // Archived section
   if (archivedRecipes.size) {
     const archHTML = `<details style="margin-top:14px">
-      <summary style="font-size:11px;color:#445;font-family:monospace;cursor:pointer;user-select:none;padding:6px 0">
-        📦 Archived (${archivedRecipes.size}) — click to expand
+      <summary style="font-size:11px;color:#445;font-family:var(--mono);cursor:pointer;user-select:none;padding:6px 0">
+         Archived (${archivedRecipes.size}) — click to expand
       </summary>
-      <div style="margin-top:8px;opacity:0.5;font-size:12px;color:#8a8f9e;font-family:monospace">
+      <div style="margin-top:8px;opacity:0.5;font-size:12px;color:#8a8f9e;font-family:var(--mono)">
         ${[...archivedRecipes].map(id => {
           const r = recipes.find(x=>x.id===id);
           return r ? `<div style="padding:4px 0;display:flex;align-items:center;gap:8px">
             <span>${esc(r.name)}</span>
             <button onmousedown="event.preventDefault();archivedRecipes.delete(${id});checked.add(${id});rerenderGrocery()"
-              style="background:none;border:1px solid #2a3f5e;color:#6e8efb;border-radius:4px;font-size:10px;cursor:pointer;padding:1px 6px">restore</button>
+              style="background:none;border:1px solid #2a3f5e;color:var(--accent);border-radius:4px;font-size:10px;cursor:pointer;padding:1px 6px">restore</button>
           </div>` : '';
         }).join('')}
       </div>
@@ -2191,23 +2182,23 @@ function rerenderGrocery() {
   }
 
   if (noDataRecipes.length) {
-    body.innerHTML += `<div style="margin-top:10px;padding:10px;background:#1a1f2e;border:1px solid var(--border);border-radius:8px;font-size:12px;color:#8a8f9e">
-      <strong style="color:#aaa">⚠ No ingredient data for:</strong> ${noDataRecipes.map(r => esc(r.name)).join(", ")}
+    body.innerHTML += `<div style="margin-top:10px;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;font-size:12px;color:#8a8f9e">
+      <strong style="color:#aaa">! No ingredient data for:</strong> ${noDataRecipes.map(r => esc(r.name)).join(", ")}
     </div>`;
   }
 }
 
 function groceryRowHTML(item, i) {
-  const reviewBadge = item.needsReview ? `<span title="Amounts scaled from text — please review" style="color:#b8860b;font-size:11px;margin-left:4px;cursor:help">⚠️</span>` : '';
-  const costStr = item.cost ? `<span style="color:#3a7a3a;font-size:11px;font-family:monospace;margin-left:6px">~$${item.cost.toFixed(2)}</span>` : '';
-  const recipesStr = item.recipes.length ? `<span style="font-size:11px;color:#445;font-family:monospace;margin-left:6px">${item.recipes.map(esc).join(", ")}</span>` : '';
-  return `<label style="display:flex;align-items:flex-start;gap:10px;padding:9px 6px;border-bottom:1px solid #1e2330;cursor:pointer;"
-         onmouseover="this.style.background='#1e2330'" onmouseout="this.style.background='transparent'">
+  const reviewBadge = item.needsReview ? `<span title="Amounts scaled from text — please review" style="color:#b8860b;font-size:11px;margin-left:4px;cursor:help">!</span>` : '';
+  const costStr = item.cost ? `<span style="color:#3a7a3a;font-size:11px;font-family:var(--mono);margin-left:6px">~$${item.cost.toFixed(2)}</span>` : '';
+  const recipesStr = item.recipes.length ? `<span style="font-size:11px;color:#445;font-family:var(--mono);margin-left:6px">${item.recipes.map(esc).join(", ")}</span>` : '';
+  return `<label style="display:flex;align-items:flex-start;gap:10px;padding:9px 6px;border-bottom:1px solid var(--bg4);cursor:pointer;"
+         onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='transparent'">
     <input type="checkbox" ${item.checked ? "checked" : ""}
       onchange="groceryItems[${i}].checked=this.checked;updateGroceryCount()"
-      style="margin-top:3px;accent-color:#6e8efb;flex-shrink:0;width:15px;height:15px;cursor:pointer;">
+      style="margin-top:3px;accent-color:var(--accent);flex-shrink:0;width:15px;height:15px;cursor:pointer;">
     <div style="flex:1;min-width:0">
-      <span style="font-size:13px;color:#E8E4DC;font-weight:500">${esc(item.text)}</span>${reviewBadge}
+      <span style="font-size:13px;color:var(--text);font-weight:500">${esc(item.text)}</span>${reviewBadge}
       ${costStr}${recipesStr}
     </div>
   </label>`;
@@ -2215,16 +2206,16 @@ function groceryRowHTML(item, i) {
 
 // Store section classification
 const STORE_SECTIONS = [
-  { label: "🥩 Meat & Seafood",    keys: ["chicken","beef","pork","turkey","shrimp","fish","steak","chorizo","sausage","bacon","salmon","tuna","ground","brisket","carnitas","meatball"] },
-  { label: "🥦 Produce",            keys: ["onion","garlic","pepper","spinach","avocado","tomato","jalapeño","jalapeno","lime","lemon","cilantro","parsley","basil","lettuce","kale","cabbage","carrot","celery","broccoli","cauliflower","zucchini","mushroom","potato","sweet potato","corn","green onion","scallion","ginger","arugula","cucumber","radish","herb","apple","mango","berry","banana","fruit","vegetable","produce","fresh"] },
-  { label: "🧀 Dairy & Eggs",       keys: ["egg","milk","cream","butter","cheese","yogurt","sour cream","ricotta","mozzarella","parmesan","feta","cheddar","heavy cream","cream cheese","half and half"] },
-  { label: "🥫 Canned & Dry Goods", keys: ["can","canned","beans","lentil","chickpea","tomato sauce","diced tomato","crushed tomato","broth","stock","soup","pasta","noodle","rice","quinoa","oat","flour","cornstarch","baking powder","baking soda","sugar","salt"] },
-  { label: "🧂 Spices & Seasonings",keys: ["powder","seasoning","spice","cumin","paprika","oregano","thyme","rosemary","chili","turmeric","cinnamon","cayenne","pepper","salt","bay leaf","red pepper flake","italian seasoning","taco seasoning","everything bagel","za'atar","sumac","curry"] },
-  { label: "🍶 Condiments & Sauces",keys: ["sauce","salsa","pesto","vinegar","oil","mayo","mustard","ketchup","honey","syrup","sriracha","hot sauce","soy sauce","coconut amino","tahini","hummus","dressing","bbq","teriyaki","hoisin","fish sauce","worcestershire","ranch"] },
-  { label: "🧊 Frozen",             keys: ["frozen","tater tot","edamame","pea"] },
-  { label: "🍞 Bread & Bakery",     keys: ["tortilla","bread","roll","bun","pita","wrap","naan","bagel","crouton","panko","breadcrumb"] },
-  { label: "🧴 Deli",               keys: ["deli","lunch meat","ham","pepperoni","salami","prosciutto","rotisserie"] },
-  { label: "🛒 Other",              keys: [] },
+  { label: " Meat & Seafood",    keys: ["chicken","beef","pork","turkey","shrimp","fish","steak","chorizo","sausage","bacon","salmon","tuna","ground","brisket","carnitas","meatball"] },
+  { label: " Produce",            keys: ["onion","garlic","pepper","spinach","avocado","tomato","jalapeño","jalapeno","lime","lemon","cilantro","parsley","basil","lettuce","kale","cabbage","carrot","celery","broccoli","cauliflower","zucchini","mushroom","potato","sweet potato","corn","green onion","scallion","ginger","arugula","cucumber","radish","herb","apple","mango","berry","banana","fruit","vegetable","produce","fresh"] },
+  { label: " Dairy & Eggs",       keys: ["egg","milk","cream","butter","cheese","yogurt","sour cream","ricotta","mozzarella","parmesan","feta","cheddar","heavy cream","cream cheese","half and half"] },
+  { label: " Canned & Dry Goods", keys: ["can","canned","beans","lentil","chickpea","tomato sauce","diced tomato","crushed tomato","broth","stock","soup","pasta","noodle","rice","quinoa","oat","flour","cornstarch","baking powder","baking soda","sugar","salt"] },
+  { label: " Spices & Seasonings",keys: ["powder","seasoning","spice","cumin","paprika","oregano","thyme","rosemary","chili","turmeric","cinnamon","cayenne","pepper","salt","bay leaf","red pepper flake","italian seasoning","taco seasoning","everything bagel","za'atar","sumac","curry"] },
+  { label: " Condiments & Sauces",keys: ["sauce","salsa","pesto","vinegar","oil","mayo","mustard","ketchup","honey","syrup","sriracha","hot sauce","soy sauce","coconut amino","tahini","hummus","dressing","bbq","teriyaki","hoisin","fish sauce","worcestershire","ranch"] },
+  { label: " Frozen",             keys: ["frozen","tater tot","edamame","pea"] },
+  { label: " Bread & Bakery",     keys: ["tortilla","bread","roll","bun","pita","wrap","naan","bagel","crouton","panko","breadcrumb"] },
+  { label: " Deli",               keys: ["deli","lunch meat","ham","pepperoni","salami","prosciutto","rotisserie"] },
+  { label: " Other",              keys: [] },
 ];
 
 function classifyItem(text) {
@@ -2232,7 +2223,7 @@ function classifyItem(text) {
   for (const section of STORE_SECTIONS) {
     if (section.keys.length && section.keys.some(k => lower.includes(k))) return section.label;
   }
-  return "🛒 Other";
+  return " Other";
 }
 
 function renderGroceryList(items) {
@@ -2252,7 +2243,7 @@ function renderGroceryList(items) {
   for (const { label } of STORE_SECTIONS) {
     if (!sections[label]) continue;
     html += `<div style="margin-bottom:4px">
-      <div style="padding:8px 6px 4px;font-size:10px;font-family:monospace;letter-spacing:.08em;text-transform:uppercase;color:#445;border-bottom:1px solid #1e2330;margin-bottom:2px">${label}</div>
+      <div style="padding:8px 6px 4px;font-size:10px;font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;color:#445;border-bottom:1px solid var(--bg4);margin-bottom:2px">${label}</div>
       ${sections[label].map(({item,i}) => groceryRowHTML(item, i)).join("")}
     </div>`;
   }
@@ -2288,8 +2279,8 @@ function copyCheckedGrocery() {
   const checkedItems = groceryItems.filter(i => i.checked);
   const lines = checkedItems.map(i => `☐ ${i.text}`);
   navigator.clipboard.writeText(lines.join("\n")).then(() => {
-    const b = event.target; b.textContent = "✅ Copied!";
-    setTimeout(() => b.textContent = "📋 Copy checked", 2000);
+    const b = event.target; b.textContent = "Copied!";
+    setTimeout(() => b.textContent = " Copy checked", 2000);
   });
 }
 
@@ -2323,7 +2314,7 @@ async function loadShares() {
         </div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.shared_with_email}</div>
-          <div style="font-size:11px;color:var(--text3);font-family:monospace">${s.shared_with_id ? '\u2713 Account linked' : '\u23f3 Pending sign up'}</div>
+          <div style="font-size:11px;color:var(--text3);font-family:var(--mono)">${s.shared_with_id ? '\u2713 Account linked' : '\u23f3 Pending sign up'}</div>
         </div>
         <select onchange="updateSharePerm('${s.id}', this.value)"
           style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--text2);font-size:12px;outline:none;cursor:pointer">
@@ -2417,12 +2408,12 @@ function openEditModal(id) {
   document.getElementById('edit-ingredients-list').style.display = 'flex';
   document.getElementById('edit-ingredients-paste').style.display = 'none';
   document.getElementById('edit-ing-add-btn').style.display = '';
-  document.getElementById('edit-ing-mode-btn').textContent = '📋 Paste mode';
+  document.getElementById('edit-ing-mode-btn').textContent = ' Paste mode';
   document.getElementById('edit-ing-mode-btn').style.color = 'var(--text3)';
   document.getElementById('edit-steps-list').style.display = 'flex';
   document.getElementById('edit-steps-paste').style.display = 'none';
   document.getElementById('edit-step-add-btn').style.display = '';
-  document.getElementById('edit-step-mode-btn').textContent = '📋 Paste mode';
+  document.getElementById('edit-step-mode-btn').textContent = ' Paste mode';
   document.getElementById('edit-step-mode-btn').style.color = 'var(--text3)';
 }
 
@@ -2437,7 +2428,7 @@ function renderEditIngredients(ings) {
   list.innerHTML = ings.map((ing, i) => `
     <div style="display:flex;gap:6px;align-items:center" id="edit-ing-row-${i}">
       <input value="${esc(ing)}" onchange="updateEditIngredient(${i}, this.value)"
-        style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif">
+        style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;outline:none;font-family:var(--sans)">
       <button onclick="removeEditIngredient(${i})" style="background:none;border:none;color:#555;font-size:16px;cursor:pointer;line-height:1;padding:2px 6px" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='#555'">×</button>
     </div>
   `).join("");
@@ -2448,9 +2439,9 @@ function renderEditSteps(steps) {
   const list = document.getElementById("edit-steps-list");
   list.innerHTML = steps.map((step, i) => `
     <div style="display:flex;gap:6px;align-items:flex-start" id="edit-step-row-${i}">
-      <span style="font-size:11px;color:var(--text3);font-family:monospace;padding-top:10px;min-width:18px;text-align:right">${i+1}.</span>
+      <span style="font-size:11px;color:var(--text3);font-family:var(--mono);padding-top:10px;min-width:18px;text-align:right">${i+1}.</span>
       <textarea onchange="updateEditStep(${i}, this.value)" rows="2"
-        style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif;resize:vertical;line-height:1.5">${esc(step)}</textarea>
+        style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;outline:none;font-family:var(--sans);resize:vertical;line-height:1.5">${esc(step)}</textarea>
       <button onclick="removeEditStep(${i})" style="background:none;border:none;color:#555;font-size:16px;cursor:pointer;line-height:1;padding:6px 6px 0" onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='#555'">×</button>
     </div>
   `).join("");
@@ -2662,18 +2653,18 @@ async function startBulkFetch() {
   progress.textContent = `Done — ${successCount} of ${urls.length} parsed successfully`;
   if (successCount > 0) {
     saveBtn.style.display = '';
-    saveBtn.textContent = `💾 Save ${successCount} Recipe${successCount !== 1 ? 's' : ''}`;
+    saveBtn.textContent = `Save ${successCount} Recipe${successCount !== 1 ? 's' : ''}`;
   }
 }
 
 function bulkRowHtml(r, i) {
   const domain = (() => { try { return new URL(r.url).hostname.replace('www.',''); } catch { return r.url; } })();
   const shortUrl = r.url.length > 65 ? r.url.slice(0,65)+'…' : r.url;
-  return `<div id="bulk-row-${i}" style="background:#12151f;border:1px solid #2a2f3e;border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:12px">
+  return `<div id="bulk-row-${i}" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:12px">
     <div style="flex:1;min-width:0">
-      <div style="font-size:11px;color:#556;font-family:monospace;margin-bottom:2px">${domain}</div>
+      <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:2px">${domain}</div>
       <div style="font-size:12px;color:#667;word-break:break-all">${shortUrl}</div>
-      <div id="bulk-row-detail-${i}" style="margin-top:5px;font-size:12px;font-family:monospace;color:#556">⏳ Waiting...</div>
+      <div id="bulk-row-detail-${i}" style="margin-top:5px;font-size:12px;font-family:var(--mono);color:var(--text3)">Waiting...</div>
     </div>
     <div id="bulk-row-check-${i}" style="flex-shrink:0"></div>
   </div>`;
@@ -2686,18 +2677,18 @@ function updateBulkRow(i) {
   const row = document.getElementById('bulk-row-' + i);
   if (!detail) return;
   if (r.status === 'loading') {
-    detail.innerHTML = '<span style="color:#6e8efb">🔍 Fetching...</span>';
+    detail.innerHTML = '<span style="color:var(--accent)">Fetching...</span>';
     row.style.borderColor = '#2a3f5e';
   } else if (r.status === 'ok') {
     const d = r.data;
-    detail.innerHTML = `<span style="color:#7bcf8e">✅ ${esc(d.name)}</span><span style="color:#445"> · ${d.ingredients?.length||0} ingredients, ${d.steps?.length||0} steps</span>`;
+    detail.innerHTML = `<span style="color:#7bcf8e">${esc(d.name)}</span><span style="color:#445"> · ${d.ingredients?.length||0} ingredients, ${d.steps?.length||0} steps</span>`;
     row.style.borderColor = '#2a5a2a';
     check.innerHTML = `<label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:#7bcf8e;white-space:nowrap">
       <input type="checkbox" checked onchange="bulkResults[${i}].selected=this.checked;updateBulkSaveBtn()" style="width:15px;height:15px;accent-color:#7bcf8e">
       Save
     </label>`;
   } else if (r.status === 'error') {
-    detail.innerHTML = `<span style="color:#e07070">❌ ${esc(r.error||'Failed to parse')}</span>`;
+    detail.innerHTML = `<span style="color:#e07070">${esc(r.error||'Failed to parse')}</span>`;
     row.style.borderColor = '#4a1a1a';
   }
 }
@@ -2705,7 +2696,7 @@ function updateBulkRow(i) {
 function updateBulkSaveBtn() {
   const n = bulkResults.filter(r => r.status === 'ok' && r.selected).length;
   const btn = document.getElementById('bulk-save-btn');
-  if (btn) btn.textContent = `💾 Save ${n} Recipe${n !== 1 ? 's' : ''}`;
+  if (btn) btn.textContent = `Save ${n} Recipe${n !== 1 ? 's' : ''}`;
 }
 
 async function saveAllBulk() {
@@ -2742,7 +2733,7 @@ async function saveAllBulk() {
   buildSelects();
   render();
   closeBulkModal();
-  showToast(`✅ Saved ${saved} recipe${saved !== 1 ? 's' : ''}!`);
+  showToast(`Saved ${saved} recipe${saved !== 1 ? 's' : ''}!`);
 }
 
 
@@ -2763,7 +2754,7 @@ function toggleEditIngMode() {
     list.style.display = 'none';
     paste.style.display = 'block';
     addBtn.style.display = 'none';
-    btn.textContent = '✏️ Row mode';
+    btn.textContent = ' Row mode';
     btn.style.color = 'var(--accent)';
     paste.focus();
   } else {
@@ -2774,7 +2765,7 @@ function toggleEditIngMode() {
     list.style.display = 'flex';
     paste.style.display = 'none';
     addBtn.style.display = '';
-    btn.textContent = '📋 Paste mode';
+    btn.textContent = ' Paste mode';
     btn.style.color = 'var(--text3)';
   }
 }
@@ -2791,7 +2782,7 @@ function toggleEditStepMode() {
     list.style.display = 'none';
     paste.style.display = 'block';
     addBtn.style.display = 'none';
-    btn.textContent = '✏️ Row mode';
+    btn.textContent = ' Row mode';
     btn.style.color = 'var(--accent)';
     paste.focus();
   } else {
@@ -2801,7 +2792,7 @@ function toggleEditStepMode() {
     list.style.display = 'flex';
     paste.style.display = 'none';
     addBtn.style.display = '';
-    btn.textContent = '📋 Paste mode';
+    btn.textContent = ' Paste mode';
     btn.style.color = 'var(--text3)';
   }
 }
@@ -2817,7 +2808,7 @@ const _origOpenEditModal = openEditModal;
 <div id="share-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center">
   <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:32px;width:100%;max-width:480px;margin:16px;box-shadow:0 24px 64px rgba(0,0,0,0.5)">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
-      <h2 style="font-family:'Playfair Display',serif;font-size:22px;color:var(--text)">👥 Share Library</h2>
+      <h2 style="font-family:'Playfair Display',serif;font-size:22px;color:var(--text)"> Share Library</h2>
       <button onclick="closeShareModal()" style="background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;line-height:1">×</button>
     </div>
 
@@ -2826,7 +2817,7 @@ const _origOpenEditModal = openEditModal;
     <!-- Invite form -->
     <div style="display:flex;gap:8px;margin-bottom:8px">
       <input id="share-email" type="email" placeholder="their@email.com"
-        style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif"
+        style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:var(--sans)"
         onkeydown="if(event.key==='Enter') inviteUser()">
       <select id="share-perm"
         style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 10px;color:var(--text);font-size:13px;outline:none;cursor:pointer">
@@ -2834,15 +2825,15 @@ const _origOpenEditModal = openEditModal;
         <option value="edit">Can edit</option>
       </select>
       <button onclick="inviteUser()" id="share-invite-btn"
-        style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap">
+        style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;cursor:pointer;font-family:var(--sans);white-space:nowrap">
         Invite
       </button>
     </div>
-    <div id="share-msg" style="font-size:12px;font-family:monospace;min-height:18px;margin-bottom:16px"></div>
+    <div id="share-msg" style="font-size:12px;font-family:var(--mono);min-height:18px;margin-bottom:16px"></div>
 
     <!-- Current shares -->
     <div style="border-top:1px solid var(--border);padding-top:16px">
-      <p style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:12px">People with access</p>
+      <p style="font-size:11px;color:var(--text3);font-family:var(--mono);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:12px">People with access</p>
       <div id="share-list" style="display:flex;flex-direction:column;gap:8px">
         <div style="font-size:13px;color:var(--text3)">Loading...</div>
       </div>
@@ -2856,8 +2847,8 @@ const _origOpenEditModal = openEditModal;
     <!-- Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;padding:24px 28px 20px;border-bottom:1px solid var(--border)">
       <div>
-        <h2 style="font-family:'Playfair Display',serif;font-size:22px;color:var(--text);margin:0 0 4px">✏ Edit Recipe</h2>
-        <p style="font-size:12px;color:var(--text3);font-family:monospace;margin:0" id="edit-modal-subtitle"></p>
+        <h2 style="font-family:'Playfair Display',serif;font-size:22px;color:var(--text);margin:0 0 4px"> Edit Recipe</h2>
+        <p style="font-size:12px;color:var(--text3);font-family:var(--mono);margin:0" id="edit-modal-subtitle"></p>
       </div>
       <button onclick="closeEditModal()" style="background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;line-height:1;padding:4px">×</button>
     </div>
@@ -2868,11 +2859,11 @@ const _origOpenEditModal = openEditModal;
       <!-- Basic Info -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
         <div style="grid-column:1/-1">
-          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Recipe Name</label>
-          <input id="edit-name" type="text" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:14px;outline:none;font-family:'DM Sans',sans-serif">
+          <label style="font-size:11px;color:var(--text3);font-family:var(--mono);letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Recipe Name</label>
+          <input id="edit-name" type="text" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:14px;outline:none;font-family:var(--sans)">
         </div>
         <div>
-          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Category</label>
+          <label style="font-size:11px;color:var(--text3);font-family:var(--mono);letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Category</label>
           <select id="edit-cat" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;cursor:pointer">
             <option value="Breakfast">Breakfast</option>
             <option value="Lunch/Dinner">Lunch/Dinner</option>
@@ -2882,64 +2873,64 @@ const _origOpenEditModal = openEditModal;
           </select>
         </div>
         <div>
-          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Protein</label>
-          <input id="edit-protein" type="text" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif">
+          <label style="font-size:11px;color:var(--text3);font-family:var(--mono);letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Protein</label>
+          <input id="edit-protein" type="text" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:var(--sans)">
         </div>
         <div>
-          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Method</label>
-          <input id="edit-method" type="text" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif">
+          <label style="font-size:11px;color:var(--text3);font-family:var(--mono);letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Method</label>
+          <input id="edit-method" type="text" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:var(--sans)">
         </div>
         <div>
-          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Source</label>
-          <input id="edit-source" type="text" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif">
+          <label style="font-size:11px;color:var(--text3);font-family:var(--mono);letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Source</label>
+          <input id="edit-source" type="text" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:var(--sans)">
         </div>
         <div>
-          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Est. Cost</label>
-          <input id="edit-cost" type="text" placeholder="e.g. $10-13" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif">
+          <label style="font-size:11px;color:var(--text3);font-family:var(--mono);letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Est. Cost</label>
+          <input id="edit-cost" type="text" placeholder="e.g. $10-13" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:var(--sans)">
         </div>
         <div>
-          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">URL</label>
-          <input id="edit-url" type="url" placeholder="https://..." style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif">
+          <label style="font-size:11px;color:var(--text3);font-family:var(--mono);letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">URL</label>
+          <input id="edit-url" type="url" placeholder="https://..." style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:var(--sans)">
         </div>
         <div>
-          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Servings</label>
-          <input id="edit-servings" type="number" min="1" max="24" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:'DM Sans',sans-serif">
+          <label style="font-size:11px;color:var(--text3);font-family:var(--mono);letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Servings</label>
+          <input id="edit-servings" type="number" min="1" max="24" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:var(--sans)">
         </div>
       </div>
 
       <!-- Ingredients + Steps with paste toggle -->
       <div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase">Ingredients</label>
+          <label style="font-size:11px;color:var(--text3);font-family:var(--mono);letter-spacing:0.05em;text-transform:uppercase">Ingredients</label>
           <div style="display:flex;gap:6px;align-items:center">
-            <button id="edit-ing-mode-btn" onclick="toggleEditIngMode()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text3);font-size:11px;padding:3px 10px;cursor:pointer;font-family:monospace">📋 Paste mode</button>
-            <button id="edit-ing-add-btn" onclick="addEditIngredient()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:11px;padding:3px 10px;cursor:pointer;font-family:monospace">+ Add</button>
+            <button id="edit-ing-mode-btn" onclick="toggleEditIngMode()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text3);font-size:11px;padding:3px 10px;cursor:pointer;font-family:var(--mono)"> Paste mode</button>
+            <button id="edit-ing-add-btn" onclick="addEditIngredient()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:11px;padding:3px 10px;cursor:pointer;font-family:var(--mono)">+ Add</button>
           </div>
         </div>
         <div id="edit-ingredients-list" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto"></div>
-        <textarea id="edit-ingredients-paste" placeholder="Paste ingredients here, one per line:&#10;1 cup flour&#10;2 eggs&#10;1/2 tsp salt" style="display:none;width:100%;height:130px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;font-family:monospace;resize:vertical;outline:none;box-sizing:border-box;line-height:1.6"></textarea>
+        <textarea id="edit-ingredients-paste" placeholder="Paste ingredients here, one per line:&#10;1 cup flour&#10;2 eggs&#10;1/2 tsp salt" style="display:none;width:100%;height:130px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;font-family:var(--mono);resize:vertical;outline:none;box-sizing:border-box;line-height:1.6"></textarea>
       </div>
 
       <!-- Steps -->
       <div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase">Steps</label>
+          <label style="font-size:11px;color:var(--text3);font-family:var(--mono);letter-spacing:0.05em;text-transform:uppercase">Steps</label>
           <div style="display:flex;gap:6px;align-items:center">
-            <button id="edit-step-mode-btn" onclick="toggleEditStepMode()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text3);font-size:11px;padding:3px 10px;cursor:pointer;font-family:monospace">📋 Paste mode</button>
-            <button id="edit-step-add-btn" onclick="addEditStep()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:11px;padding:3px 10px;cursor:pointer;font-family:monospace">+ Add</button>
+            <button id="edit-step-mode-btn" onclick="toggleEditStepMode()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text3);font-size:11px;padding:3px 10px;cursor:pointer;font-family:var(--mono)"> Paste mode</button>
+            <button id="edit-step-add-btn" onclick="addEditStep()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:11px;padding:3px 10px;cursor:pointer;font-family:var(--mono)">+ Add</button>
           </div>
         </div>
         <div id="edit-steps-list" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto"></div>
-        <textarea id="edit-steps-paste" placeholder="Paste steps here, one per line:&#10;Preheat oven to 375°F&#10;Mix dry ingredients in a bowl&#10;Add wet ingredients and stir" style="display:none;width:100%;height:130px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;font-family:monospace;resize:vertical;outline:none;box-sizing:border-box;line-height:1.6"></textarea>
+        <textarea id="edit-steps-paste" placeholder="Paste steps here, one per line:&#10;Preheat oven to 375°F&#10;Mix dry ingredients in a bowl&#10;Add wet ingredients and stir" style="display:none;width:100%;height:130px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;font-family:var(--mono);resize:vertical;outline:none;box-sizing:border-box;line-height:1.6"></textarea>
       </div>
 
       <!-- Message -->
-      <div id="edit-msg" style="display:none;font-size:13px;font-family:monospace;padding:8px 12px;border-radius:8px"></div>
+      <div id="edit-msg" style="display:none;font-size:13px;font-family:var(--mono);padding:8px 12px;border-radius:8px"></div>
 
       <!-- Footer -->
       <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px;border-top:1px solid var(--border)">
-        <button onclick="closeEditModal()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:9px 18px;color:var(--text2);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif">Cancel</button>
-        <button onclick="saveEdit()" id="edit-save-btn" style="background:var(--accent);border:none;border-radius:8px;padding:9px 22px;color:#fff;font-size:13px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif">Save Changes</button>
+        <button onclick="closeEditModal()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:9px 18px;color:var(--text2);font-size:13px;cursor:pointer;font-family:var(--sans)">Cancel</button>
+        <button onclick="saveEdit()" id="edit-save-btn" style="background:var(--accent);border:none;border-radius:8px;padding:9px 22px;color:#fff;font-size:13px;font-weight:500;cursor:pointer;font-family:var(--sans)">Save Changes</button>
       </div>
     </div>
   </div>
@@ -2951,21 +2942,21 @@ const _origOpenEditModal = openEditModal;
 <!-- Tutorial -->
 <div id="tut-backdrop" style="display:none;position:fixed;inset:0;z-index:3000;background:transparent;pointer-events:all"></div>
 <div id="tut-highlight" style="display:none;position:fixed;z-index:3001;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,0.72);pointer-events:none;transition:left 0.25s,top 0.25s,width 0.25s,height 0.25s"></div>
-<div id="tut-card" style="display:none;position:fixed;z-index:3002;background:#1a1f2e;border:1px solid #6e8efb;border-radius:14px;padding:20px 22px;width:290px;box-shadow:0 12px 40px rgba(0,0,0,0.7)">
-  <div id="tut-arrow" style="position:absolute;width:12px;height:12px;background:#1a1f2e;border-left:1px solid #6e8efb;border-top:1px solid #6e8efb;"></div>
+<div id="tut-card" style="display:none;position:fixed;z-index:3002;background:var(--bg2);border:1px solid var(--accent);border-radius:14px;padding:20px 22px;width:290px;box-shadow:0 12px 40px rgba(0,0,0,0.7)">
+  <div id="tut-arrow" style="position:absolute;width:12px;height:12px;background:var(--bg2);border-left:1px solid var(--accent);border-top:1px solid var(--accent);"></div>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
     <div style="display:flex;align-items:center;gap:8px">
       <span id="tut-emoji" style="font-size:18px"></span>
-      <strong id="tut-title" style="font-size:14px;color:#F5F0E8"></strong>
+      <strong id="tut-title" style="font-size:14px;color:var(--text)"></strong>
     </div>
-    <button id="tut-x" style="background:none;border:none;color:#556;font-size:18px;cursor:pointer;line-height:1">×</button>
+    <button id="tut-x" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;line-height:1">×</button>
   </div>
   <p id="tut-body" style="margin:0 0 14px;font-size:13px;color:#b0b5c4;line-height:1.6"></p>
   <div style="display:flex;align-items:center;justify-content:space-between">
     <div id="tut-dots" style="display:flex;gap:4px"></div>
     <div style="display:flex;gap:6px">
-      <button id="tut-skip" style="background:none;border:1px solid #2a2f3e;border-radius:6px;padding:5px 10px;color:#667;font-size:12px;cursor:pointer">Skip</button>
-      <button id="tut-next" style="background:#6e8efb;border:none;border-radius:6px;padding:5px 14px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">Next →</button>
+      <button id="tut-skip" style="background:none;border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:#667;font-size:12px;cursor:pointer">Skip</button>
+      <button id="tut-next" style="background:var(--accent);border:none;border-radius:6px;padding:5px 14px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">Next →</button>
     </div>
   </div>
 </div>
@@ -2973,14 +2964,14 @@ const _origOpenEditModal = openEditModal;
 <script>
 (function() {
   var STEPS = [
-    { emoji:"👋", title:"Welcome!", body:"This is your recipe library and meal planner. Let me show you around!", sel:null },
-    { emoji:"🔍", title:"Search & Filter", body:"Search recipes by name, protein, or source. Use the dropdowns to filter by category, protein, or method.", sel:"input[placeholder*='Search']" },
+    { emoji:"", title:"Welcome!", body:"This is your recipe library and meal planner. Let me show you around!", sel:null },
+    { emoji:"", title:"Search & Filter", body:"Search recipes by name, protein, or source. Use the dropdowns to filter by category, protein, or method.", sel:"input[placeholder*='Search']" },
     { emoji:"☑️", title:"Select Recipes", body:"Check the box next to recipes to add them to your grocery list. Select multiple to combine ingredients.", sel:"input[type='checkbox']" },
-    { emoji:"🛒", title:"Grocery List", body:"After selecting recipes, this button generates a combined shopping list with all ingredients.", sel:"#grocery-btn" },
-    { emoji:"📅", title:"Plan Your Week", body:"Open the weekly planner to drag recipes onto days, view your Google Calendar, and export meal plans.", sel:"button[onclick*='planner']" },
-    { emoji:"➕", title:"Add Recipes", body:"Click Add to create a new recipe. Paste in a URL and the app will try to auto-fill the details.", sel:"button[onclick*='toggleAdd']" },
-    { emoji:"👥", title:"Share Your Library", body:"Invite someone by email to view or edit your recipe library. They'll get an email invite.", sel:"button[onclick*='ShareModal']" },
-    { emoji:"🎉", title:"You're all set!", body:"Start by browsing, select some recipes, and hit Grocery List. Happy cooking!", sel:null },
+    { emoji:"cart", title:"Grocery List", body:"After selecting recipes, this button generates a combined shopping list with all ingredients.", sel:"#grocery-btn" },
+    { emoji:"", title:"Plan Your Week", body:"Open the weekly planner to drag recipes onto days, view your Google Calendar, and export meal plans.", sel:"button[onclick*='planner']" },
+    { emoji:"+", title:"Add Recipes", body:"Click Add to create a new recipe. Paste in a URL and the app will try to auto-fill the details.", sel:"button[onclick*='toggleAdd']" },
+    { emoji:"", title:"Share Your Library", body:"Invite someone by email to view or edit your recipe library. They'll get an email invite.", sel:"button[onclick*='ShareModal']" },
+    { emoji:"", title:"You're all set!", body:"Start by browsing, select some recipes, and hit Grocery List. Happy cooking!", sel:null },
   ];
 
   var idx = 0;
@@ -3013,7 +3004,7 @@ const _origOpenEditModal = openEditModal;
     document.getElementById("tut-body").textContent = step.body;
     document.getElementById("tut-next").textContent = i === STEPS.length - 1 ? "Done ✓" : "Next →";
     document.getElementById("tut-dots").innerHTML = STEPS.map(function(_,j) {
-      return '<div style="width:6px;height:6px;border-radius:50%;background:' + (j===i?'#6e8efb':'#2a2f3e') + '"></div>';
+      return '<div style="width:6px;height:6px;border-radius:50%;background:' + (j===i?'var(--accent)':'var(--border)') + '"></div>';
     }).join('');
 
     backdrop.style.display = "block";
@@ -3054,8 +3045,8 @@ const _origOpenEditModal = openEditModal;
         arrow.style.transform = "rotate(45deg)";
         arrow.style.borderRight = "none";
         arrow.style.borderBottom = "none";
-        arrow.style.borderLeft = "1px solid #6e8efb";
-        arrow.style.borderTop = "1px solid #6e8efb";
+        arrow.style.borderLeft = "1px solid var(--accent)";
+        arrow.style.borderTop = "1px solid var(--accent)";
       } else {
         // Card above target — arrow points DOWN
         card.style.top = (r.top - cardH - 16) + "px";
@@ -3066,8 +3057,8 @@ const _origOpenEditModal = openEditModal;
         arrow.style.transform = "rotate(225deg)";
         arrow.style.borderRight = "none";
         arrow.style.borderBottom = "none";
-        arrow.style.borderLeft = "1px solid #6e8efb";
-        arrow.style.borderTop = "1px solid #6e8efb";
+        arrow.style.borderLeft = "1px solid var(--accent)";
+        arrow.style.borderTop = "1px solid var(--accent)";
       }
       arrow.style.display = "block";
     } else {
@@ -3109,31 +3100,31 @@ function closeSidebar() {
 
     <!-- Bulk Recipe Loader Modal -->
     <div id="bulk-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:400;display:none;align-items:center;justify-content:center;padding:16px">
-      <div style="background:#1a1f2e;border:1px solid #2a2f3e;border-radius:14px;width:100%;max-width:780px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden">
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;width:100%;max-width:780px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden">
         <!-- Header -->
-        <div style="padding:20px 24px 16px;border-bottom:1px solid #2a2f3e;display:flex;align-items:center;gap:12px">
+        <div style="padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px">
           <div>
-            <h2 style="margin:0;font-size:18px;color:#F5F0E8">📦 Bulk Recipe Loader</h2>
-            <p style="margin:4px 0 0;font-size:12px;color:#556;font-family:monospace">Paste one URL per line — we'll fetch them all at once</p>
+            <h2 style="margin:0;font-size:18px;color:var(--text)">Bulk Import</h2>
+            <p style="margin:4px 0 0;font-size:12px;color:var(--text3);font-family:var(--mono)">Paste one URL per line — we'll fetch them all at once</p>
           </div>
-          <button onclick="closeBulkModal()" style="margin-left:auto;background:none;border:none;color:#556;cursor:pointer;font-size:20px;padding:4px">✕</button>
+          <button onclick="closeBulkModal()" style="margin-left:auto;background:none;border:none;color:var(--text3);cursor:pointer;font-size:20px;padding:4px">✕</button>
         </div>
 
         <!-- URL input -->
         <div id="bulk-input-phase" style="padding:20px 24px">
           <textarea id="bulk-urls" placeholder="https://www.kaleynutrition.com/recipe-1&#10;https://www.kaleynutrition.com/recipe-2&#10;https://www.hungryhobbymom.com/recipe-3"
-            style="width:100%;height:140px;background:#12151f;border:1px solid #2a2f3e;border-radius:8px;padding:12px;color:#E8E4DC;font-size:13px;font-family:monospace;resize:vertical;outline:none;line-height:1.6"></textarea>
+            style="width:100%;height:140px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;color:var(--text);font-size:13px;font-family:var(--mono);resize:vertical;outline:none;line-height:1.6"></textarea>
           <div style="display:flex;align-items:center;gap:10px;margin-top:12px">
-            <button onclick="startBulkFetch()" class="btn btn-primary" style="font-size:14px;padding:10px 24px">🔍 Fetch All Recipes</button>
-            <span id="bulk-url-count" style="font-size:12px;color:#556;font-family:monospace"></span>
+            <button onclick="startBulkFetch()" class="btn btn-primary" style="font-size:14px;padding:10px 24px">Fetch All Recipes</button>
+            <span id="bulk-url-count" style="font-size:12px;color:var(--text3);font-family:var(--mono)"></span>
           </div>
         </div>
 
         <!-- Results phase -->
         <div id="bulk-results-phase" style="display:none;flex:1;overflow:hidden;display:none;flex-direction:column">
-          <div style="padding:12px 24px;border-bottom:1px solid #2a2f3e;display:flex;align-items:center;gap:12px">
-            <span id="bulk-progress" style="font-size:13px;color:#9a9fae;font-family:monospace"></span>
-            <button id="bulk-save-btn" onclick="saveAllBulk()" class="btn btn-primary" style="margin-left:auto;display:none">💾 Save All Successful</button>
+          <div style="padding:12px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px">
+            <span id="bulk-progress" style="font-size:13px;color:var(--text2);font-family:var(--mono)"></span>
+            <button id="bulk-save-btn" onclick="saveAllBulk()" class="btn btn-primary" style="margin-left:auto;display:none">Save All Successful</button>
           </div>
           <div id="bulk-results-list" style="flex:1;overflow-y:auto;padding:12px 24px;display:flex;flex-direction:column;gap:8px"></div>
         </div>
@@ -3143,29 +3134,29 @@ function closeSidebar() {
 
 <!-- Bulk Recipe Loader Modal -->
 <div id="bulk-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:500;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto">
-  <div style="background:#1a1f2e;border:1px solid #2a2f3e;border-radius:14px;width:100%;max-width:760px;display:flex;flex-direction:column;overflow:hidden">
-    <div style="padding:20px 24px 16px;border-bottom:1px solid #2a2f3e;display:flex;align-items:baseline;gap:12px">
-      <h2 style="margin:0;font-size:18px;color:#F5F0E8;font-family:Georgia,serif">📦 Bulk Recipe Loader</h2>
-      <span style="font-size:12px;color:#556;font-family:monospace">Paste one URL per line</span>
-      <button onclick="closeBulkModal()" style="margin-left:auto;background:none;border:none;color:#556;cursor:pointer;font-size:22px;line-height:1;padding:0">✕</button>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;width:100%;max-width:760px;display:flex;flex-direction:column;overflow:hidden">
+    <div style="padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:baseline;gap:12px">
+      <h2 style="margin:0;font-size:18px;color:var(--text);font-family:var(--serif)">Bulk Import</h2>
+      <span style="font-size:12px;color:var(--text3);font-family:var(--mono)">Paste one URL per line</span>
+      <button onclick="closeBulkModal()" style="margin-left:auto;background:none;border:none;color:var(--text3);cursor:pointer;font-size:22px;line-height:1;padding:0">✕</button>
     </div>
 
     <!-- Phase 1: URL input -->
     <div id="bulk-input-phase" style="padding:20px 24px">
       <textarea id="bulk-urls"
         placeholder="https://www.kaleynutrition.com/greek-turkey-meatballs&#10;https://www.hungryhobbymom.com/slow-cooker-sesame-chicken&#10;https://www.sisufitness.com/creamy-taco-soup"
-        style="width:100%;height:150px;background:#12151f;border:1px solid #2a2f3e;border-radius:8px;padding:12px;color:#E8E4DC;font-size:13px;font-family:monospace;resize:vertical;outline:none;line-height:1.7;box-sizing:border-box"></textarea>
+        style="width:100%;height:150px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;color:var(--text);font-size:13px;font-family:var(--mono);resize:vertical;outline:none;line-height:1.7;box-sizing:border-box"></textarea>
       <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
-        <button onclick="startBulkFetch()" class="btn btn-primary" style="padding:10px 24px;font-size:14px">🔍 Fetch All Recipes</button>
-        <span id="bulk-url-count" style="font-size:12px;color:#556;font-family:monospace"></span>
+        <button onclick="startBulkFetch()" class="btn btn-primary" style="padding:10px 24px;font-size:14px">Fetch All Recipes</button>
+        <span id="bulk-url-count" style="font-size:12px;color:var(--text3);font-family:var(--mono)"></span>
       </div>
     </div>
 
     <!-- Phase 2: Results -->
     <div id="bulk-results-phase" style="display:none;flex-direction:column">
-      <div style="padding:12px 24px;border-bottom:1px solid #2a2f3e;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-        <span id="bulk-progress" style="font-size:13px;color:#9a9fae;font-family:monospace;flex:1"></span>
-        <button id="bulk-save-btn" onclick="saveAllBulk()" class="btn btn-primary" style="display:none">💾 Save Recipes</button>
+      <div style="padding:12px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span id="bulk-progress" style="font-size:13px;color:var(--text2);font-family:var(--mono);flex:1"></span>
+        <button id="bulk-save-btn" onclick="saveAllBulk()" class="btn btn-primary" style="display:none">Save Recipes</button>
       </div>
       <div id="bulk-results-list" style="padding:12px 24px;display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow-y:auto"></div>
     </div>
@@ -3173,7 +3164,7 @@ function closeSidebar() {
 </div>
 
 
-  <div class="page-footer" id="page-footer">🍽 Mealplannr · <span id="last-updated-date">Loading...</span></div>
+  <div class="page-footer" id="page-footer"> Mealplannr · <span id="last-updated-date">Loading...</span></div>
 </div><!-- /sidebar-layout -->
 <script src="/sidebar.js"></script>
 </body>
