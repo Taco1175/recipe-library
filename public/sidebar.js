@@ -61,3 +61,22 @@
     if (e.persisted) window.location.reload();
   });
 })();
+
+// ── Last updated date ──
+(function() {
+  function setLastUpdated() {
+    const el = document.getElementById('last-updated-date');
+    if (!el) return;
+    // Use the HTML file's last-modified header as a proxy for deploy date
+    // Falls back to document.lastModified (local dev)
+    try {
+      const d = new Date(document.lastModified);
+      if (d && !isNaN(d.getTime()) && d.getFullYear() > 2020) {
+        el.textContent = 'Last updated ' + d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        return;
+      }
+    } catch(e) {}
+    el.textContent = 'Last updated March 2026';
+  }
+  document.addEventListener('DOMContentLoaded', setLastUpdated);
+})();
