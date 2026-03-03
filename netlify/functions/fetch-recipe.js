@@ -227,6 +227,49 @@ function parsePrintPage(html) {
   return result;
 }
 
+// Numbered-step parser: handles sites like flexibledietinglifestyle.com
+// that use plain HTML with steps like "1.) text" under a Directions heading
+function parseNumberedSteps(html) {
+  const result = { name: null, ingredients: [], steps: [] };
+
+  const h1 = html.match(/<h1[^>]*>([^<]+)<\/h1>/);
+  if (h1) result.name = h1[1].trim();
+
+  const plain = html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<[^>]+>/g, '\n')
+    .replace(/&amp;/g,'&').replace(/&nbsp;/g,' ').replace(/&#\d+;/g,'')
+    .replace(/\n{3,}/g,'\n\n');
+
+  // Ingredients: text between "Ingredients" and "Directions" headings
+  const ingM = plain.match(/Ingredients[^\n]*\n([\s\S]*?)(?:\n\s*(?:Directions?|Instructions?|Steps?))/i);
+  if (ingM) {
+    ingM[1].split('\n')
+      .map(l => l.replace(/^[\*\-\u2022]\s*/, '').trim())
+      .filter(l => l.length > 2 && !/^make[s]?\s*\d/i.test(l))
+      .forEach(l => result.ingredients.push(l));
+  }
+
+  // Steps: numbered lines after "Directions" heading — "1.) ...", "1. ...", "Step 1:"
+  const dirM = plain.match(/(?:Directions?|Instructions?|Steps?)[^\n]*\n([\s\S]*?)(?:\n\s*(?:Recipe Video|Notes?|Nutrition|$))/i);
+  if (dirM) {
+    const lines = dirM[1].split('\n').map(l => l.trim()).filter(Boolean);
+    let current = null;
+    for (const line of lines) {
+      if (/^(?:Step\s*)?\d+[\.\):]/.test(line)) {
+        if (current) result.steps.push(current);
+        current = line.replace(/^(?:Step\s*)?\d+[\.\):]\s*/, '');
+      } else if (current && line.length > 3) {
+        current += ' ' + line;
+      }
+    }
+    if (current) result.steps.push(current);
+  }
+
+  return result;
+}
+
 function guessSource(url) {
   try {
     const host = new URL(url).hostname.replace("www.", "");
@@ -311,7 +354,7 @@ exports.handler = async (event) => {
       const html = await fetchUrl(fetchUrl2);
 
       // Run all parsers, collect best ingredients + best steps separately
-      const parsers = [parseJsonLd, parseWPRM, parseTasty, parsePrintPage, parseGeneric];
+      const parsers = [parseJsonLd, parseWPRM, parseTasty, parsePrintPage, parseNumberedSteps, parseGeneric];
       let bestIngredients = result.ingredients;
       let bestSteps = result.steps;
 
