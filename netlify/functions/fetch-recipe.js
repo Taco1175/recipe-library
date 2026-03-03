@@ -54,10 +54,11 @@ function parseJsonLd(html) {
         result.steps = data.recipeInstructions.map(s => {
           if (typeof s === "string") return s.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
           if (s["@type"] === "HowToSection" && Array.isArray(s.itemListElement)) {
-            return s.itemListElement.map(i => (i.text || i.name || "").replace(/\s+/g, " ").trim()).join(" ");
+            // Return each step within the section separately rather than joining
+            return s.itemListElement.map(i => (i.text || i.name || "").replace(/<[^>]+>/g,"").replace(/\s+/g, " ").trim()).filter(Boolean).join("|||SPLIT|||");
           }
           return (s.text || s.name || "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
-        }).filter(i => i.length > 3);
+        }).filter(i => i.length > 3).flatMap(s => s.includes('|||SPLIT|||') ? s.split('|||SPLIT|||').filter(Boolean) : [s]);
       }
 
       // Servings
@@ -91,11 +92,20 @@ function parseWPRM(html) {
     if (full) result.ingredients.push(full);
   });
 
-  const stepBlocks = [...html.matchAll(/class="wprm-recipe-instruction-text"[^>]*>([\s\S]*?)<\/p>/g)];
-  stepBlocks.forEach(m => {
+  // Steps: grab each instruction container (works for <p>, <div>, <span>)
+  const stepContainers = [...html.matchAll(/class="wprm-recipe-instruction-text"[^>]*>([\s\S]*?)<\/(?:p|div|span)>/g)];
+  stepContainers.forEach(m => {
     const text = m[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-    if (text) result.steps.push(text);
+    if (text.length > 5) result.steps.push(text);
   });
+  // Also try wprm-recipe-step-container as some themes use that
+  if (!result.steps.length) {
+    const stepRows = [...html.matchAll(/class="wprm-recipe-step[^"]*"[^>]*>([\s\S]*?)<\/li>/g)];
+    stepRows.forEach(m => {
+      const text = m[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      if (text.length > 5) result.steps.push(text);
+    });
+  }
 
   return result;
 }
@@ -293,22 +303,29 @@ exports.handler = async (event) => {
       console.warn("[fetch-recipe] JustTheRecipe failed:", e.message);
     }
 
-    // Step 2: If JTR didn't get ingredients, fall back to our own parsers
-    if (!result.ingredients.length) {
-      console.log("[fetch-recipe] JTR returned no ingredients, trying own parsers");
+    // Step 2: If JTR missing ingredients OR steps, run our own parsers
+    const needIngredients = !result.ingredients.length;
+    const needSteps = !result.steps.length;
+    if (needIngredients || needSteps) {
+      console.log(`[fetch-recipe] JTR missing: ingredients=${needIngredients} steps=${needSteps}, running fallback parsers`);
       const html = await fetchUrl(fetchUrl2);
-      let parsed = parseJsonLd(html);
-      if (!parsed.ingredients.length) parsed = { ...parsed, ...parseWPRM(html) };
-      if (!parsed.ingredients.length) parsed = { ...parsed, ...parseTasty(html) };
-      if (!parsed.ingredients.length) parsed = { ...parsed, ...parsePrintPage(html) };
-      if (!parsed.ingredients.length) parsed = { ...parsed, ...parseGeneric(html) };
-      // Merge — prefer JTR name if we got one, otherwise use parsed
-      result = {
-        name: result.name || parsed.name,
-        ingredients: parsed.ingredients,
-        steps: result.steps.length ? result.steps : parsed.steps,
-        servings: result.servings || parsed.servings,
-      };
+
+      // Run all parsers, collect best ingredients + best steps separately
+      const parsers = [parseJsonLd, parseWPRM, parseTasty, parsePrintPage, parseGeneric];
+      let bestIngredients = result.ingredients;
+      let bestSteps = result.steps;
+
+      for (const parse of parsers) {
+        if (bestIngredients.length && bestSteps.length) break; // got both, done
+        const p = parse(html);
+        if (!bestIngredients.length && p.ingredients?.length) bestIngredients = p.ingredients;
+        if (!bestSteps.length && p.steps?.length) bestSteps = p.steps;
+        if (!result.name && p.name) result.name = p.name;
+        if (!result.servings && p.servings) result.servings = p.servings;
+      }
+
+      result.ingredients = bestIngredients;
+      result.steps = bestSteps;
     }
 
     // Debug info when everything failed
