@@ -17,7 +17,21 @@ function fetchUrl(url) {
       }
       let data = "";
       res.on("data", chunk => data += chunk);
-      res.on("end", () => resolve(data));
+      res.on("end", () => {
+        // Detect Cloudflare/bot-protection challenge pages
+        if (
+          res.statusCode === 403 ||
+          (res.statusCode === 200 && (
+            data.includes("Enable JavaScript and cookies to continue") ||
+            data.includes("cf-browser-verification") ||
+            data.includes("cf_chl_opt") ||
+            data.includes("Checking your browser")
+          ))
+        ) {
+          return reject(new Error("CLOUDFLARE_BLOCKED"));
+        }
+        resolve(data);
+      });
     });
     req.on("error", reject);
     req.on("timeout", () => { req.destroy(); reject(new Error("Timeout")); });
@@ -391,6 +405,13 @@ exports.handler = async (event) => {
       }),
     };
   } catch (e) {
+    if (e.message === "CLOUDFLARE_BLOCKED") {
+      return { statusCode: 200, headers, body: JSON.stringify({
+        name: "", ingredients: [], steps: [], source: guessSource(url), servings: 4,
+        success: false,
+        error: "This site uses bot protection (Cloudflare) that blocks automated fetching. Try visiting the site directly and copying the ingredients manually.",
+      })};
+    }
     return { statusCode: 500, headers, body: JSON.stringify({ error: e.message }) };
   }
 };

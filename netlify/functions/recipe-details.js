@@ -20,7 +20,7 @@ exports.handler = async (event) => {
   if (event.httpMethod === "POST") {
     const { recipe_id, ingredients, steps, servings } = JSON.parse(event.body || "{}");
     if (!recipe_id || !ingredients || !steps) return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: "Missing fields" }) };
-    const { ok, data } = await supabase("/recipe_details?on_conflict=recipe_id", "POST", {
+    const { ok, data } = await supabase("/recipe_details?on_conflict=recipe_id,user_id", "POST", {
       recipe_id, ingredients, steps, servings: servings || 4,
       user_id: user.id, updated_at: new Date().toISOString()
     }, token);

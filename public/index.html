@@ -1358,7 +1358,7 @@ async function autoFetchRecipe(url) {
     const data = await res.json();
 
     if (!res.ok || data.error) {
-      addMsg("Could not load page. Try copying ingredients manually.", "error");
+      addMsg(data.error || "Could not load page. Try copying ingredients manually.", "error");
       return;
     }
 
