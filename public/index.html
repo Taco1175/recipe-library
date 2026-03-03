@@ -2412,6 +2412,18 @@ function openEditModal(id) {
 
   document.getElementById("edit-modal").style.display = "flex";
   document.body.style.overflow = "hidden";
+  // Reset paste modes
+  editIngPasteMode = false; editStepPasteMode = false;
+  document.getElementById('edit-ingredients-list').style.display = 'flex';
+  document.getElementById('edit-ingredients-paste').style.display = 'none';
+  document.getElementById('edit-ing-add-btn').style.display = '';
+  document.getElementById('edit-ing-mode-btn').textContent = '📋 Paste mode';
+  document.getElementById('edit-ing-mode-btn').style.color = 'var(--text3)';
+  document.getElementById('edit-steps-list').style.display = 'flex';
+  document.getElementById('edit-steps-paste').style.display = 'none';
+  document.getElementById('edit-step-add-btn').style.display = '';
+  document.getElementById('edit-step-mode-btn').textContent = '📋 Paste mode';
+  document.getElementById('edit-step-mode-btn').style.color = 'var(--text3)';
 }
 
 function closeEditModal() {
@@ -2446,11 +2458,17 @@ function renderEditSteps(steps) {
 }
 
 function getEditIngredients() {
+  if (editIngPasteMode) {
+    return document.getElementById('edit-ingredients-paste').value.split('\n').map(l=>l.trim()).filter(Boolean);
+  }
   return Array.from(document.getElementById("edit-ingredients-list").querySelectorAll("input"))
     .map(el => el.value.trim()).filter(Boolean);
 }
 
 function getEditSteps() {
+  if (editStepPasteMode) {
+    return document.getElementById('edit-steps-paste').value.split('\n').map(l=>l.trim()).filter(Boolean);
+  }
   return Array.from(document.getElementById("edit-steps-list").querySelectorAll("textarea"))
     .map(el => el.value.trim()).filter(Boolean);
 }
@@ -2728,6 +2746,70 @@ async function saveAllBulk() {
 }
 
 
+// ── Edit modal paste mode toggles ──
+let editIngPasteMode = false;
+let editStepPasteMode = false;
+
+function toggleEditIngMode() {
+  editIngPasteMode = !editIngPasteMode;
+  const list = document.getElementById('edit-ingredients-list');
+  const paste = document.getElementById('edit-ingredients-paste');
+  const btn = document.getElementById('edit-ing-mode-btn');
+  const addBtn = document.getElementById('edit-ing-add-btn');
+  if (editIngPasteMode) {
+    // Switching to paste: pre-fill textarea with current list
+    const current = Array.from(list.querySelectorAll('input')).map(i => i.value).filter(Boolean);
+    paste.value = current.join('\n');
+    list.style.display = 'none';
+    paste.style.display = 'block';
+    addBtn.style.display = 'none';
+    btn.textContent = '✏️ Row mode';
+    btn.style.color = 'var(--accent)';
+    paste.focus();
+  } else {
+    // Switching back to rows: parse textarea back into rows
+    const lines = paste.value.split('\n').map(l => l.trim()).filter(Boolean);
+    list._data = lines;
+    renderEditIngredients(lines);
+    list.style.display = 'flex';
+    paste.style.display = 'none';
+    addBtn.style.display = '';
+    btn.textContent = '📋 Paste mode';
+    btn.style.color = 'var(--text3)';
+  }
+}
+
+function toggleEditStepMode() {
+  editStepPasteMode = !editStepPasteMode;
+  const list = document.getElementById('edit-steps-list');
+  const paste = document.getElementById('edit-steps-paste');
+  const btn = document.getElementById('edit-step-mode-btn');
+  const addBtn = document.getElementById('edit-step-add-btn');
+  if (editStepPasteMode) {
+    const current = Array.from(list.querySelectorAll('textarea')).map(t => t.value).filter(Boolean);
+    paste.value = current.join('\n');
+    list.style.display = 'none';
+    paste.style.display = 'block';
+    addBtn.style.display = 'none';
+    btn.textContent = '✏️ Row mode';
+    btn.style.color = 'var(--accent)';
+    paste.focus();
+  } else {
+    const lines = paste.value.split('\n').map(l => l.trim()).filter(Boolean);
+    list._data = lines;
+    renderEditSteps(lines);
+    list.style.display = 'flex';
+    paste.style.display = 'none';
+    addBtn.style.display = '';
+    btn.textContent = '📋 Paste mode';
+    btn.style.color = 'var(--text3)';
+  }
+}
+
+// Reset paste mode when modal opens
+const _origOpenEditModal = openEditModal;
+
+
 
 </script>
 
@@ -2825,22 +2907,30 @@ async function saveAllBulk() {
         </div>
       </div>
 
-      <!-- Ingredients -->
+      <!-- Ingredients + Steps with paste toggle -->
       <div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase">Ingredients</label>
-          <button onclick="addEditIngredient()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:11px;padding:3px 10px;cursor:pointer;font-family:monospace">+ Add</button>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button id="edit-ing-mode-btn" onclick="toggleEditIngMode()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text3);font-size:11px;padding:3px 10px;cursor:pointer;font-family:monospace">📋 Paste mode</button>
+            <button id="edit-ing-add-btn" onclick="addEditIngredient()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:11px;padding:3px 10px;cursor:pointer;font-family:monospace">+ Add</button>
+          </div>
         </div>
         <div id="edit-ingredients-list" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto"></div>
+        <textarea id="edit-ingredients-paste" placeholder="Paste ingredients here, one per line:&#10;1 cup flour&#10;2 eggs&#10;1/2 tsp salt" style="display:none;width:100%;height:130px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;font-family:monospace;resize:vertical;outline:none;box-sizing:border-box;line-height:1.6"></textarea>
       </div>
 
       <!-- Steps -->
       <div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <label style="font-size:11px;color:var(--text3);font-family:monospace;letter-spacing:0.05em;text-transform:uppercase">Steps</label>
-          <button onclick="addEditStep()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:11px;padding:3px 10px;cursor:pointer;font-family:monospace">+ Add</button>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button id="edit-step-mode-btn" onclick="toggleEditStepMode()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text3);font-size:11px;padding:3px 10px;cursor:pointer;font-family:monospace">📋 Paste mode</button>
+            <button id="edit-step-add-btn" onclick="addEditStep()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--accent);font-size:11px;padding:3px 10px;cursor:pointer;font-family:monospace">+ Add</button>
+          </div>
         </div>
-        <div id="edit-steps-list" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto"></div>
+        <div id="edit-steps-list" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto"></div>
+        <textarea id="edit-steps-paste" placeholder="Paste steps here, one per line:&#10;Preheat oven to 375°F&#10;Mix dry ingredients in a bowl&#10;Add wet ingredients and stir" style="display:none;width:100%;height:130px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;font-family:monospace;resize:vertical;outline:none;box-sizing:border-box;line-height:1.6"></textarea>
       </div>
 
       <!-- Message -->
