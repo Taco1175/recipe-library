@@ -20,6 +20,48 @@ const _FUN = { library:'📚', planner:'📅', fridge:'🥦', share:'👥', tuto
 // ── THEME ──
 function getTheme() { return localStorage.getItem('mp-theme') || 'dark'; }
 
+// Extract Supabase auth token from localStorage
+function _getToken() {
+  try {
+    for (const k of Object.keys(localStorage)) {
+      if (k.includes('supabase') && k.includes('auth')) {
+        const v = JSON.parse(localStorage.getItem(k) || '{}');
+        if (v?.access_token) return v.access_token;
+        if (v?.session?.access_token) return v.session.access_token;
+      }
+    }
+  } catch(e) {}
+  return null;
+}
+
+// On page load: pull theme from server and apply if different from localStorage
+async function _loadThemeFromServer() {
+  const token = _getToken();
+  if (!token) return;
+  try {
+    const res = await fetch('/.netlify/functions/user-preferences', {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (!res.ok) return;
+    const { theme } = await res.json();
+    if (theme && theme !== localStorage.getItem('mp-theme')) {
+      localStorage.setItem('mp-theme', theme);
+      setTheme(theme);
+    }
+  } catch(e) {}
+}
+
+// Fire-and-forget: save theme to server (doesn't block UI)
+function _saveThemeToServer(t) {
+  const token = _getToken();
+  if (!token) return;
+  fetch('/.netlify/functions/user-preferences', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ theme: t })
+  }).catch(() => {});
+}
+
 function setTheme(t) {
   document.documentElement.setAttribute('data-theme', t);
   localStorage.setItem('mp-theme', t);
@@ -99,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
     [['dark','Dark'],['light','Light'],['fun','Fun']].forEach(([t, lbl]) => {
       const b = document.createElement('button');
       b.className = 'theme-btn'; b.dataset.theme = t; b.textContent = lbl;
-      b.onclick = () => setTheme(t);
+      b.onclick = () => { setTheme(t); _saveThemeToServer(t); };
       sw.appendChild(b);
     });
     const ui = footer.querySelector('.user-info');
@@ -108,6 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Apply saved theme (also calls _updateIcons)
   setTheme(getTheme());
+  _loadThemeFromServer(); // sync from server (no flash: localStorage applied first)
 
   // Last updated
   const el = document.getElementById('last-updated-date');
