@@ -378,6 +378,7 @@ input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); c
     </div>
     <div class="sidebar-nav">
       <button class="sidebar-add-btn" onclick="toggleAdd()"><span>＋</span><span class="sidebar-add-text"> Add Recipe</span></button>
+      <button class="sidebar-add-btn" onclick="openBulkModal()" style="background:#1e2a3e;border:1px solid #2a3f5e;color:#7eb8f7;margin-top:4px"><span>📦</span><span class="sidebar-add-text"> Bulk Add</span></button>
       <a class="nav-item active" href="/"><span class="nav-icon">📚</span><span class="nav-label">Recipe Library</span><span id="total-badge" style="font-size:11px;color:#556;font-family:monospace;margin-left:auto;padding-right:4px"></span></a>
       <a class="nav-item" href="/planner.html"><span class="nav-icon">📅</span><span class="nav-label">Plan Week</span></a>
       <div class="nav-divider"></div>
@@ -2560,6 +2561,173 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 
+// ── BULK RECIPE LOADER ──
+let bulkResults = [];
+
+function openBulkModal() {
+  const m = document.getElementById('bulk-modal');
+  m.style.display = 'flex';
+  document.getElementById('bulk-input-phase').style.display = 'block';
+  document.getElementById('bulk-results-phase').style.display = 'none';
+  document.getElementById('bulk-urls').value = '';
+  document.getElementById('bulk-url-count').textContent = '';
+  document.getElementById('bulk-results-list').innerHTML = '';
+  bulkResults = [];
+  setTimeout(() => document.getElementById('bulk-urls').focus(), 100);
+}
+
+function closeBulkModal() {
+  document.getElementById('bulk-modal').style.display = 'none';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('bulk-urls')?.addEventListener('input', function() {
+    const urls = this.value.split('\n').map(u => u.trim()).filter(u => u.startsWith('http'));
+    document.getElementById('bulk-url-count').textContent = urls.length ? `${urls.length} URL${urls.length > 1 ? 's' : ''} detected` : '';
+  });
+  document.getElementById('bulk-modal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeBulkModal();
+  });
+});
+
+async function startBulkFetch() {
+  const raw = document.getElementById('bulk-urls').value;
+  const urls = [...new Set(raw.split('\n').map(u => u.trim()).filter(u => u.startsWith('http')))];
+  if (!urls.length) return;
+
+  document.getElementById('bulk-input-phase').style.display = 'none';
+  const resultsPhase = document.getElementById('bulk-results-phase');
+  resultsPhase.style.display = 'flex';
+  const list = document.getElementById('bulk-results-list');
+  const progress = document.getElementById('bulk-progress');
+  const saveBtn = document.getElementById('bulk-save-btn');
+  saveBtn.style.display = 'none';
+
+  bulkResults = urls.map(url => ({ url, status: 'pending', data: null, selected: false }));
+  list.innerHTML = bulkResults.map((r, i) => bulkRowHtml(r, i)).join('');
+  progress.textContent = `Fetching 0 / ${urls.length}...`;
+
+  let done = 0;
+  const BATCH = 3;
+  for (let i = 0; i < urls.length; i += BATCH) {
+    await Promise.all(urls.slice(i, i + BATCH).map(async (url, bi) => {
+      const idx = i + bi;
+      bulkResults[idx].status = 'loading';
+      updateBulkRow(idx);
+      try {
+        const hdrs = await Auth.headers();
+        const res = await fetch('/.netlify/functions/fetch-recipe', {
+          method: 'POST',
+          headers: { ...hdrs, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+        });
+        const data = await res.json();
+        if (!res.ok || data.error || !data.name) {
+          bulkResults[idx].status = 'error';
+          bulkResults[idx].error = data.error || 'Could not parse recipe';
+        } else {
+          bulkResults[idx].status = 'ok';
+          bulkResults[idx].data = data;
+          bulkResults[idx].selected = true;
+        }
+      } catch(e) {
+        bulkResults[idx].status = 'error';
+        bulkResults[idx].error = e.message;
+      }
+      done++;
+      progress.textContent = `Fetching ${done} / ${urls.length}...`;
+      updateBulkRow(idx);
+    }));
+  }
+
+  const successCount = bulkResults.filter(r => r.status === 'ok').length;
+  progress.textContent = `Done — ${successCount} of ${urls.length} parsed successfully`;
+  if (successCount > 0) {
+    saveBtn.style.display = '';
+    saveBtn.textContent = `💾 Save ${successCount} Recipe${successCount !== 1 ? 's' : ''}`;
+  }
+}
+
+function bulkRowHtml(r, i) {
+  const domain = (() => { try { return new URL(r.url).hostname.replace('www.',''); } catch { return r.url; } })();
+  const shortUrl = r.url.length > 65 ? r.url.slice(0,65)+'…' : r.url;
+  return `<div id="bulk-row-${i}" style="background:#12151f;border:1px solid #2a2f3e;border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:12px">
+    <div style="flex:1;min-width:0">
+      <div style="font-size:11px;color:#556;font-family:monospace;margin-bottom:2px">${domain}</div>
+      <div style="font-size:12px;color:#667;word-break:break-all">${shortUrl}</div>
+      <div id="bulk-row-detail-${i}" style="margin-top:5px;font-size:12px;font-family:monospace;color:#556">⏳ Waiting...</div>
+    </div>
+    <div id="bulk-row-check-${i}" style="flex-shrink:0"></div>
+  </div>`;
+}
+
+function updateBulkRow(i) {
+  const r = bulkResults[i];
+  const detail = document.getElementById('bulk-row-detail-' + i);
+  const check = document.getElementById('bulk-row-check-' + i);
+  const row = document.getElementById('bulk-row-' + i);
+  if (!detail) return;
+  if (r.status === 'loading') {
+    detail.innerHTML = '<span style="color:#6e8efb">🔍 Fetching...</span>';
+    row.style.borderColor = '#2a3f5e';
+  } else if (r.status === 'ok') {
+    const d = r.data;
+    detail.innerHTML = `<span style="color:#7bcf8e">✅ ${esc(d.name)}</span><span style="color:#445"> · ${d.ingredients?.length||0} ingredients, ${d.steps?.length||0} steps</span>`;
+    row.style.borderColor = '#2a5a2a';
+    check.innerHTML = `<label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:#7bcf8e;white-space:nowrap">
+      <input type="checkbox" checked onchange="bulkResults[${i}].selected=this.checked;updateBulkSaveBtn()" style="width:15px;height:15px;accent-color:#7bcf8e">
+      Save
+    </label>`;
+  } else if (r.status === 'error') {
+    detail.innerHTML = `<span style="color:#e07070">❌ ${esc(r.error||'Failed to parse')}</span>`;
+    row.style.borderColor = '#4a1a1a';
+  }
+}
+
+function updateBulkSaveBtn() {
+  const n = bulkResults.filter(r => r.status === 'ok' && r.selected).length;
+  const btn = document.getElementById('bulk-save-btn');
+  if (btn) btn.textContent = `💾 Save ${n} Recipe${n !== 1 ? 's' : ''}`;
+}
+
+async function saveAllBulk() {
+  const toSave = bulkResults.filter(r => r.status === 'ok' && r.selected);
+  if (!toSave.length) return;
+  const btn = document.getElementById('bulk-save-btn');
+  btn.disabled = true;
+
+  let saved = 0;
+  for (const r of toSave) {
+    try {
+      const d = r.data;
+      const nid = Math.max(0, ...BASE.map(x=>x.id), ...recipes.map(x=>x.id)) + 1 + saved;
+      const nr = {
+        id: nid, name: d.name,
+        category: d.category || 'Lunch/Dinner',
+        protein: d.protein || 'Other',
+        method: d.method || 'Stovetop',
+        source: guessSourceFromUrl(r.url),
+        url: r.url, cost: '',
+        image_url: d.image_url || null,
+      };
+      recipes.push(nr);
+      await api('extra-recipes', 'POST', nr);
+      if (d.ingredients?.length) {
+        await api('recipe-details', 'POST', { recipe_id: nid, ingredients: d.ingredients, steps: d.steps||[], servings: d.servings||4 });
+        details[nid] = { ingredients: d.ingredients, steps: d.steps||[], servings: d.servings||4 };
+      }
+      saved++;
+      btn.textContent = `Saving ${saved} / ${toSave.length}...`;
+    } catch(e) { console.error('Bulk save failed for', r.url, e); }
+  }
+
+  buildSelects();
+  render();
+  closeBulkModal();
+  showToast(`✅ Saved ${saved} recipe${saved !== 1 ? 's' : ''}!`);
+}
+
+
 
 </script>
 
@@ -2847,6 +3015,72 @@ function closeSidebar() {
 }
 
 </script>
+
+
+    <!-- Bulk Recipe Loader Modal -->
+    <div id="bulk-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:400;display:none;align-items:center;justify-content:center;padding:16px">
+      <div style="background:#1a1f2e;border:1px solid #2a2f3e;border-radius:14px;width:100%;max-width:780px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden">
+        <!-- Header -->
+        <div style="padding:20px 24px 16px;border-bottom:1px solid #2a2f3e;display:flex;align-items:center;gap:12px">
+          <div>
+            <h2 style="margin:0;font-size:18px;color:#F5F0E8">📦 Bulk Recipe Loader</h2>
+            <p style="margin:4px 0 0;font-size:12px;color:#556;font-family:monospace">Paste one URL per line — we'll fetch them all at once</p>
+          </div>
+          <button onclick="closeBulkModal()" style="margin-left:auto;background:none;border:none;color:#556;cursor:pointer;font-size:20px;padding:4px">✕</button>
+        </div>
+
+        <!-- URL input -->
+        <div id="bulk-input-phase" style="padding:20px 24px">
+          <textarea id="bulk-urls" placeholder="https://www.kaleynutrition.com/recipe-1&#10;https://www.kaleynutrition.com/recipe-2&#10;https://www.hungryhobbymom.com/recipe-3"
+            style="width:100%;height:140px;background:#12151f;border:1px solid #2a2f3e;border-radius:8px;padding:12px;color:#E8E4DC;font-size:13px;font-family:monospace;resize:vertical;outline:none;line-height:1.6"></textarea>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:12px">
+            <button onclick="startBulkFetch()" class="btn btn-primary" style="font-size:14px;padding:10px 24px">🔍 Fetch All Recipes</button>
+            <span id="bulk-url-count" style="font-size:12px;color:#556;font-family:monospace"></span>
+          </div>
+        </div>
+
+        <!-- Results phase -->
+        <div id="bulk-results-phase" style="display:none;flex:1;overflow:hidden;display:none;flex-direction:column">
+          <div style="padding:12px 24px;border-bottom:1px solid #2a2f3e;display:flex;align-items:center;gap:12px">
+            <span id="bulk-progress" style="font-size:13px;color:#9a9fae;font-family:monospace"></span>
+            <button id="bulk-save-btn" onclick="saveAllBulk()" class="btn btn-primary" style="margin-left:auto;display:none">💾 Save All Successful</button>
+          </div>
+          <div id="bulk-results-list" style="flex:1;overflow-y:auto;padding:12px 24px;display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+      </div>
+    </div>
+
+
+<!-- Bulk Recipe Loader Modal -->
+<div id="bulk-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:500;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto">
+  <div style="background:#1a1f2e;border:1px solid #2a2f3e;border-radius:14px;width:100%;max-width:760px;display:flex;flex-direction:column;overflow:hidden">
+    <div style="padding:20px 24px 16px;border-bottom:1px solid #2a2f3e;display:flex;align-items:baseline;gap:12px">
+      <h2 style="margin:0;font-size:18px;color:#F5F0E8;font-family:Georgia,serif">📦 Bulk Recipe Loader</h2>
+      <span style="font-size:12px;color:#556;font-family:monospace">Paste one URL per line</span>
+      <button onclick="closeBulkModal()" style="margin-left:auto;background:none;border:none;color:#556;cursor:pointer;font-size:22px;line-height:1;padding:0">✕</button>
+    </div>
+
+    <!-- Phase 1: URL input -->
+    <div id="bulk-input-phase" style="padding:20px 24px">
+      <textarea id="bulk-urls"
+        placeholder="https://www.kaleynutrition.com/greek-turkey-meatballs&#10;https://www.hungryhobbymom.com/slow-cooker-sesame-chicken&#10;https://www.sisufitness.com/creamy-taco-soup"
+        style="width:100%;height:150px;background:#12151f;border:1px solid #2a2f3e;border-radius:8px;padding:12px;color:#E8E4DC;font-size:13px;font-family:monospace;resize:vertical;outline:none;line-height:1.7;box-sizing:border-box"></textarea>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
+        <button onclick="startBulkFetch()" class="btn btn-primary" style="padding:10px 24px;font-size:14px">🔍 Fetch All Recipes</button>
+        <span id="bulk-url-count" style="font-size:12px;color:#556;font-family:monospace"></span>
+      </div>
+    </div>
+
+    <!-- Phase 2: Results -->
+    <div id="bulk-results-phase" style="display:none;flex-direction:column">
+      <div style="padding:12px 24px;border-bottom:1px solid #2a2f3e;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span id="bulk-progress" style="font-size:13px;color:#9a9fae;font-family:monospace;flex:1"></span>
+        <button id="bulk-save-btn" onclick="saveAllBulk()" class="btn btn-primary" style="display:none">💾 Save Recipes</button>
+      </div>
+      <div id="bulk-results-list" style="padding:12px 24px;display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow-y:auto"></div>
+    </div>
+  </div>
+</div>
 
 </div><!-- /sidebar-layout -->
 <script src="/sidebar.js"></script>
