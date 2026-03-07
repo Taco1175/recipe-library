@@ -158,16 +158,7 @@
 
 
 </style>
-<script>
-(async () => {
-  try {
-    const cfg = await fetch("/.netlify/functions/config").then(r => r.json());
-    window.__SUPABASE_URL__ = cfg.supabaseUrl;
-    window.__SUPABASE_ANON_KEY__ = cfg.supabaseAnonKey;
-    window.__GOOGLE_CLIENT_ID__ = cfg.googleClientId;
-  } catch(e) {}
-})();
-</script>
+
 <script src="/auth.js"></script>
 </head>
 <body>
@@ -303,7 +294,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const API = "/.netlify/functions";
+const API = "/api";
 async function apiFetch(path, method="GET", body=null) {
   const hdrs = await Auth.headers();
   if (!hdrs) { Auth.signOut(); throw new Error("Not authenticated"); }
@@ -511,7 +502,7 @@ async function init() {
     if (_fl) _fl.textContent = _u.email;
   }
   try {
-    recipes = await apiFetch("extra-recipes");
+    recipes = await apiFetch("recipes");
     // Load cart from localStorage (set by main page)
     try {
       const saved = localStorage.getItem("recipe-cart");
