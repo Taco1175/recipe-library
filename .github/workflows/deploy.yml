@@ -1,0 +1,46 @@
+﻿name: Deploy to Pi
+
+on:
+  push:
+    branches:
+      - modernize
+  workflow_dispatch:
+
+env:
+  DEPLOY_DIR: /home/taco1175/recipe-library/backend
+  PUBLIC_DIR: /home/taco1175/recipe-library/backend/pb_public
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: self-hosted
+    steps:
+      - name: Checkout modernize branch
+        uses: actions/checkout@v4
+        with:
+          ref: modernize
+          clean: true
+
+      - name: Deploy frontend to pb_public
+        run: |
+          mkdir -p ${{ env.PUBLIC_DIR }}
+          rsync -av --delete public/ ${{ env.PUBLIC_DIR }}/
+
+      - name: Deploy backend API
+        run: |
+          mkdir -p ${{ env.DEPLOY_DIR }}/api
+          rsync -av --delete backend/api/ ${{ env.DEPLOY_DIR }}/api/
+          cp backend/server.js ${{ env.DEPLOY_DIR }}/server.js
+          cp backend/package.json ${{ env.DEPLOY_DIR }}/package.json
+
+      - name: Install Node dependencies
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: npm install --omit=dev
+
+      - name: Restart API server
+        run: pm2 restart mealplannr-api
+
+      - name: Health check
+        run: |
+          sleep 3
+          curl -sf http://localhost:3000/ && echo "OK" || (pm2 logs mealplannr-api --lines 20 --nostream && exit 1)
