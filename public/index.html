@@ -779,7 +779,13 @@ async function loadData() {
     archivedRecipes.clear();
     recipes.forEach(r => { if (r.archived) archivedRecipes.add(r.id); });
     if (Array.isArray(detailsRes)) {
-      detailsRes.forEach(d => { details[d.recipe_id] = { ingredients: d.ingredients, steps: d.steps }; });
+      detailsRes.forEach(d => {
+        // PocketBase returns the relation field as "recipe" (not "recipe_id").
+        // Ingredients/steps may be stored as JSON strings — parse if needed.
+        const ingredients = typeof d.ingredients === "string" ? JSON.parse(d.ingredients) : (d.ingredients || []);
+        const steps       = typeof d.steps       === "string" ? JSON.parse(d.steps)       : (d.steps       || []);
+        details[d.recipe] = { ingredients, steps };
+      });
     }
   } catch(e) {
     console.error("Load error", e);
