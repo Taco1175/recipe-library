@@ -22,7 +22,7 @@ module.exports = async function recipesHandler(req, res) {
       { filter: `user="${user.id}"`, sort: "created" },
       token
     );
-    if (!recOk) return send(res, 500, { error: "DB error" });
+    if (!recOk) return send(res, 500, { error: "DB error", detail: recData });
 
     // Fetch library shares where I am the recipient
     const { data: shareData } = await pbList(
