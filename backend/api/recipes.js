@@ -1,7 +1,3 @@
-// backend/api/recipes.js
-// Replaces: netlify/functions/extra-recipes.js
-// Handles GET (list), POST (create/update), DELETE
-
 const {
   pbList, pbCreate, pbUpdate, pbDelete, pbFirst,
   getUserFromRequest, unauthorized, badRequest, serverError, ok, CORS,
@@ -16,27 +12,32 @@ module.exports = async function recipesHandler(req, res) {
 
   // ── GET /api/recipes ──────────────────────────────────────────────────────
   if (req.method === "GET") {
-    // Fetch recipes owned by this user
+    // 1. Fetch user's own recipes
     const { ok: recOk, data: recData } = await pbList(
       "recipes",
-      { sort: "-created" },
+      { 
+        sort: "-created",
+        filter: `user="${user.id}"` 
+      },
       token
     );
-    if (!recOk) return send(res, 500, { error: "DB error", detail: recData });
 
-    // Fetch library shares where I am the recipient
+    if (!recOk) {
+      console.error("PB List Error:", recData);
+      return send(res, 500, { error: "DB error", detail: recData });
+    }
+
+    // 2. Fetch shared recipes
     const { data: shareData } = await pbList(
       "library_shares",
       { filter: `shared_with="${user.id}"` },
       token
     );
+    
     const shares = shareData?.items || [];
-
-    // Collect owner IDs so we can label shared recipes
     const ownerIds = [...new Set(shares.map(s => s.owner))];
-
-    // For each share, fetch that owner's recipes too
     let sharedRecipes = [];
+
     for (const ownerId of ownerIds) {
       const ownerShare = shares.find(s => s.owner === ownerId);
       const { data: owned } = await pbList(
@@ -44,15 +45,18 @@ module.exports = async function recipesHandler(req, res) {
         { filter: `user="${ownerId}"` },
         token
       );
-      const ownerEmail = ownerShare?.owner_email || ownerId;
-      const ownerName  = ownerEmail.split("@")[0];
+      
+      const ownerEmail = ownerShare?.owner_email || "Shared";
+      const ownerName = ownerEmail.split("@")[0];
+      
       (owned?.items || []).forEach(r => {
         sharedRecipes.push({ ...r, _owner_label: ownerName + "'s" });
       });
     }
 
+    // 3. Combine and wrap in an 'items' object for frontend compatibility
     const allRecipes = [...(recData?.items || []), ...sharedRecipes];
-    return send(res, 200, allRecipes);
+    return send(res, 200, { items: allRecipes, totalItems: allRecipes.length });
   }
 
   // ── POST /api/recipes ─────────────────────────────────────────────────────
@@ -60,16 +64,15 @@ module.exports = async function recipesHandler(req, res) {
     const body = req.body || {};
     const { id, ...fields } = body;
 
-    // Partial update (e.g. archived toggle) — has id but no name
+    // Partial update
     if (id && !fields.name) {
       const result = await pbUpdate("recipes", id, fields, token);
       if (!result.ok) return send(res, 500, { error: "Update failed" });
       return send(res, 200, { success: true });
     }
 
-    // Full upsert — if id exists update, otherwise create
+    // Full upsert
     if (id) {
-      // Check if record exists and belongs to user
       const existing = await pbFirst("recipes", `id="${id}" && user="${user.id}"`, token);
       if (existing) {
         const result = await pbUpdate("recipes", id, { ...fields, user: user.id }, token);
@@ -78,7 +81,7 @@ module.exports = async function recipesHandler(req, res) {
       }
     }
 
-    // Create new record
+    // Create new
     const result = await pbCreate("recipes", { ...fields, id: id || undefined, user: user.id }, token);
     if (!result.ok) return send(res, 500, { error: "Create failed", detail: result.data });
     return send(res, 200, result.data);
@@ -89,7 +92,6 @@ module.exports = async function recipesHandler(req, res) {
     const id = new URL(req.url, "http://x").searchParams.get("id");
     if (!id) return send(res, 400, { error: "Missing id" });
 
-    // Verify ownership before delete
     const existing = await pbFirst("recipes", `id="${id}" && user="${user.id}"`, token);
     if (!existing) return send(res, 404, { error: "Not found" });
 
@@ -101,6 +103,9 @@ module.exports = async function recipesHandler(req, res) {
 };
 
 function send(res, status, body) {
-  res.writeHead(status, CORS);
+  res.writeHead(status, { 
+    ...CORS, 
+    "Content-Type": "application/json" 
+  });
   res.end(JSON.stringify(body));
 }
