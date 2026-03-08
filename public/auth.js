@@ -139,9 +139,11 @@ const Auth = (() => {
   // Initiate Google OAuth — stores PKCE verifier & state, then redirects
   async function signInWithGoogle() {
     try {
-      // Step 1: Ask PocketBase for the list of OAuth2 providers to get
-      // the authUrl, codeVerifier, and state for Google
-      const { ok, data } = await _pb("collections/users/auth-methods");
+      // Step 1: Ask PocketBase for the list of OAuth2 providers.
+      // We must pass redirectUrl so PocketBase includes the correct
+      // redirect_uri in the Google authUrl (required by Google OAuth).
+      const redirectUrl = location.origin + "/login.html";
+      const { ok, data } = await _pb(`collections/users/auth-methods?redirectUrl=${encodeURIComponent(redirectUrl)}`);
       if (!ok) throw new Error("Could not load auth methods");
 
       const google = (data.oauth2?.providers || []).find(p => p.name === "google");
