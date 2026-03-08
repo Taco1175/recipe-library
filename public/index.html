@@ -3071,10 +3071,9 @@ showApp();
 })();
 </script>
 <script>
-if ('serviceWorker' in navigator && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(err => console.warn('SW registration failed:', err));
-  });
+// Unregister any lingering service workers (old Supabase-era SW cached API errors)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
 }
 
 // ── Sidebar functions ──
