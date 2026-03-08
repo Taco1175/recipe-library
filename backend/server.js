@@ -145,6 +145,13 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Proxy any unmatched /api/* to PocketBase
+  // This covers /api/collections/*, /api/admins/*, /api/health, etc.
+  // (our custom routes above take priority; everything else passes through)
+  if (pathname.startsWith("/api/")) {
+    return proxyToPocketBase(req, res);
+  }
+
   // Static files
   serveStatic(req, res, pathname);
 });
