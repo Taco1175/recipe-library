@@ -19,7 +19,7 @@ module.exports = async function recipesHandler(req, res) {
     // Fetch recipes owned by this user
     const { ok: recOk, data: recData } = await pbList(
       "recipes",
-      { filter: `user="${user.id}"`, sort: "created" },
+      { sort: "-created" },
       token
     );
     if (!recOk) return send(res, 500, { error: "DB error", detail: recData });
