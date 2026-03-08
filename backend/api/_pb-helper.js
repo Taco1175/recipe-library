@@ -47,19 +47,25 @@ async function getAdminToken() {
 
 // ── Extract & verify user token from incoming HTTP request ─────────────────
 async function getUserFromRequest(req) {
-  // Express/http: check Authorization header
-  const authHeader = req.headers?.authorization || req.headers?.Authorization || "";
+  // Use a case-insensitive check for the Authorization header
+  const authHeader = req.headers['authorization'] || req.headers['Authorization'] || "";
+  
+  // Clean the token (removes Bearer if it's there, handles raw if not)
   const token = authHeader.replace(/^Bearer\s+/i, "").trim();
   if (!token) return null;
 
-  // Verify by calling /api/collections/users/auth-refresh
-  // This returns the current user record if valid, or 401 if not
+  // PocketBase /auth-refresh is the gold standard for verifying the session
   const { ok, data } = await pbFetch("collections/users/auth-refresh", "POST", null, token);
+  
+  // If PB returns 200, the token is valid. We return the fresh token PB gives us.
   if (!ok || !data.record) return null;
 
-  // Return fresh token + record (PocketBase rotates tokens on refresh)
-  return { user: data.record, token: data.token || token };
+  return { 
+    user: data.record, 
+    token: data.token || token 
+  };
 }
+
 
 // ── Collection helpers ─────────────────────────────────────────────────────
 
