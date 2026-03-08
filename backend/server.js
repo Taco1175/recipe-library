@@ -74,8 +74,9 @@ function serveStatic(req, res, pathname) {
     const ext  = path.extname(filePath).toLowerCase();
     const mime = MIME[ext] || "application/octet-stream";
     const headers = { "Content-Type": mime };
-    // Cache static assets aggressively, never cache HTML
-    if (ext === ".html") {
+    // Never cache HTML, JS, or CSS — they change on every deploy.
+    // Images/fonts are stable so cache them long-term.
+    if (ext === ".html" || ext === ".js" || ext === ".css") {
       headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
     } else {
       headers["Cache-Control"] = "public, max-age=31536000, immutable";
