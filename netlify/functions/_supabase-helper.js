@@ -19,7 +19,8 @@ async function supabaseRequest(path, method, body, token) {
     Authorization: `Bearer ${token}`,
     "Content-Type": "application/json",
   };
-  if (method === "POST" || method === "PATCH") headers.Prefer = "return=representation";
+  if (method === "POST") headers.Prefer = "return=representation,resolution=merge-duplicates";
+  if (method === "PATCH") headers.Prefer = "return=representation";
 
   const res = await fetch(`${SUPABASE_URL}/rest/v1${path}`, {
     method,

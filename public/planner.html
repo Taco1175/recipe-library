@@ -158,30 +158,10 @@
 
 
 </style>
-<script>
-(async () => {
-  try {
-    const cfg = await fetch("/.netlify/functions/config").then(r => r.json());
-    window.__SUPABASE_URL__ = cfg.supabaseUrl;
-    window.__SUPABASE_ANON_KEY__ = cfg.supabaseAnonKey;
-    window.__GOOGLE_CLIENT_ID__ = cfg.googleClientId;
-  } catch(e) {}
-})();
-</script>
+
 <script src="/auth.js"></script>
 </head>
 <body>
-<!-- AUTH GUARD -->
-<script>
-// Auth guard — redirect to login if no valid session
-(function() {
-  const token = localStorage.getItem("sb-access-token");
-  const expiry = parseInt(localStorage.getItem("sb-token-expiry") || "0");
-  if (!token || Date.now() > expiry) {
-    location.href = "/login.html?next=" + encodeURIComponent(location.pathname);
-  }
-})();
-</script>
 
   <nav class="sidebar" id="sidebar">
     <div class="sidebar-logo">
@@ -303,7 +283,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const API = "/.netlify/functions";
+const API = "/api";
 async function apiFetch(path, method="GET", body=null) {
   const hdrs = await Auth.headers();
   if (!hdrs) { Auth.signOut(); throw new Error("Not authenticated"); }
@@ -511,7 +491,7 @@ async function init() {
     if (_fl) _fl.textContent = _u.email;
   }
   try {
-    recipes = await apiFetch("extra-recipes");
+    recipes = await apiFetch("recipes");
     // Load cart from localStorage (set by main page)
     try {
       const saved = localStorage.getItem("recipe-cart");
@@ -1011,10 +991,8 @@ function onDayDrop(e) {
 init();
 </script>
 <script>
-if ("serviceWorker" in navigator && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(err => console.warn("SW failed:", err));
-  });
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
 }
 </script>
 

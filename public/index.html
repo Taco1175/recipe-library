@@ -312,30 +312,7 @@ input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--accent); c
 </head>
 <body>
 <!-- AUTH GUARD -->
-<script>
-// Auth guard — redirect to login if no valid session
-(function() {
-  const token = localStorage.getItem("sb-access-token");
-  const expiry = parseInt(localStorage.getItem("sb-token-expiry") || "0");
-  if (!token || Date.now() > expiry) {
-    location.href = "/login.html?next=" + encodeURIComponent(location.pathname);
-  }
-})();
-</script>
-
 <!-- APP -->
-<script>
-// Bootstrap: load config FIRST, then init app
-(async () => {
-  try {
-    const cfg = await fetch("/.netlify/functions/config").then(r => r.json());
-    window.__SUPABASE_URL__ = cfg.supabaseUrl;
-    window.__SUPABASE_ANON_KEY__ = cfg.supabaseAnonKey;
-    window.__GOOGLE_CLIENT_ID__ = cfg.googleClientId;
-  } catch(e) { console.error("Config load failed", e); }
-  await showApp();
-})();
-</script>
 <div id="app">
   <!-- SIDEBAR -->
   <nav class="sidebar" id="sidebar">
@@ -730,11 +707,15 @@ let pendingDetails = null;
 async function api(path, method="GET", body=null) {
   const hdrs = await Auth.headers();
   if (!hdrs) { Auth.signOut(); throw new Error("Not authenticated"); }
-  const r = await fetch(`/.netlify/functions/${path}`, {
+  const r = await fetch(`/api/${path}`, {
     method,
     headers: hdrs,
     body: body ? JSON.stringify(body) : undefined
   });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err.error || `HTTP ${r.status}`);
+  }
   return r.json();
 }
 
@@ -789,18 +770,49 @@ async function showApp() {
 
 async function loadData() {
   try {
+    // 1. Use the Auth.headers() from your auth.js
+    const hdrs = await Auth.headers();
+    if (!hdrs) throw new Error("Not authenticated");
+
     const [recipesRes, detailsRes] = await Promise.all([
-      api("extra-recipes"),  // now points to full recipes table
+      api("recipes"),
       api("recipe-details")
     ]);
-    // Always replace with DB data, even if empty
-    recipes = Array.isArray(recipesRes) ? recipesRes : [];
+
+    // 2. REFIX: PocketBase returns an object with an 'items' array.
+    // Your previous code was likely failing here because it expected an array directly.
+    recipes = recipesRes.items ? recipesRes.items : (Array.isArray(recipesRes) ? recipesRes : []);
+    
+    // Sync archived status
     archivedRecipes.clear();
     recipes.forEach(r => { if (r.archived) archivedRecipes.add(r.id); });
-    if (Array.isArray(detailsRes)) {
-      detailsRes.forEach(d => { details[d.recipe_id] = { ingredients: d.ingredients, steps: d.steps }; });
-    }
-  } catch(e) { console.error("Load error", e); }
+
+    // 3. Process the details list
+    const detailsArray = detailsRes.items ? detailsRes.items : (Array.isArray(detailsRes) ? detailsRes : []);
+    
+    details = {};
+    detailsArray.forEach(d => {
+      // PocketBase relations usually come back as 'recipe' or 'recipe_id'
+      const rId = d.recipe || d.recipe_id;
+      if (rId) {
+        details[rId] = {
+          // Parse JSON if the backend hasn't already
+          ingredients: typeof d.ingredients === "string" ? JSON.parse(d.ingredients) : (d.ingredients || []),
+          steps: typeof d.steps === "string" ? JSON.parse(d.steps) : (d.steps || []),
+          servings: d.servings || 4
+        };
+      }
+    });
+
+    console.log(`Successfully synced ${recipes.length} recipes.`);
+  } catch(e) {
+    console.error("Load error:", e);
+    document.getElementById("rows").innerHTML = `
+      <div style="padding:40px;text-align:center;color:var(--red);font-family:var(--mono);font-size:13px">
+        Failed to load recipes: ${e.message}<br>
+        <button onclick="location.reload()" style="margin-top:12px;padding:7px 16px;background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:6px;cursor:pointer">Retry</button>
+      </div>`;
+  }
 }
 
 // ── Render ──
@@ -963,14 +975,14 @@ async function backfillImages() {
   for (const r of toFetch) {
     try {
       const hdrs = await Auth.headers();
-      const res = await fetch("/.netlify/functions/fetch-recipe", {
+      const res = await fetch("/api/fetch-recipe", {
         method: "POST",
         headers: { ...hdrs, "Content-Type": "application/json" },
         body: JSON.stringify({ url: r.url }),
       });
       const data = await res.json();
       if (data.image_url) {
-        await api("extra-recipes", "POST", { id: r.id, image_url: data.image_url });
+        await api("recipes", "POST", { id: r.id, image_url: data.image_url });
         r.image_url = data.image_url;
       }
     } catch(e) {}
@@ -1084,13 +1096,13 @@ function archiveRecipe(id) {
   if (!confirm(`Archive "${recipes.find(r=>r.id===id)?.name}"?\nIt will be hidden but you can restore it anytime.`)) return;
   checked.delete(id);
   archivedRecipes.add(id);
-  api("extra-recipes", "POST", { id, archived: true }).catch(() => {});
+  api("recipes", "POST", { id, archived: true }).catch(() => {});
   render();
 }
 
 function unarchiveRecipe(id) {
   archivedRecipes.delete(id);
-  api("extra-recipes", "POST", { id, archived: false }).catch(() => {});
+  api("recipes", "POST", { id, archived: false }).catch(() => {});
   render();
 }
 
@@ -1350,7 +1362,7 @@ async function autoFetchRecipe(url) {
   try {
     // Use our Netlify function — handles JustTheRecipe + fallback parsers server-side
     const hdrs = await Auth.headers();
-    const res = await fetch("/.netlify/functions/fetch-recipe", {
+    const res = await fetch("/api/fetch-recipe", {
       method: "POST",
       headers: { ...hdrs, "Content-Type": "application/json" },
       body: JSON.stringify({ url: fetchUrl }),
@@ -1358,7 +1370,7 @@ async function autoFetchRecipe(url) {
     const data = await res.json();
 
     if (!res.ok || data.error) {
-      addMsg("Could not load page. Try copying ingredients manually.", "error");
+      addMsg(data.error || "Could not load page. Try copying ingredients manually.", "error");
       return;
     }
 
@@ -1389,7 +1401,7 @@ async function saveNew() {
   const nid = Math.max(...BASE.map(r=>r.id), ...recipes.map(r=>r.id)) + 1;
   const nr = { id:nid, name, category:document.getElementById("new-cat").value, protein:document.getElementById("new-protein").value||"Other", method:document.getElementById("new-method").value||"Stovetop", source:document.getElementById("new-source").value||"Unknown", url, cost:document.getElementById("new-cost").value||"TBD", image_url: pendingDetails?.image_url || null };
   recipes.push(nr);
-  await api("extra-recipes","POST",nr);
+  await api("recipes","POST",nr);
   const servings = parseInt(document.getElementById("new-servings").value) || 4;
   nr.servings = servings;
   if (pendingDetails) {
@@ -2535,7 +2547,7 @@ async function saveEdit() {
 
   try {
     // Save recipe metadata
-    await api("extra-recipes", "POST", updatedRecipe);
+    await api("recipes", "POST", updatedRecipe);
 
     // Save details
     await api("recipe-details", "POST", {
@@ -2625,7 +2637,7 @@ async function startBulkFetch() {
       updateBulkRow(idx);
       try {
         const hdrs = await Auth.headers();
-        const res = await fetch('/.netlify/functions/fetch-recipe', {
+        const res = await fetch('/api/fetch-recipe', {
           method: 'POST',
           headers: { ...hdrs, 'Content-Type': 'application/json' },
           body: JSON.stringify({ url }),
@@ -2720,7 +2732,7 @@ async function saveAllBulk() {
         image_url: d.image_url || null,
       };
       recipes.push(nr);
-      await api('extra-recipes', 'POST', nr);
+      await api('recipes', 'POST', nr);
       if (d.ingredients?.length) {
         await api('recipe-details', 'POST', { recipe_id: nid, ingredients: d.ingredients, steps: d.steps||[], servings: d.servings||4 });
         details[nid] = { ingredients: d.ingredients, steps: d.steps||[], servings: d.servings||4 };
@@ -2800,8 +2812,7 @@ function toggleEditStepMode() {
 // Reset paste mode when modal opens
 const _origOpenEditModal = openEditModal;
 
-
-
+showApp();
 </script>
 
 <!-- Share Modal -->
@@ -3079,10 +3090,9 @@ const _origOpenEditModal = openEditModal;
 })();
 </script>
 <script>
-if ('serviceWorker' in navigator && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(err => console.warn('SW registration failed:', err));
-  });
+// Unregister any lingering service workers (old Supabase-era SW cached API errors)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
 }
 
 // ── Sidebar functions ──
