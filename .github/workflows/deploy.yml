@@ -3,7 +3,7 @@
 on:
   push:
     branches:
-      - modernize
+      - main
   workflow_dispatch:
 
 env:
@@ -15,10 +15,10 @@ jobs:
     name: Build & Deploy
     runs-on: self-hosted
     steps:
-      - name: Checkout modernize branch
+      - name: Checkout main branch
         uses: actions/checkout@v4
         with:
-          ref: modernize
+          ref: main
           clean: true
 
       - name: Deploy frontend to pb_public
