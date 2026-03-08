@@ -64,8 +64,11 @@ async function getUserFromRequest(req) {
 // ── Collection helpers ─────────────────────────────────────────────────────
 
 // GET list from a collection, with optional filter
-async function pbList(collection, { filter = "", sort = "", fields = "*", perPage = 500, page = 1 } = {}, token) {
-  const qs = new URLSearchParams({ filter, sort, fields, perPage, page }).toString();
+async function pbList(collection, { filter = "", sort = "", perPage = 500, page = 1 } = {}, token) {
+  const params = { perPage, page };
+  if (filter) params.filter = filter;
+  if (sort)   params.sort   = sort;
+  const qs = new URLSearchParams(params).toString();
   return pbFetch(`collections/${collection}/records?${qs}`, "GET", null, token);
 }
 
