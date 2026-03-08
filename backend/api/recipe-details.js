@@ -18,9 +18,8 @@ module.exports = async function recipeDetailsHandler(req, res) {
   // ── GET /api/recipe-details?id=xxx ────────────────────────────────────────
   if (req.method === "GET") {
     const id = urlParams.get("id");
-    const filter = id
-      ? `recipe="${id}" && user="${user.id}"`
-      : `user="${user.id}"`;
+    // Collection rule enforces user = @request.auth.id — don't duplicate in filter
+    const filter = id ? `recipe="${id}"` : "";
 
     const { ok, data } = await pbList("recipe_details", { filter }, token);
     if (!ok) return send(res, 500, { error: "DB error" });
@@ -34,10 +33,10 @@ module.exports = async function recipeDetailsHandler(req, res) {
       return send(res, 400, { error: "Missing fields: recipe_id, ingredients, steps" });
     }
 
-    // Check if record already exists for this recipe + user
+    // Check if record already exists for this recipe
     const existing = await pbFirst(
       "recipe_details",
-      `recipe="${recipe_id}" && user="${user.id}"`,
+      `recipe="${recipe_id}"`,
       token
     );
 
@@ -67,7 +66,7 @@ module.exports = async function recipeDetailsHandler(req, res) {
 
     const existing = await pbFirst(
       "recipe_details",
-      `recipe="${id}" && user="${user.id}"`,
+      `recipe="${id}"`,
       token
     );
     if (!existing) return send(res, 404, { error: "Not found" });

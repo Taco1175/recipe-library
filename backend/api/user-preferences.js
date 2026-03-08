@@ -12,7 +12,7 @@ module.exports = async function userPreferencesHandler(req, res) {
 
   // GET — return saved theme
   if (req.method === "GET") {
-    const pref = await pbFirst("user_preferences", `user="${user.id}"`, token);
+    const pref = await pbFirst("user_preferences", "", token);
     return send(res, 200, { theme: pref?.theme || "dark" });
   }
 
@@ -23,7 +23,7 @@ module.exports = async function userPreferencesHandler(req, res) {
       return send(res, 400, { error: "Invalid theme" });
     }
 
-    const existing = await pbFirst("user_preferences", `user="${user.id}"`, token);
+    const existing = await pbFirst("user_preferences", "", token);
     if (existing) {
       await pbUpdate("user_preferences", existing.id, { theme }, token);
     } else {
