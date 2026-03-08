@@ -154,8 +154,11 @@ const Auth = (() => {
       sessionStorage.setItem("pb_oauth_verifier",  google.codeVerifier);
       sessionStorage.setItem("pb_oauth_state",     google.state);
 
-      // Redirect to Google via PocketBase's authUrl
-      location.href = google.authUrl;
+      // Force-set redirect_uri in the authUrl. PocketBase may omit it when
+      // its Application URL isn't configured, causing Google's Error 400.
+      const authUrlObj = new URL(google.authUrl);
+      authUrlObj.searchParams.set("redirect_uri", redirectUrl);
+      location.href = authUrlObj.toString();
     } catch (e) {
       console.error("Google sign-in error:", e);
       throw e;
