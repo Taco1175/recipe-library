@@ -89,16 +89,35 @@ function serveStatic(req, res, pathname) {
 // ── PocketBase transparent proxy (for /api/collections/*, /api/admins/*, etc.) ──
 // We expose PocketBase's own API at /pb-api/* to avoid conflicting with our /api/*
 function proxyToPocketBase(req, res) {
+  // Add perPage=500 to ensure PocketBase doesn't truncate your list to the default 30
   const pbUrl = new URL(req.url.replace("/pb-api/", "/api/"), PB_INTERNAL);
+  if (req.method === "GET" && !pbUrl.searchParams.has("perPage")) {
+      pbUrl.searchParams.set("perPage", "500");
+  }
+
   const client = pbUrl.protocol === "https:" ? https : http;
   const proxyReq = client.request(
-    { hostname: pbUrl.hostname, port: pbUrl.port, path: pbUrl.pathname + pbUrl.search, method: req.method, headers: req.headers },
+    { 
+      hostname: pbUrl.hostname, 
+      port: pbUrl.port, 
+      path: pbUrl.pathname + pbUrl.search, 
+      method: req.method, 
+      // Ensure we forward the Authorization header from auth.js
+      headers: {
+          ...req.headers,
+          "host": pbUrl.host // Cloudflare/Proxy requirement
+      }
+    },
     proxyRes => {
       res.writeHead(proxyRes.statusCode, proxyRes.headers);
       proxyRes.pipe(res);
     }
   );
-  proxyReq.on("error", () => { res.writeHead(502); res.end("Bad Gateway"); });
+  proxyReq.on("error", (e) => { 
+      console.error("PB Proxy Error:", e.message);
+      res.writeHead(502); 
+      res.end("Bad Gateway"); 
+  });
   req.pipe(proxyReq);
 }
 
