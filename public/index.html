@@ -312,21 +312,7 @@ input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--accent); c
 </head>
 <body>
 <!-- AUTH GUARD -->
-<script>
-// Auth guard — redirect to login if no valid session
-(function() {
-  const token = localStorage.getItem("sb-access-token");
-  const expiry = parseInt(localStorage.getItem("sb-token-expiry") || "0");
-  if (!token || Date.now() > expiry) {
-    location.href = "/login.html?next=" + encodeURIComponent(location.pathname);
-  }
-})();
-</script>
-
 <!-- APP -->
-<script>
-showApp();
-</script>
 <div id="app">
   <!-- SIDEBAR -->
   <nav class="sidebar" id="sidebar">
@@ -726,6 +712,10 @@ async function api(path, method="GET", body=null) {
     headers: hdrs,
     body: body ? JSON.stringify(body) : undefined
   });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err.error || `HTTP ${r.status}`);
+  }
   return r.json();
 }
 
@@ -791,7 +781,13 @@ async function loadData() {
     if (Array.isArray(detailsRes)) {
       detailsRes.forEach(d => { details[d.recipe_id] = { ingredients: d.ingredients, steps: d.steps }; });
     }
-  } catch(e) { console.error("Load error", e); }
+  } catch(e) {
+    console.error("Load error", e);
+    document.getElementById("rows").innerHTML = `<div style="padding:40px;text-align:center;color:var(--red);font-family:var(--mono);font-size:13px">
+      Failed to load recipes: ${e.message}<br>
+      <button onclick="loadData().then(()=>{buildSelects();render()})" style="margin-top:12px;padding:7px 16px;background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:6px;cursor:pointer;font-family:var(--mono)">Retry</button>
+    </div>`;
+  }
 }
 
 // ── Render ──
@@ -2791,8 +2787,7 @@ function toggleEditStepMode() {
 // Reset paste mode when modal opens
 const _origOpenEditModal = openEditModal;
 
-
-
+showApp();
 </script>
 
 <!-- Share Modal -->
