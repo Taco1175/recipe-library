@@ -770,29 +770,48 @@ async function showApp() {
 
 async function loadData() {
   try {
+    // 1. Use the Auth.headers() from your auth.js
+    const hdrs = await Auth.headers();
+    if (!hdrs) throw new Error("Not authenticated");
+
     const [recipesRes, detailsRes] = await Promise.all([
-      api("recipes"),  // now points to full recipes table
+      api("recipes"),
       api("recipe-details")
     ]);
-    // Always replace with DB data, even if empty
-    recipes = Array.isArray(recipesRes) ? recipesRes : [];
+
+    // 2. REFIX: PocketBase returns an object with an 'items' array.
+    // Your previous code was likely failing here because it expected an array directly.
+    recipes = recipesRes.items ? recipesRes.items : (Array.isArray(recipesRes) ? recipesRes : []);
+    
+    // Sync archived status
     archivedRecipes.clear();
     recipes.forEach(r => { if (r.archived) archivedRecipes.add(r.id); });
-    if (Array.isArray(detailsRes)) {
-      detailsRes.forEach(d => {
-        // PocketBase returns the relation field as "recipe" (not "recipe_id").
-        // Ingredients/steps may be stored as JSON strings — parse if needed.
-        const ingredients = typeof d.ingredients === "string" ? JSON.parse(d.ingredients) : (d.ingredients || []);
-        const steps       = typeof d.steps       === "string" ? JSON.parse(d.steps)       : (d.steps       || []);
-        details[d.recipe] = { ingredients, steps };
-      });
-    }
+
+    // 3. Process the details list
+    const detailsArray = detailsRes.items ? detailsRes.items : (Array.isArray(detailsRes) ? detailsRes : []);
+    
+    details = {};
+    detailsArray.forEach(d => {
+      // PocketBase relations usually come back as 'recipe' or 'recipe_id'
+      const rId = d.recipe || d.recipe_id;
+      if (rId) {
+        details[rId] = {
+          // Parse JSON if the backend hasn't already
+          ingredients: typeof d.ingredients === "string" ? JSON.parse(d.ingredients) : (d.ingredients || []),
+          steps: typeof d.steps === "string" ? JSON.parse(d.steps) : (d.steps || []),
+          servings: d.servings || 4
+        };
+      }
+    });
+
+    console.log(`Successfully synced ${recipes.length} recipes.`);
   } catch(e) {
-    console.error("Load error", e);
-    document.getElementById("rows").innerHTML = `<div style="padding:40px;text-align:center;color:var(--red);font-family:var(--mono);font-size:13px">
-      Failed to load recipes: ${e.message}<br>
-      <button onclick="loadData().then(()=>{buildSelects();render()})" style="margin-top:12px;padding:7px 16px;background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:6px;cursor:pointer;font-family:var(--mono)">Retry</button>
-    </div>`;
+    console.error("Load error:", e);
+    document.getElementById("rows").innerHTML = `
+      <div style="padding:40px;text-align:center;color:var(--red);font-family:var(--mono);font-size:13px">
+        Failed to load recipes: ${e.message}<br>
+        <button onclick="location.reload()" style="margin-top:12px;padding:7px 16px;background:transparent;border:1px solid var(--border2);color:var(--text2);border-radius:6px;cursor:pointer">Retry</button>
+      </div>`;
   }
 }
 
