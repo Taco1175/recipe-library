@@ -1,84 +1,59 @@
 // backend/api/recipe-details.js
-// Replaces: netlify/functions/recipe-details.js
-
-const {
-  pbList, pbCreate, pbUpdate, pbDelete, pbFirst,
-  getUserFromRequest, CORS,
-} = require("./_pb-helper");
+const { pbList, pbCreate, pbUpdate, pbFirst, getUserFromRequest, send } = require("./_pb-helper");
 
 module.exports = async function recipeDetailsHandler(req, res) {
+  // Handle CORS preflight
   if (req.method === "OPTIONS") return send(res, 200, {});
 
   const auth = await getUserFromRequest(req);
   if (!auth) return send(res, 401, { error: "Unauthorized" });
   const { user, token } = auth;
 
-  const urlParams = new URL(req.url, "http://x").searchParams;
-
-  // ── GET /api/recipe-details?id=xxx ────────────────────────────────────────
+  // ── GET /api/recipe-details ────────────────────────────────────────────────
+  // Returns all recipe details accessible to the user
   if (req.method === "GET") {
-    const id = urlParams.get("id");
-    // Collection rule enforces user = @request.auth.id — don't duplicate in filter
-    const filter = id ? `recipe="${id}"` : "";
-
-    const { ok, data } = await pbList("recipe_details", { filter }, token);
-    if (!ok) return send(res, 500, { error: "DB error" });
-    return send(res, 200, data?.items || []);
-  }
-
-  // ── POST /api/recipe-details (upsert) ─────────────────────────────────────
-  if (req.method === "POST") {
-    const { recipe_id, ingredients, steps, servings } = req.body || {};
-    if (!recipe_id || !ingredients || !steps) {
-      return send(res, 400, { error: "Missing fields: recipe_id, ingredients, steps" });
+    const { ok: detOk, data: detData } = await pbList("recipe_details", { perPage: 500 }, token);
+    
+    if (!detOk) {
+      console.error("Details Fetch Error:", detData);
+      return send(res, 500, { error: "Failed to fetch details", detail: detData });
     }
 
-    // Check if record already exists for this recipe
-    const existing = await pbFirst(
-      "recipe_details",
-      `recipe="${recipe_id}"`,
-      token
-    );
+    // Return the items array so index.html can map them to the details object
+    return send(res, 200, { items: detData.items || [] });
+  }
+
+  // ── POST /api/recipe-details ───────────────────────────────────────────────
+  // Upsert (Create or Update) recipe details
+  if (req.method === "POST") {
+    const body = req.body || {};
+    const { recipe_id, ingredients, steps, servings } = body;
+
+    if (!recipe_id) return send(res, 400, { error: "Missing recipe_id" });
+
+    // 1. Check if details already exist for this recipe
+    // Note: In your PB schema, ensure the relation field is named 'recipe'
+    const existing = await pbFirst("recipe_details", `recipe="${recipe_id}"`, token);
 
     const payload = {
-      recipe:      recipe_id,
-      user:        user.id,
-      ingredients: JSON.stringify(ingredients), // PocketBase stores as JSON field
-      steps:       JSON.stringify(steps),
-      servings:    servings || 4,
+      recipe: recipe_id,
+      ingredients: Array.isArray(ingredients) ? ingredients : [],
+      steps: Array.isArray(steps) ? steps : [],
+      servings: servings || 4
     };
 
-    let result;
     if (existing) {
-      result = await pbUpdate("recipe_details", existing.id, payload, token);
+      // 2. Update existing record
+      const result = await pbUpdate("recipe_details", existing.id, payload, token);
+      if (!result.ok) return send(res, 500, { error: "Update failed", detail: result.data });
+      return send(res, 200, result.data);
     } else {
-      result = await pbCreate("recipe_details", payload, token);
+      // 3. Create new record
+      const result = await pbCreate("recipe_details", payload, token);
+      if (!result.ok) return send(res, 500, { error: "Create failed", detail: result.data });
+      return send(res, 200, result.data);
     }
-
-    if (!result.ok) return send(res, 500, { error: "Save failed", detail: result.data });
-    return send(res, 200, { success: true });
-  }
-
-  // ── DELETE /api/recipe-details?id=xxx ─────────────────────────────────────
-  if (req.method === "DELETE") {
-    const id = urlParams.get("id");
-    if (!id) return send(res, 400, { error: "Missing id" });
-
-    const existing = await pbFirst(
-      "recipe_details",
-      `recipe="${id}"`,
-      token
-    );
-    if (!existing) return send(res, 404, { error: "Not found" });
-
-    await pbDelete("recipe_details", existing.id, token);
-    return send(res, 200, { success: true });
   }
 
   return send(res, 405, { error: "Method Not Allowed" });
 };
-
-function send(res, status, body) {
-  res.writeHead(status, CORS);
-  res.end(JSON.stringify(body));
-}
