@@ -37,6 +37,7 @@ module.exports = async function recipeDetailsHandler(req, res) {
 
     const payload = {
       recipe: recipe_id,
+      user: user.id,
       ingredients: Array.isArray(ingredients) ? ingredients : [],
       steps: Array.isArray(steps) ? steps : [],
       servings: servings || 4
