@@ -892,7 +892,7 @@ function renderGrid(list) {
       : `<div class="card-img-placeholder">${icon}</div>`;
 
     return `<div class="recipe-card${hd?"":" no-details"}" onclick="cardClick(event,'${r.id}')">
-      <input type="checkbox" class="card-check" ${isChecked?"checked":""} onclick="chk(event,'${r.id}')">`
+      <input type="checkbox" class="card-check" ${isChecked?"checked":""} onclick="chk(event,'${r.id}')">
       ${imgHtml}
       <div class="card-body">
         <div class="card-name${hd?"":" dim"}">${esc(r.name)}</div>
