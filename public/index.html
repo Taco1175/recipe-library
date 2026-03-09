@@ -3267,20 +3267,43 @@ function parseOcrText(text) {
   const result = { name: "", ingredients: [], steps: [], servings: null };
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 
+  // Lines that are clearly ad/spam content — skip entirely
+  function isSpam(line) {
+    if (/[©™®]/.test(line)) return true;                          // trademark/copyright
+    if (/https?:\/\/|www\.|\.com\/|\.net\//i.test(line)) return true; // URLs
+    if (/\b(save up to|% off|\bbundle\b|earn up to|bonus|card members?|terms apply|get a quote|visa|mastercard|amex|disney|netflix|subscribe|newsletter|insurance|auto when|home and)\b/i.test(line)) return true;
+    // Mostly symbols/numbers with very few letters
+    const letters = (line.match(/[a-zA-Z]/g) || []).length;
+    if (letters < 3 && line.length > 4) return true;
+    // Garbage: starts with ~ > or has >=40% non-word non-space chars
+    if (/^[~>\*\^]/.test(line)) return true;
+    const noise = (line.match(/[^a-zA-Z0-9\s,.()\-\/½¼¾⅓⅔⅛°'"]/g) || []).length;
+    if (noise / line.length > 0.35) return true;
+    return false;
+  }
+
   let section = null;
   for (const line of lines) {
+    if (isSpam(line)) continue;
+
     if (/^ingredients?[\s:]*$/i.test(line))       { section = "ing"; continue; }
     if (/^(instructions?|directions?|method|steps?|how to( make)?|preparation)[\s:]*/i.test(line)) { section = "steps"; continue; }
-    if (/^(notes?|nutrition|tips?|serving|storage|make ahead)[\s:]*/i.test(line)) { section = null; continue; }
+    if (/^(notes?|nutrition|tips?|serving|storage|make ahead|faq)[\s:]*/i.test(line)) { section = null; continue; }
 
-    if (!result.name && section === null && line.length > 4 && line.length < 80
-        && !/\d/.test(line.slice(0, 3))) {
-      result.name = line;
-      continue;
+    // Name: first plausible recipe-title line before any section header
+    if (!result.name && section === null) {
+      const looksLikeName = line.length > 4 && line.length < 80
+        && !/^\d/.test(line)                          // doesn't start with number
+        && !/\d{3,}/.test(line)                       // no long number runs (phone#, URL)
+        && (line.match(/[a-zA-Z]/g)||[]).length > line.length * 0.6; // mostly letters
+      if (looksLikeName) { result.name = line; continue; }
     }
 
     if (section === "ing") {
-      const clean = line.replace(/^[•\-*·▪▸→]\s*/, "").trim();
+      // Strip bullet chars — OCR often reads • as ¢ or e or c
+      const clean = line.replace(/^[•\-*·▪▸→¢¢©]\s*/, "")
+                        .replace(/^[a-z¢]\s+(?=\d)/, "") // lone letter/symbol before amount
+                        .trim();
       if (clean.length > 2 && clean.length < 120) result.ingredients.push(clean);
     } else if (section === "steps") {
       const clean = line.replace(/^\d+[.):\s]+/, "").trim();
