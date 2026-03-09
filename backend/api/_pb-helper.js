@@ -114,6 +114,11 @@ async function findUserByEmail(email) {
   } catch (e) { return null; }
 }
 
+function send(res, status, body) {
+  res.writeHead(status, { ...CORS, "Content-Type": "application/json" });
+  res.end(JSON.stringify(body));
+}
+
 function unauthorized(msg = "Unauthorized") {
   return { statusCode: 401, headers: CORS, body: JSON.stringify({ error: msg }) };
 }
@@ -136,5 +141,5 @@ function ok(body) {
 module.exports = {
   pbFetch, pbList, pbGet, pbCreate, pbUpdate, pbDelete, pbFirst,
   getAdminToken, getUserFromRequest, findUserByEmail,
-  unauthorized, badRequest, serverError, ok, CORS,
+  send, unauthorized, badRequest, serverError, ok, CORS,
 };
