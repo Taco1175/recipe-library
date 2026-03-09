@@ -1390,7 +1390,7 @@ async function autoFetchRecipe(url) {
       return;
     }
 
-    if (data.name) document.getElementById("new-name").value = data.name;
+    if (data.name) document.getElementById("new-name").value = data.name.replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">");
     if (data.servings) document.getElementById("new-servings").value = data.servings;
 
     if (data.ingredients?.length) {
