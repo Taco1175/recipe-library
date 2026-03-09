@@ -485,7 +485,7 @@ input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--accent); c
         </div>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-        <button class="btn btn-primary" onclick="saveNew()">Save Recipe</button>
+        <button class="btn btn-primary" id="save-new-btn" onclick="saveNew()">Save Recipe</button>
         <button class="btn btn-outline" onclick="toggleAdd()">Cancel</button>
       </div>
     </div>
@@ -727,7 +727,8 @@ async function api(path, method="GET", body=null) {
   });
   if (!r.ok) {
     const err = await r.json().catch(() => ({}));
-    throw new Error(err.error || `HTTP ${r.status}`);
+    const detail = err.detail ? (" — " + JSON.stringify(err.detail).slice(0, 200)) : "";
+    throw new Error((err.error || `HTTP ${r.status}`) + detail);
   }
   return r.json();
 }
@@ -1376,7 +1377,7 @@ async function autoFetchRecipe(url) {
   if (!srcField.value) srcField.value = guessSourceFromUrl(url);
 
   try {
-    // Use our Netlify function — handles JustTheRecipe + fallback parsers server-side
+    // Use our API — handles JustTheRecipe + fallback parsers server-side
     const hdrs = await Auth.headers();
     const res = await fetch("/api/fetch-recipe", {
       method: "POST",
@@ -1394,7 +1395,7 @@ async function autoFetchRecipe(url) {
     if (data.servings) document.getElementById("new-servings").value = data.servings;
 
     if (data.ingredients?.length) {
-      pendingDetails = { ingredients: data.ingredients, steps: data.steps || [], servings: data.servings || 4 };
+      pendingDetails = { ingredients: data.ingredients, steps: data.steps || [], servings: data.servings || 4, image_url: data.image_url || null };
       addMsg(`Found ${data.ingredients.length} ingredients, ${data.steps.length} steps. Review below then save.`, "success");
       const prev = document.getElementById("fetch-preview");
       const ingList = document.getElementById("preview-ingredients");
@@ -1414,19 +1415,30 @@ async function saveNew() {
   const name = document.getElementById("new-name").value.trim();
   const url = document.getElementById("new-url").value.trim();
   if (!name) return addMsg("Please enter a recipe name.", "error");
+  const saveBtn = document.getElementById("save-new-btn");
+  saveBtn.disabled = true;
   addMsg("Saving...", "loading");
   const payload = { name, category:document.getElementById("new-cat").value, protein:document.getElementById("new-protein").value||"Other", method:document.getElementById("new-method").value||"Stovetop", source:document.getElementById("new-source").value||"Unknown", url, cost:document.getElementById("new-cost").value||"TBD", image_url: pendingDetails?.image_url || null };
-  const saved = await api("recipes","POST", payload);
+  let saved;
+  try { saved = await api("recipes","POST", payload); }
+  catch(e) { addMsg("Save failed: " + e.message, "error"); saveBtn.disabled = false; return; }
   const nid = saved.id;
   const nr = { ...payload, id: nid };
   recipes.push(nr);
   const servings = parseInt(document.getElementById("new-servings").value) || 4;
   nr.servings = servings;
+  let detailsErr = null;
   if (pendingDetails) {
-    await api("recipe-details","POST",{ recipe_id:nid, ingredients:pendingDetails.ingredients, steps:pendingDetails.steps, servings: pendingDetails.servings || servings });
-    details[nid] = { ...pendingDetails, servings: pendingDetails.servings || servings };
+    try {
+      await api("recipe-details","POST",{ recipe_id:nid, ingredients:pendingDetails.ingredients, steps:pendingDetails.steps, servings: pendingDetails.servings || servings });
+      details[nid] = { ...pendingDetails, servings: pendingDetails.servings || servings };
+    } catch(e) {
+      console.error("Details save failed:", e.message);
+      detailsErr = e.message;
+    }
     pendingDetails = null;
   }
+  saveBtn.disabled = false;
   buildSelects();
   ["new-url","new-name","new-protein","new-method","new-source","new-cost"].forEach(id=>document.getElementById(id).value="");
   document.getElementById("add-panel").classList.remove("show");
@@ -1435,6 +1447,14 @@ async function saveNew() {
   document.getElementById("preview-ingredients").innerHTML = "";
   document.getElementById("preview-steps").innerHTML = "";
   render();
+  if (detailsErr) {
+    const t = document.createElement("div");
+    t.style.cssText = "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#2a1515;color:#f87171;border:1px solid #4a2020;border-radius:8px;padding:10px 18px;font-size:13px;font-family:var(--mono);z-index:9999;max-width:90vw";
+    t.textContent = "Recipe saved but ingredients failed: " + detailsErr;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 8000);
+    return;
+  }
   fireConfetti();
   setTimeout(()=>{const w=document.getElementById("wrap-"+nid);if(w){w.scrollIntoView({behavior:"smooth",block:"center"});w.classList.add("open");}},200);
 }
@@ -3111,7 +3131,7 @@ showApp();
 })();
 </script>
 <script>
-// Unregister any lingering service workers (old Supabase-era SW cached API errors)
+// Unregister any lingering service workers (SW may cache stale API responses)
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
 }
@@ -3265,20 +3285,43 @@ function parseOcrText(text) {
   const result = { name: "", ingredients: [], steps: [], servings: null };
   const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 
+  // Lines that are clearly ad/spam content — skip entirely
+  function isSpam(line) {
+    if (/[©™®]/.test(line)) return true;                          // trademark/copyright
+    if (/https?:\/\/|www\.|\.com\/|\.net\//i.test(line)) return true; // URLs
+    if (/\b(save up to|% off|\bbundle\b|earn up to|bonus|card members?|terms apply|get a quote|visa|mastercard|amex|disney|netflix|subscribe|newsletter|insurance|auto when|home and)\b/i.test(line)) return true;
+    // Mostly symbols/numbers with very few letters
+    const letters = (line.match(/[a-zA-Z]/g) || []).length;
+    if (letters < 3 && line.length > 4) return true;
+    // Garbage: starts with ~ > or has >=40% non-word non-space chars
+    if (/^[~>\*\^]/.test(line)) return true;
+    const noise = (line.match(/[^a-zA-Z0-9\s,.()\-\/½¼¾⅓⅔⅛°'"]/g) || []).length;
+    if (noise / line.length > 0.35) return true;
+    return false;
+  }
+
   let section = null;
   for (const line of lines) {
+    if (isSpam(line)) continue;
+
     if (/^ingredients?[\s:]*$/i.test(line))       { section = "ing"; continue; }
     if (/^(instructions?|directions?|method|steps?|how to( make)?|preparation)[\s:]*/i.test(line)) { section = "steps"; continue; }
-    if (/^(notes?|nutrition|tips?|serving|storage|make ahead)[\s:]*/i.test(line)) { section = null; continue; }
+    if (/^(notes?|nutrition|tips?|serving|storage|make ahead|faq)[\s:]*/i.test(line)) { section = null; continue; }
 
-    if (!result.name && section === null && line.length > 4 && line.length < 80
-        && !/\d/.test(line.slice(0, 3))) {
-      result.name = line;
-      continue;
+    // Name: first plausible recipe-title line before any section header
+    if (!result.name && section === null) {
+      const looksLikeName = line.length > 4 && line.length < 80
+        && !/^\d/.test(line)                          // doesn't start with number
+        && !/\d{3,}/.test(line)                       // no long number runs (phone#, URL)
+        && (line.match(/[a-zA-Z]/g)||[]).length > line.length * 0.6; // mostly letters
+      if (looksLikeName) { result.name = line; continue; }
     }
 
     if (section === "ing") {
-      const clean = line.replace(/^[•\-*·▪▸→]\s*/, "").trim();
+      // Strip bullet chars — OCR often reads • as ¢ or e or c
+      const clean = line.replace(/^[•\-*·▪▸→¢¢©]\s*/, "")
+                        .replace(/^[a-z¢]\s+(?=\d)/, "") // lone letter/symbol before amount
+                        .trim();
       if (clean.length > 2 && clean.length < 120) result.ingredients.push(clean);
     } else if (section === "steps") {
       const clean = line.replace(/^\d+[.):\s]+/, "").trim();
