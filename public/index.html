@@ -1402,10 +1402,12 @@ async function saveNew() {
   const name = document.getElementById("new-name").value.trim();
   const url = document.getElementById("new-url").value.trim();
   if (!name) return addMsg("Please enter a recipe name.", "error");
-  const nid = Math.max(...BASE.map(r=>r.id), ...recipes.map(r=>r.id)) + 1;
-  const nr = { id:nid, name, category:document.getElementById("new-cat").value, protein:document.getElementById("new-protein").value||"Other", method:document.getElementById("new-method").value||"Stovetop", source:document.getElementById("new-source").value||"Unknown", url, cost:document.getElementById("new-cost").value||"TBD", image_url: pendingDetails?.image_url || null };
+  addMsg("Saving...", "loading");
+  const payload = { name, category:document.getElementById("new-cat").value, protein:document.getElementById("new-protein").value||"Other", method:document.getElementById("new-method").value||"Stovetop", source:document.getElementById("new-source").value||"Unknown", url, cost:document.getElementById("new-cost").value||"TBD", image_url: pendingDetails?.image_url || null };
+  const saved = await api("recipes","POST", payload);
+  const nid = saved.id;
+  const nr = { ...payload, id: nid };
   recipes.push(nr);
-  await api("recipes","POST",nr);
   const servings = parseInt(document.getElementById("new-servings").value) || 4;
   nr.servings = servings;
   if (pendingDetails) {
