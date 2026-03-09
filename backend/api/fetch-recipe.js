@@ -54,25 +54,17 @@ async function fetchHTML(url) {
 function parseRecipe(html, url) {
   const result = { url, name: "", ingredients: [], steps: [], image_url: null, servings: 4 };
 
-  // 1. JSON-LD (most reliable when present)
+  // Ingredients — try each strategy until we have some
   tryJsonLd(html, result);
-
-  // 2. WPRM embedded JS object (RecipeTin Eats, many WP sites)
   if (!result.ingredients.length) tryWprmJson(html, result);
-
-  // 3. WPRM HTML classes
   if (!result.ingredients.length) tryWprmHtml(html, result);
-
-  // 4. Tasty / Mediavine / generic schema HTML classes
   if (!result.ingredients.length) trySchemaHtml(html, result);
-
-  // 5. Generic <ul> scored by measurement words
   if (!result.ingredients.length) tryGenericUl(html, result);
-
-  // 6. Plain-text section fallback
   if (!result.ingredients.length) tryPlainText(html, result);
 
-  // Steps fallback: first large <ol>
+  // Steps — always try WPRM and generic OL even if ingredients came from JSON-LD
+  if (!result.steps.length) tryWprmSteps(html, result);
+  if (!result.steps.length) tryWprmJson(html, result);  // wprm JS has steps too
   if (!result.steps.length) tryGenericOl(html, result);
 
   // Name fallback
@@ -165,7 +157,7 @@ function tryWprmJson(html, result) {
       }).filter(Boolean);
     }
 
-    if (Array.isArray(recipe.instructions)) {
+    if (!result.steps.length && Array.isArray(recipe.instructions)) {
       const flat = recipe.instructions.flatMap(g =>
         Array.isArray(g.instructions) ? g.instructions : [g]
       );
@@ -176,31 +168,29 @@ function tryWprmJson(html, result) {
   } catch (e) { /* ignore */ }
 }
 
-// ── Strategy 3: WPRM HTML class scraping ──────────────────────────────────
+// ── Strategy 3: WPRM HTML class scraping (ingredients) ────────────────────
 function tryWprmHtml(html, result) {
-  // Ingredients
   const ingBlocks = [...html.matchAll(/class="wprm-recipe-ingredient["\s][^>]*>([\s\S]*?)<\/li>/g)];
-  if (ingBlocks.length) {
-    result.ingredients = ingBlocks.map(m => {
-      const amt   = (m[1].match(/wprm-recipe-ingredient-amount[^>]*>([^<]+)/) || [])[1] || "";
-      const unit  = (m[1].match(/wprm-recipe-ingredient-unit[^>]*>([^<]+)/)   || [])[1] || "";
-      const name  = (m[1].match(/wprm-recipe-ingredient-name[^>]*>([^<(]+)/)  || [])[1] || "";
-      const notes = (m[1].match(/wprm-recipe-ingredient-notes[^>]*>([^<]+)/)  || [])[1] || "";
-      return [amt, unit, name.trim(), notes ? `(${notes.trim()})` : ""]
-        .filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
-    }).map(decodeEntities).filter(Boolean);
-  }
+  if (!ingBlocks.length) return;
+  result.ingredients = ingBlocks.map(m => {
+    const amt   = (m[1].match(/wprm-recipe-ingredient-amount[^>]*>([^<]+)/) || [])[1] || "";
+    const unit  = (m[1].match(/wprm-recipe-ingredient-unit[^>]*>([^<]+)/)   || [])[1] || "";
+    const name  = (m[1].match(/wprm-recipe-ingredient-name[^>]*>([^<(]+)/)  || [])[1] || "";
+    const notes = (m[1].match(/wprm-recipe-ingredient-notes[^>]*>([^<]+)/)  || [])[1] || "";
+    return [amt, unit, name.trim(), notes ? `(${notes.trim()})` : ""]
+      .filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+  }).map(decodeEntities).filter(Boolean);
+}
 
-  // Instructions
-  if (!result.steps.length) {
-    const stepBlocks = [...html.matchAll(/class="wprm-recipe-instruction["\s][^>]*>([\s\S]*?)<\/li>/g)];
-    if (stepBlocks.length) {
-      result.steps = stepBlocks.map(m => {
-        const text = (m[1].match(/wprm-recipe-instruction-text[^>]*>([\s\S]*?)<\/([^>]+)>/) || [])[1] || m[1];
-        return clean(text);
-      }).filter(s => s.length > 5);
-    }
-  }
+// ── WPRM HTML steps (always runs independently of ingredient strategy) ─────
+function tryWprmSteps(html, result) {
+  const stepBlocks = [...html.matchAll(/class="wprm-recipe-instruction["\s][^>]*>([\s\S]*?)<\/li>/g)];
+  if (!stepBlocks.length) return;
+  result.steps = stepBlocks.map(m => {
+    // Try to grab just the text span; fall back to full li content
+    const textMatch = m[1].match(/wprm-recipe-instruction-text[^>]*>([\s\S]*?)<\/(div|p|span)>/);
+    return clean(textMatch ? textMatch[1] : m[1]);
+  }).filter(s => s.length > 5);
 }
 
 // ── Strategy 4: Generic schema HTML class patterns ─────────────────────────
