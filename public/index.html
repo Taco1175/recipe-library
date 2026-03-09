@@ -310,6 +310,7 @@ input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--accent); c
 </style>
 <script src="/auth.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 <!-- AUTH GUARD -->
@@ -441,7 +442,18 @@ input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--accent); c
               onmouseover="this.style.background='#3a5070'" onmouseout="this.style.background='#2a3f5e'">
               Fetch
             </button>
+            <button type="button" onclick="document.getElementById('ocr-file-input').click()"
+              title="Scan a photo of a recipe (paste image or upload)"
+              style="background:#2a3f2a;border:1px solid #3a6a3a;color:#7bcf8e;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:12px;font-family:var(--mono);white-space:nowrap;flex-shrink:0"
+              onmouseover="this.style.background='#3a5a3a'" onmouseout="this.style.background='#2a3f2a'">
+              📷 Scan
+            </button>
+            <input type="file" id="ocr-file-input" accept="image/*" style="display:none" onchange="ocrFromFile(this)">
           </div>
+        </div>
+        <div id="ocr-preview-row" style="display:none;margin-top:8px;align-items:center;gap:10px">
+          <img id="ocr-preview-img" style="height:60px;border-radius:6px;border:1px solid var(--border);object-fit:cover">
+          <span id="ocr-status" style="font-size:11px;font-family:var(--mono);color:var(--text3)"></span>
         </div>
         <div class="field"><label>Recipe Name</label><input type="text" id="new-name" placeholder="Auto-filled"></div>
         <div class="field"><label>Category</label>
@@ -3189,6 +3201,96 @@ function closeSidebar() {
 <script>
 function fireConfetti() {
   confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+}
+
+// ── OCR: scan a photo of a recipe ─────────────────────────────────────────
+function ocrFromFile(input) {
+  if (!input.files?.length) return;
+  const file = input.files[0];
+  input.value = "";
+  const url = URL.createObjectURL(file);
+  runOcr(url);
+}
+
+document.addEventListener("paste", e => {
+  if (!document.getElementById("add-panel").classList.contains("show")) return;
+  const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith("image/"));
+  if (!item) return;
+  const url = URL.createObjectURL(item.getAsFile());
+  runOcr(url);
+});
+
+async function runOcr(imageUrl) {
+  const row = document.getElementById("ocr-preview-row");
+  const img = document.getElementById("ocr-preview-img");
+  const status = document.getElementById("ocr-status");
+
+  img.src = imageUrl;
+  row.style.display = "flex";
+  status.textContent = "Reading image...";
+  addMsg("Scanning recipe photo...", "loading");
+
+  try {
+    const { data: { text } } = await Tesseract.recognize(imageUrl, "eng", {
+      logger: m => {
+        if (m.status === "recognizing text")
+          status.textContent = `Reading... ${Math.round(m.progress * 100)}%`;
+      }
+    });
+
+    status.textContent = "Done";
+    const parsed = parseOcrText(text);
+
+    if (parsed.name && !document.getElementById("new-name").value)
+      document.getElementById("new-name").value = parsed.name;
+    if (parsed.servings)
+      document.getElementById("new-servings").value = parsed.servings;
+
+    if (parsed.ingredients.length) {
+      pendingDetails = { ingredients: parsed.ingredients, steps: parsed.steps, servings: parsed.servings || 4 };
+      document.getElementById("preview-ingredients").innerHTML = parsed.ingredients.map(i => `<li>${esc(i)}</li>`).join("");
+      document.getElementById("preview-steps").innerHTML = parsed.steps.map(s => `<li>${esc(s)}</li>`).join("");
+      document.getElementById("fetch-preview").style.display = "block";
+      addMsg(`Found ${parsed.ingredients.length} ingredients, ${parsed.steps.length} steps from photo.`, "success");
+    } else {
+      addMsg("Couldn't extract ingredients from photo. Try a clearer image.", "error");
+    }
+  } catch(e) {
+    status.textContent = "Failed";
+    addMsg("OCR failed: " + e.message, "error");
+  }
+}
+
+function parseOcrText(text) {
+  const result = { name: "", ingredients: [], steps: [], servings: null };
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+
+  let section = null;
+  for (const line of lines) {
+    if (/^ingredients?[\s:]*$/i.test(line))       { section = "ing"; continue; }
+    if (/^(instructions?|directions?|method|steps?|how to( make)?|preparation)[\s:]*/i.test(line)) { section = "steps"; continue; }
+    if (/^(notes?|nutrition|tips?|serving|storage|make ahead)[\s:]*/i.test(line)) { section = null; continue; }
+
+    if (!result.name && section === null && line.length > 4 && line.length < 80
+        && !/\d/.test(line.slice(0, 3))) {
+      result.name = line;
+      continue;
+    }
+
+    if (section === "ing") {
+      const clean = line.replace(/^[•\-*·▪▸→]\s*/, "").trim();
+      if (clean.length > 2 && clean.length < 120) result.ingredients.push(clean);
+    } else if (section === "steps") {
+      const clean = line.replace(/^\d+[.):\s]+/, "").trim();
+      if (clean.length > 8) result.steps.push(clean);
+    }
+  }
+
+  // Servings: scan whole text
+  const svMatch = text.match(/serves?\s*:?\s*(\d+)/i) || text.match(/(\d+)\s*servings?/i);
+  if (svMatch) result.servings = parseInt(svMatch[1]);
+
+  return result;
 }
 </script>
 </body>
