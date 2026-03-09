@@ -327,15 +327,6 @@
     .ing-card { position: static; }
   }
 </style>
-<script>
-(async () => {
-  try {
-    const cfg = await fetch("/.netlify/functions/config").then(r => r.json());
-    window.__SUPABASE_URL__ = cfg.supabaseUrl;
-    window.__SUPABASE_ANON_KEY__ = cfg.supabaseAnonKey;
-  } catch(e) {}
-})();
-</script>
 <script src="/auth.js"></script>
 </head>
 <body>
@@ -354,13 +345,12 @@
 </div>
 
 <script>
-const API = "/.netlify/functions";
 async function apiFetch(fn, method="GET", body=null) {
   const hdrs = await Auth.headers();
   if (!hdrs) { Auth.signOut(); throw new Error("Not authenticated"); }
   const opts = { method, headers: hdrs };
   if (body) opts.body = JSON.stringify(body);
-  const r = await fetch(`${API}/${fn}`, opts);
+  const r = await fetch(`/api/${fn}`, opts);
   return r.json();
 }
 
@@ -429,17 +419,20 @@ async function init() {
   const ok = await Auth.require();
   if (!ok) return;
   const params = new URLSearchParams(location.search);
-  const id = parseInt(params.get("id"));
+  const id = params.get("id");
   if (!id) { document.getElementById("app").innerHTML = '<div class="loading-state">No recipe ID provided.</div>'; return; }
 
   try {
-    const [recipes, allDetails] = await Promise.all([
-      apiFetch("extra-recipes"),
+    const [recipesRes, detailsRes] = await Promise.all([
+      apiFetch("recipes"),
       apiFetch("recipe-details")
     ]);
 
-    const recipe = Array.isArray(recipes) ? recipes.find(r => r.id === id) : null;
-    const detail = Array.isArray(allDetails) ? allDetails.find(d => d.recipe_id === id) : null;
+    const recipeList = recipesRes.items || (Array.isArray(recipesRes) ? recipesRes : []);
+    const detailList = detailsRes.items || (Array.isArray(detailsRes) ? detailsRes : []);
+
+    const recipe = recipeList.find(r => r.id === id) || null;
+    const detail = detailList.find(d => (d.recipe || d.recipe_id) === id) || null;
 
     if (!recipe) { document.getElementById("app").innerHTML = '<div class="loading-state">Recipe not found.</div>'; return; }
 

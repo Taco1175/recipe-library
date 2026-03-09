@@ -774,20 +774,23 @@ async function loadData() {
     const hdrs = await Auth.headers();
     if (!hdrs) throw new Error("Not authenticated");
 
-    const [recipesRes, detailsRes] = await Promise.all([
+    const [recipesResult, detailsResult] = await Promise.allSettled([
       api("recipes"),
       api("recipe-details")
     ]);
 
-    // 2. REFIX: PocketBase returns an object with an 'items' array.
-    // Your previous code was likely failing here because it expected an array directly.
+    const recipesRes = recipesResult.status === "fulfilled" ? recipesResult.value : {};
+    const detailsRes = detailsResult.status === "fulfilled" ? detailsResult.value : {};
+    if (detailsResult.status === "rejected") console.warn("recipe-details failed:", detailsResult.reason);
+
     recipes = recipesRes.items ? recipesRes.items : (Array.isArray(recipesRes) ? recipesRes : []);
-    
+    if (recipesResult.status === "rejected") throw recipesResult.reason;
+
     // Sync archived status
     archivedRecipes.clear();
     recipes.forEach(r => { if (r.archived) archivedRecipes.add(r.id); });
 
-    // 3. Process the details list
+    // Process the details list
     const detailsArray = detailsRes.items ? detailsRes.items : (Array.isArray(detailsRes) ? detailsRes : []);
     
     details = {};
