@@ -13,7 +13,16 @@ module.exports = async function fetchRecipeHandler(req, res) {
   if (!url) return send(res, 400, { error: "URL is required" });
 
   try {
-    const html = await fetchHTML(url);
+    let html = await fetchHTML(url);
+
+    // If this is a wprm_print or other print URL, follow the canonical link
+    // to the full recipe page which has richer structured data
+    const canonical = (html.match(/<link[^>]+rel="canonical"[^>]+href="([^"]+)"/i) ||
+                       html.match(/<link[^>]+href="([^"]+)"[^>]+rel="canonical"/i))?.[1];
+    if (canonical && canonical !== url && !canonical.includes("wprm_print") && !canonical.includes("/print")) {
+      try { html = await fetchHTML(canonical); } catch { /* keep original */ }
+    }
+
     const result = parseRecipe(html, url);
     return send(res, 200, result);
   } catch (e) {
@@ -169,16 +178,29 @@ function tryWprmJson(html, result) {
 
 // ── Strategy 3: WPRM HTML class scraping ──────────────────────────────────
 function tryWprmHtml(html, result) {
-  const blocks = [...html.matchAll(/class="wprm-recipe-ingredient[\s"][^>]*>([\s\S]*?)<\/li>/g)];
-  if (!blocks.length) return;
-  result.ingredients = blocks.map(m => {
-    const amt   = (m[1].match(/wprm-recipe-ingredient-amount[^>]*>([^<]+)/) || [])[1] || "";
-    const unit  = (m[1].match(/wprm-recipe-ingredient-unit[^>]*>([^<]+)/)   || [])[1] || "";
-    const name  = (m[1].match(/wprm-recipe-ingredient-name[^>]*>([^<(]+)/)  || [])[1] || "";
-    const notes = (m[1].match(/wprm-recipe-ingredient-notes[^>]*>([^<]+)/)  || [])[1] || "";
-    return [amt, unit, name.trim(), notes ? `(${notes.trim()})` : ""]
-      .filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
-  }).map(decodeEntities).filter(Boolean);
+  // Ingredients
+  const ingBlocks = [...html.matchAll(/class="wprm-recipe-ingredient["\s][^>]*>([\s\S]*?)<\/li>/g)];
+  if (ingBlocks.length) {
+    result.ingredients = ingBlocks.map(m => {
+      const amt   = (m[1].match(/wprm-recipe-ingredient-amount[^>]*>([^<]+)/) || [])[1] || "";
+      const unit  = (m[1].match(/wprm-recipe-ingredient-unit[^>]*>([^<]+)/)   || [])[1] || "";
+      const name  = (m[1].match(/wprm-recipe-ingredient-name[^>]*>([^<(]+)/)  || [])[1] || "";
+      const notes = (m[1].match(/wprm-recipe-ingredient-notes[^>]*>([^<]+)/)  || [])[1] || "";
+      return [amt, unit, name.trim(), notes ? `(${notes.trim()})` : ""]
+        .filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+    }).map(decodeEntities).filter(Boolean);
+  }
+
+  // Instructions
+  if (!result.steps.length) {
+    const stepBlocks = [...html.matchAll(/class="wprm-recipe-instruction["\s][^>]*>([\s\S]*?)<\/li>/g)];
+    if (stepBlocks.length) {
+      result.steps = stepBlocks.map(m => {
+        const text = (m[1].match(/wprm-recipe-instruction-text[^>]*>([\s\S]*?)<\/([^>]+)>/) || [])[1] || m[1];
+        return clean(text);
+      }).filter(s => s.length > 5);
+    }
+  }
 }
 
 // ── Strategy 4: Generic schema HTML class patterns ─────────────────────────
