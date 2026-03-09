@@ -1,4 +1,5 @@
 // backend/api/fetch-recipe.js
+const cheerio = require("cheerio");
 const { getUserFromRequest, send } = require("./_pb-helper");
 
 module.exports = async function fetchRecipeHandler(req, res) {
@@ -18,7 +19,7 @@ module.exports = async function fetchRecipeHandler(req, res) {
     // If this is a wprm_print or other print URL, follow the canonical link
     // to the full recipe page which has richer structured data
     const canonical = (html.match(/<link[^>]+rel="canonical"[^>]+href="([^"]+)"/i) ||
-                       html.match(/<link[^>]+href="([^"]+)"[^>]+rel="canonical"/i))?.[1];
+                       html.match(/<link[^>]+href="([^"]+)\"[^>]+rel="canonical"/i))?.[1];
     if (canonical && canonical !== url && !canonical.includes("wprm_print") && !canonical.includes("/print")) {
       try { html = await fetchHTML(canonical); } catch { /* keep original */ }
     }
@@ -50,42 +51,41 @@ async function fetchHTML(url) {
   return response.text();
 }
 
-// ── Main parser — tries strategies in order ────────────────────────────────
+// ── Main parser ────────────────────────────────────────────────────────────
 function parseRecipe(html, url) {
   const result = { url, name: "", ingredients: [], steps: [], image_url: null, servings: 4 };
+  const $ = cheerio.load(html);
 
   // Ingredients — try each strategy until we have some
   tryJsonLd(html, result);
   if (!result.ingredients.length) tryWprmJson(html, result);
-  if (!result.ingredients.length) tryWprmHtml(html, result);
-  if (!result.ingredients.length) trySchemaHtml(html, result);
-  if (!result.ingredients.length) tryGenericUl(html, result);
-  if (!result.ingredients.length) tryPlainText(html, result);
+  if (!result.ingredients.length) tryCheerioIngredients($, result);
+  if (!result.ingredients.length) tryGenericUl($, result);
 
-  // Steps — always try WPRM and generic OL even if ingredients came from JSON-LD
-  if (!result.steps.length) tryWprmSteps(html, result);
+  // Steps — always run independently of ingredient strategy
+  if (!result.steps.length) tryCheerioSteps($, result);
   if (!result.steps.length) tryWprmJson(html, result);  // wprm JS has steps too
-  if (!result.steps.length) tryGenericOl(html, result);
+  if (!result.steps.length) tryGenericOl($, result);
+  if (!result.steps.length) tryPlainText($, result);
 
   // Name fallback
   if (!result.name) {
-    const h1 = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
-    if (h1) result.name = clean(h1[1]);
+    const h1 = $("h1").first().text().trim();
+    if (h1) result.name = h1;
     else {
-      const title = html.match(/<title>([^<]+)<\/title>/i);
-      if (title) result.name = clean(title[1].split(/[|\-–]/)[0]);
+      const title = $("title").text().trim();
+      if (title) result.name = title.split(/[|\-–]/)[0].trim();
     }
   }
 
   // Image fallback chain: og:image → twitter:image
   if (!result.image_url) {
-    const og = html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i)
-             || html.match(/<meta[^>]+content="([^"]+)"[^>]+property="og:image"/i);
-    if (og) result.image_url = og[1];
+    result.image_url = $("meta[property='og:image']").attr("content")
+                    || $("meta[name='og:image']").attr("content")
+                    || null;
   }
   if (!result.image_url) {
-    const tw = html.match(/<meta[^>]+name="twitter:image"[^>]+content="([^"]+)"/i);
-    if (tw) result.image_url = tw[1];
+    result.image_url = $("meta[name='twitter:image']").attr("content") || null;
   }
 
   return result;
@@ -104,7 +104,7 @@ function tryJsonLd(html, result) {
 
       if (!isRecipe(data)) continue;
 
-      if (data.name) result.name = clean(data.name);
+      if (data.name) result.name = cleanText(data.name);
 
       if (Array.isArray(data.recipeIngredient) && data.recipeIngredient.length) {
         result.ingredients = data.recipeIngredient
@@ -144,10 +144,9 @@ function tryWprmJson(html, result) {
     const recipe = Object.values(recipes)[0];
     if (!recipe) return;
 
-    if (recipe.name && !result.name) result.name = clean(recipe.name);
+    if (recipe.name && !result.name) result.name = cleanText(recipe.name);
 
-    if (Array.isArray(recipe.ingredients)) {
-      // WPRM ingredients can be grouped
+    if (!result.ingredients.length && Array.isArray(recipe.ingredients)) {
       const flat = recipe.ingredients.flatMap(g =>
         Array.isArray(g.ingredients) ? g.ingredients : [g]
       );
@@ -161,73 +160,129 @@ function tryWprmJson(html, result) {
       const flat = recipe.instructions.flatMap(g =>
         Array.isArray(g.instructions) ? g.instructions : [g]
       );
-      result.steps = flat.map(i => clean(i.text || "")).filter(s => s.length > 5);
+      result.steps = flat.map(i => cleanText(i.text || "")).filter(s => s.length > 5);
     }
 
     if (!result.servings && recipe.servings) result.servings = parseInt(recipe.servings) || 4;
   } catch (e) { /* ignore */ }
 }
 
-// ── Strategy 3: WPRM HTML class scraping (ingredients) ────────────────────
-function tryWprmHtml(html, result) {
-  const ingBlocks = [...html.matchAll(/class="wprm-recipe-ingredient["\s][^>]*>([\s\S]*?)<\/li>/g)];
-  if (!ingBlocks.length) return;
-  result.ingredients = ingBlocks.map(m => {
-    const amt   = (m[1].match(/wprm-recipe-ingredient-amount[^>]*>([^<]+)/) || [])[1] || "";
-    const unit  = (m[1].match(/wprm-recipe-ingredient-unit[^>]*>([^<]+)/)   || [])[1] || "";
-    const name  = (m[1].match(/wprm-recipe-ingredient-name[^>]*>([^<(]+)/)  || [])[1] || "";
-    const notes = (m[1].match(/wprm-recipe-ingredient-notes[^>]*>([^<]+)/)  || [])[1] || "";
-    return [amt, unit, name.trim(), notes ? `(${notes.trim()})` : ""]
-      .filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
-  }).map(decodeEntities).filter(Boolean);
-}
+// ── Strategy 3: Cheerio DOM-based ingredient parsing ──────────────────────
+function tryCheerioIngredients($, result) {
+  // WPRM ingredients
+  const wprmItems = [];
+  $(".wprm-recipe-ingredient").each((_, el) => {
+    const amt   = $(el).find(".wprm-recipe-ingredient-amount").text().trim();
+    const unit  = $(el).find(".wprm-recipe-ingredient-unit").text().trim();
+    const name  = $(el).find(".wprm-recipe-ingredient-name").text().trim();
+    const notes = $(el).find(".wprm-recipe-ingredient-notes").text().trim();
+    const parts = [amt, unit, name, notes ? `(${notes})` : ""];
+    const ing = parts.filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+    if (ing) wprmItems.push(ing);
+  });
+  if (wprmItems.length) { result.ingredients = wprmItems; return; }
 
-// ── WPRM HTML steps (always runs independently of ingredient strategy) ─────
-function tryWprmSteps(html, result) {
-  const stepBlocks = [...html.matchAll(/class="wprm-recipe-instruction["\s][^>]*>([\s\S]*?)<\/li>/g)];
-  if (!stepBlocks.length) return;
-  result.steps = stepBlocks.map(m => {
-    // Try to grab just the text span; fall back to full li content
-    const textMatch = m[1].match(/wprm-recipe-instruction-text[^>]*>([\s\S]*?)<\/(div|p|span)>/);
-    return clean(textMatch ? textMatch[1] : m[1]);
-  }).filter(s => s.length > 5);
-}
+  // Schema.org itemprop
+  const schemaItems = [];
+  $("[itemprop='recipeIngredient'], [itemprop='ingredients']").each((_, el) => {
+    const text = cleanIngredient($(el).text());
+    if (text) schemaItems.push(text);
+  });
+  if (schemaItems.length >= 2) { result.ingredients = schemaItems; return; }
 
-// ── Strategy 4: Generic schema HTML class patterns ─────────────────────────
-function trySchemaHtml(html, result) {
-  // Covers Tasty, Mediavine Create, Delicious Recipes, etc.
-  const patterns = [
-    /class="[^"]*ingredient[^"]*"[^>]*>([\s\S]*?)<\/li>/gi,
-    /itemprop="recipeIngredient"[^>]*>([\s\S]*?)<\//gi,
+  // Tasty / Mediavine / common class patterns
+  const classPatterns = [
+    ".tasty-recipes-ingredients li",
+    ".mv-create-ingredients li",
+    ".recipe-ingredients li",
+    ".ingredients li",
+    ".ingredient-list li",
+    ".structured-ingredients li",
   ];
-  for (const pat of patterns) {
-    const matches = [...html.matchAll(pat)];
-    if (matches.length >= 3) {
-      result.ingredients = matches
-        .map(m => cleanIngredient(m[1]))
-        .filter(Boolean);
-      return;
+  for (const sel of classPatterns) {
+    const items = [];
+    $(sel).each((_, el) => {
+      const text = cleanIngredient($(el).text());
+      if (text) items.push(text);
+    });
+    if (items.length >= 2) { result.ingredients = items; return; }
+  }
+}
+
+// ── Cheerio DOM-based step parsing ────────────────────────────────────────
+function tryCheerioSteps($, result) {
+  // WPRM instruction text (most reliable)
+  const wprmSteps = [];
+  $(".wprm-recipe-instruction-text, .wprm-recipe-instruction").each((_, el) => {
+    // Avoid double-counting child elements by checking for instruction-text specifically
+    if ($(el).hasClass("wprm-recipe-instruction-text") || !$(el).find(".wprm-recipe-instruction-text").length) {
+      const text = $(el).text().replace(/\s+/g, " ").trim();
+      if (text.length > 5) wprmSteps.push(text);
     }
+  });
+  if (wprmSteps.length) { result.steps = wprmSteps; return; }
+
+  // Schema.org itemprop=recipeInstructions
+  const schemaSteps = [];
+  $("[itemprop='recipeInstructions'] [itemprop='text'], [itemprop='recipeInstructions'] li, [itemprop='step']").each((_, el) => {
+    const text = $(el).text().replace(/\s+/g, " ").trim();
+    if (text.length > 5) schemaSteps.push(text);
+  });
+  if (schemaSteps.length) { result.steps = schemaSteps; return; }
+
+  // Tasty / Mediavine / common class patterns
+  const classPatterns = [
+    ".tasty-recipes-instructions li",
+    ".mv-create-instructions li",
+    ".recipe-instructions li",
+    ".instructions li",
+    ".recipe-method li",
+    ".wprm-recipe-instructions li",
+    ".recipe-steps li",
+  ];
+  for (const sel of classPatterns) {
+    const items = [];
+    $(sel).each((_, el) => {
+      const text = $(el).text().replace(/\s+/g, " ").trim();
+      if (text.length > 5) items.push(text);
+    });
+    if (items.length >= 2) { result.steps = items; return; }
   }
 }
 
 // ── Strategy 5: Generic <ul> scored by measurement words ──────────────────
-function tryGenericUl(html, result) {
+function tryGenericUl($, result) {
   const MEAS = /(\d[\d\s\/.]*\s*(cup|tsp|tbsp|teaspoon|tablespoon|pound|lb|oz|ounce|gram|g\b|clove|bunch|pinch|can|slice|strip|large|medium|small|whole))/i;
-  const allUls = [...html.matchAll(/<ul[^>]*>([\s\S]*?)<\/ul>/gi)];
   let best = null, bestScore = 0;
-  for (const ul of allUls) {
-    const items = [...ul[1].matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)]
-      .map(m => cleanIngredient(m[1])).filter(t => t.length > 2 && t.length < 200);
+  $("ul").each((_, ul) => {
+    const items = [];
+    $(ul).children("li").each((_, li) => {
+      const text = cleanIngredient($(li).text());
+      if (text.length > 2 && text.length < 200) items.push(text);
+    });
     const score = items.filter(t => MEAS.test(t) || /^\d/.test(t)).length;
     if (score > bestScore && items.length >= 3) { best = items; bestScore = score; }
-  }
+  });
   if (best && bestScore >= 2) result.ingredients = best;
 }
 
-// ── Strategy 6: Plain-text section fallback ───────────────────────────────
-function tryPlainText(html, result) {
-  const plain = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+// ── Steps: first large <ol> ────────────────────────────────────────────────
+function tryGenericOl($, result) {
+  let best = null;
+  $("ol").each((_, ol) => {
+    const items = [];
+    $(ol).children("li").each((_, li) => {
+      const text = $(li).text().replace(/\s+/g, " ").trim();
+      if (text.length > 10) items.push(text);
+    });
+    if (!best || items.length > best.length) best = items;
+  });
+  if (best && best.length >= 2) result.steps = best;
+}
+
+// ── Plain text fallback ────────────────────────────────────────────────────
+function tryPlainText($, result) {
+  const plain = $.text().replace(/\s+/g, " ");
   const lines = plain.split(/\n|(?<=[.!?])\s+(?=[A-Z])/).map(l => l.trim()).filter(Boolean);
   let inIng = false, inStep = false;
   for (const line of lines) {
@@ -244,18 +299,6 @@ function tryPlainText(html, result) {
   }
 }
 
-// ── Steps: first large <ol> ────────────────────────────────────────────────
-function tryGenericOl(html, result) {
-  const allOls = [...html.matchAll(/<ol[^>]*>([\s\S]*?)<\/ol>/gi)];
-  let best = null;
-  for (const ol of allOls) {
-    const items = [...ol[1].matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)]
-      .map(m => clean(m[1])).filter(t => t.length > 10);
-    if (!best || items.length > best.length) best = items;
-  }
-  if (best && best.length >= 2) result.steps = best;
-}
-
 // ── Helpers ────────────────────────────────────────────────────────────────
 function isRecipe(d) {
   if (!d || !d["@type"]) return false;
@@ -266,19 +309,18 @@ function isRecipe(d) {
 function flattenInstructions(instructions) {
   const steps = [];
   for (const s of instructions) {
-    if (typeof s === "string") { const t = clean(s); if (t.length > 5) steps.push(t); }
+    if (typeof s === "string") { const t = cleanText(s); if (t.length > 5) steps.push(t); }
     else if (s["@type"] === "HowToSection" && Array.isArray(s.itemListElement)) {
-      // Recurse into sections
       steps.push(...flattenInstructions(s.itemListElement));
     } else {
-      const t = clean(s.text || s.name || "");
+      const t = cleanText(s.text || s.name || "");
       if (t.length > 5) steps.push(t);
     }
   }
   return steps;
 }
 
-function clean(str) {
+function cleanText(str) {
   return decodeEntities(String(str || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim());
 }
 
