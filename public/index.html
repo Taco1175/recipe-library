@@ -727,7 +727,8 @@ async function api(path, method="GET", body=null) {
   });
   if (!r.ok) {
     const err = await r.json().catch(() => ({}));
-    throw new Error(err.error || `HTTP ${r.status}`);
+    const detail = err.detail ? (" — " + JSON.stringify(err.detail).slice(0, 200)) : "";
+    throw new Error((err.error || `HTTP ${r.status}`) + detail);
   }
   return r.json();
 }
@@ -1394,7 +1395,7 @@ async function autoFetchRecipe(url) {
     if (data.servings) document.getElementById("new-servings").value = data.servings;
 
     if (data.ingredients?.length) {
-      pendingDetails = { ingredients: data.ingredients, steps: data.steps || [], servings: data.servings || 4 };
+      pendingDetails = { ingredients: data.ingredients, steps: data.steps || [], servings: data.servings || 4, image_url: data.image_url || null };
       addMsg(`Found ${data.ingredients.length} ingredients, ${data.steps.length} steps. Review below then save.`, "success");
       const prev = document.getElementById("fetch-preview");
       const ingList = document.getElementById("preview-ingredients");
@@ -1426,11 +1427,15 @@ async function saveNew() {
   recipes.push(nr);
   const servings = parseInt(document.getElementById("new-servings").value) || 4;
   nr.servings = servings;
+  let detailsErr = null;
   if (pendingDetails) {
     try {
       await api("recipe-details","POST",{ recipe_id:nid, ingredients:pendingDetails.ingredients, steps:pendingDetails.steps, servings: pendingDetails.servings || servings });
       details[nid] = { ...pendingDetails, servings: pendingDetails.servings || servings };
-    } catch(e) { console.error("Details save failed:", e.message); }
+    } catch(e) {
+      console.error("Details save failed:", e.message);
+      detailsErr = e.message;
+    }
     pendingDetails = null;
   }
   saveBtn.disabled = false;
@@ -1442,6 +1447,14 @@ async function saveNew() {
   document.getElementById("preview-ingredients").innerHTML = "";
   document.getElementById("preview-steps").innerHTML = "";
   render();
+  if (detailsErr) {
+    const t = document.createElement("div");
+    t.style.cssText = "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#2a1515;color:#f87171;border:1px solid #4a2020;border-radius:8px;padding:10px 18px;font-size:13px;font-family:var(--mono);z-index:9999;max-width:90vw";
+    t.textContent = "Recipe saved but ingredients failed: " + detailsErr;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 8000);
+    return;
+  }
   fireConfetti();
   setTimeout(()=>{const w=document.getElementById("wrap-"+nid);if(w){w.scrollIntoView({behavior:"smooth",block:"center"});w.classList.add("open");}},200);
 }
