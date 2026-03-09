@@ -1,0 +1,37 @@
+name: Auto-merge claude branches into develop
+
+on:
+  push:
+    branches:
+      - 'claude/**'
+
+jobs:
+  merge-to-develop:
+    name: Merge into develop
+    runs-on: self-hosted
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Sync develop with main
+        run: |
+          git fetch origin main
+          git merge --ff-only origin/main || git merge -X theirs origin/main -m "Sync develop with main"
+
+      - name: Merge claude branch into develop
+        run: |
+          git fetch origin ${{ github.ref_name }}
+          git merge --no-ff origin/${{ github.ref_name }} \
+            -m "Auto-merge ${{ github.ref_name }} into develop"
+
+      - name: Push develop
+        run: git push origin develop
