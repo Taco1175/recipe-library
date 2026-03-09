@@ -6,6 +6,9 @@ on:
       - main
       - develop
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Auto-merge claude branches into develop"]
+    types: [completed]
 
 env:
   DEPLOY_DIR: /home/taco1175/recipe-library/backend
@@ -15,11 +18,12 @@ jobs:
   deploy:
     name: Build & Deploy
     runs-on: self-hosted
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref_name }}
+          ref: ${{ github.event_name == 'workflow_run' && 'develop' || github.ref_name }}
           clean: true
 
       - name: Deploy frontend to pb_public

@@ -215,6 +215,18 @@ async function resetPassword() {
 
 // On load: check if we're returning from OAuth or already logged in
 (async () => {
+  // Detect private / local IP — Google OAuth won't work here
+  const h = location.hostname;
+  const isPrivate = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h);
+  if (isPrivate) {
+    document.querySelectorAll(".btn-google").forEach(b => b.style.display = "none");
+    document.querySelectorAll(".divider").forEach(d => d.style.display = "none");
+    const note = document.createElement("p");
+    note.style.cssText = "font-size:12px;color:#f87171;text-align:center;margin:8px 0 0;font-family:monospace";
+    note.textContent = "Google sign-in requires a public URL (e.g. ngrok). Use email/password below.";
+    document.querySelector(".card")?.prepend(note);
+  }
+
   const isOAuthCallback = new URLSearchParams(location.search).has("code");
 
   if (isOAuthCallback) {
