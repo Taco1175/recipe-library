@@ -1,8 +1,19 @@
 # 🍽 Recipe Library
 
-Personal meal planning app with grocery list generation, fridge matching, and recipe auto-fetch.
+Personal meal planning and recipe management app — self-hosted on a Raspberry Pi.
 
-**Live site:** https://cowpushing-meals.netlify.app
+Fetch recipes from URLs, build grocery lists, match ingredients to your fridge, and plan meals by week.
+
+**Live site:** https://mealplannr.xyz
+
+---
+
+## Stack
+
+- **Frontend:** Vanilla JS, HTML/CSS — no build step
+- **Backend:** Node.js API server (`backend/`)
+- **Database:** PocketBase (self-hosted)
+- **Hosting:** Raspberry Pi (self-hosted, served via nginx)
 
 ---
 
@@ -11,21 +22,13 @@ Personal meal planning app with grocery list generation, fridge matching, and re
 | Branch | Purpose |
 |--------|---------|
 | `develop` | All new changes go here — test locally |
-| `main` | Production only — merge when ready to go live |
-
-All changes are pushed to `develop`. Merge to `main` when you're happy to deploy.
+| `main` | Production — merge when ready to deploy |
 
 ---
 
-## Local Dev Setup (one time)
+## Local Dev Setup
 
-### 1. Install Netlify CLI
-
-```bash
-npm install -g netlify-cli
-```
-
-### 2. Clone and switch to develop
+### 1. Clone and switch to develop
 
 ```bash
 git clone https://github.com/Taco1175/recipe-library.git
@@ -33,40 +36,25 @@ cd recipe-library
 git checkout develop
 ```
 
-### 3. Link to your Netlify site
+### 2. Set up environment
 
 ```bash
-netlify link
-# Choose "Use current git remote"
+cp .env.example .env
+# Fill in your PocketBase URL and admin credentials
 ```
 
-### 4. Pull environment variables
+### 3. Start the API server
 
 ```bash
-netlify env:pull .env
+cd backend
+npm install
+npm run dev
+# API runs at http://localhost:3000
 ```
 
-### 5. Start the dev server
+### 4. Open the frontend
 
-```bash
-netlify dev
-# Opens at http://localhost:8888
-```
-
----
-
-## Daily Workflow
-
-```bash
-# Pull latest changes from develop
-git pull origin develop
-
-# Start local server
-netlify dev
-
-# When ready to go live, merge develop → main on GitHub
-# This auto-deploys to Netlify — no manual deploy needed
-```
+Open `public/index.html` directly in a browser, or serve with any static server.
 
 ---
 
@@ -74,22 +62,25 @@ netlify dev
 
 ```
 public/
-  index.html              # Entire frontend (single file)
-netlify/
-  functions/
-    fetch-recipe.js       # Scrapes recipe URLs for ingredients
-    extra-recipes.js      # CRUD for recipes in Supabase
-    recipe-details.js     # Ingredients + steps storage
-    structured-ingredients.js  # Grocery list generation
-migrations/
-  *.sql                   # Supabase schema migrations
-netlify.toml              # Build + functions config
-.env.example              # Environment variable template
+  index.html          # Main app (recipe library + grocery list)
+  planner.html        # Meal planner
+  recipe.html         # Single recipe view
+  login.html          # Auth page
+  privacy.html        # Privacy policy
+  shared.css          # Shared styles
+  auth.js             # Auth helpers
+  sidebar.js          # Shared sidebar
+backend/
+  server.js           # Express API server
+  api/
+    recipes.js        # Recipe CRUD
+    recipe-details.js # Ingredients + steps
+    fetch-recipe.js   # URL scraper
+    grocery-list.js   # Grocery list generation
+    match-ingredients.js
+    library-shares.js
+    user-preferences.js
+.github/
+  workflows/
+    deploy.yml        # Auto-deploy to Pi on push to main
 ```
-
-## Tech Stack
-
-- **Frontend:** Vanilla JS, single HTML file
-- **Backend:** Netlify Functions (Node.js)
-- **Database:** Supabase (Postgres)
-- **Hosting:** Netlify (auto-deploy from main branch only)
