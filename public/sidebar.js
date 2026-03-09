@@ -1,4 +1,4 @@
-// ── SIDEBAR: shared across all pages — theme switcher + nav icons ──
+// ── SIDEBAR: shared across all pages — theme switcher, nav, settings ──
 
 const _SVG = {
   collapse: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 12L6 8l4-4"/></svg>',
@@ -9,38 +9,31 @@ const _SVG = {
   share:    '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="3" r="1.5"/><circle cx="12" cy="13" r="1.5"/><circle cx="3" cy="8" r="1.5"/><path d="M4.4 7.3L10.7 3.9M4.4 8.7l6.3 3.4"/></svg>',
   tutorial: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6"/><path d="M8 7v4M8 5v.5"/></svg>',
   signout:  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3M10 11l3-3-3-3M13 8H6"/></svg>',
+  settings: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="2"/><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.1 3.1l1.1 1.1M11.8 11.8l1.1 1.1M3.1 12.9l1.1-1.1M11.8 4.2l1.1-1.1"/></svg>',
   add:      '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10"/></svg>',
   bulk:     '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><path d="M11.5 9v6M9 11.5h5"/></svg>',
   image:    '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="3" width="12" height="10" rx="1.5"/><circle cx="5.5" cy="6.5" r="1"/><path d="M2 11l3.5-3 3 2.5 2.5-2 3 3"/></svg>',
 };
 
-// Fun mode uses emojis instead of SVGs
-const _FUN = { library:'📚', planner:'📅', fridge:'🥦', share:'👥', tutorial:'✨', add:'＋', bulk:'📦', image:'🖼' };
+const _FUN = { library:'📚', planner:'📅', fridge:'🥦', share:'👥', tutorial:'✨', add:'＋', bulk:'📦', image:'🖼', settings:'⚙️' };
 
 // ── THEME ──
 function getTheme() { return localStorage.getItem('mp-theme') || 'dark'; }
 
-// Extract Supabase auth token from localStorage
+// Use PocketBase auth token from auth.js (loaded before sidebar.js on every page)
 function _getToken() {
   try {
-    for (const k of Object.keys(localStorage)) {
-      if (k.includes('supabase') && k.includes('auth')) {
-        const v = JSON.parse(localStorage.getItem(k) || '{}');
-        if (v?.access_token) return v.access_token;
-        if (v?.session?.access_token) return v.session.access_token;
-      }
-    }
+    if (typeof Auth !== 'undefined') return Auth.getToken();
   } catch(e) {}
   return null;
 }
 
-// On page load: pull theme from server and apply if different from localStorage
-async function _loadThemeFromServer() {
+async function _loadPrefsFromServer() {
   const token = _getToken();
   if (!token) return;
   try {
-    const res = await fetch('/.netlify/functions/user-preferences', {
-      headers: { Authorization: 'Bearer ' + token }
+    const res = await fetch('/api/user-preferences', {
+      headers: { Authorization: token }
     });
     if (!res.ok) return;
     const { theme } = await res.json();
@@ -51,13 +44,12 @@ async function _loadThemeFromServer() {
   } catch(e) {}
 }
 
-// Fire-and-forget: save theme to server (doesn't block UI)
 function _saveThemeToServer(t) {
   const token = _getToken();
   if (!token) return;
-  fetch('/.netlify/functions/user-preferences', {
+  fetch('/api/user-preferences', {
     method: 'POST',
-    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    headers: { Authorization: token, 'Content-Type': 'application/json' },
     body: JSON.stringify({ theme: t })
   }).catch(() => {});
 }
@@ -125,6 +117,142 @@ document.addEventListener('click', e => {
 
 window.addEventListener('pageshow', e => { if (e.persisted) window.location.reload(); });
 
+// ── SETTINGS MODAL ──────────────────────────────────────────────────────────
+
+const CARRIER_LABELS = {
+  att:        'AT&T',
+  verizon:    'Verizon',
+  tmobile:    'T-Mobile',
+  sprint:     'Sprint',
+  uscellular: 'US Cellular',
+  boost:      'Boost Mobile',
+  cricket:    'Cricket',
+  metro:      'Metro by T-Mobile',
+};
+
+function openSettings() {
+  document.getElementById('settings-modal')?.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'settings-modal';
+  modal.style.cssText = `
+    position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
+    background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);padding:16px;
+  `;
+  modal.innerHTML = `
+    <div style="background:var(--bg2,#1a1f2e);border:1px solid var(--border,#2a2f3e);border-radius:16px;
+      padding:28px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <h2 style="margin:0;font-size:17px;color:var(--text,#E8E4DC)">Settings</h2>
+        <button onclick="document.getElementById('settings-modal').remove()"
+          style="background:none;border:none;color:var(--text2,#b0b5c4);font-size:20px;cursor:pointer;line-height:1">×</button>
+      </div>
+
+      <!-- Notifications section -->
+      <div style="margin-bottom:20px;">
+        <p style="font-size:11px;font-family:monospace;color:var(--text3,#667);letter-spacing:.06em;margin-bottom:12px">
+          NOTIFICATIONS (SMS via carrier gateway)
+        </p>
+
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div>
+            <label style="font-size:12px;color:var(--text2,#b0b5c4);display:block;margin-bottom:4px">Phone number</label>
+            <input id="s-phone" type="tel" placeholder="5551234567 (digits only)"
+              style="width:100%;background:var(--bg3,#1e2330);border:1px solid var(--border,#2a2f3e);
+                border-radius:8px;padding:9px 12px;color:var(--text,#E8E4DC);font-size:14px;outline:none;">
+          </div>
+
+          <div>
+            <label style="font-size:12px;color:var(--text2,#b0b5c4);display:block;margin-bottom:4px">Carrier</label>
+            <select id="s-carrier"
+              style="width:100%;background:var(--bg3,#1e2330);border:1px solid var(--border,#2a2f3e);
+                border-radius:8px;padding:9px 12px;color:var(--text,#E8E4DC);font-size:14px;outline:none;">
+              <option value="">— Select carrier —</option>
+              ${Object.entries(CARRIER_LABELS).map(([k,v]) => `<option value="${k}">${v}</option>`).join('')}
+            </select>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
+            ${[
+              ['notify_login',        '🔒 Alert me when someone unauthorized tries to log in'],
+              ['notify_meal_save',    '🍽 Text me when a meal is added to the planner'],
+              ['notify_daily_digest', '☀️ Morning digest — text me today\'s meal plan (7–10am)'],
+            ].map(([id, label]) => `
+              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text2,#b0b5c4)">
+                <input type="checkbox" id="s-${id}"
+                  style="width:16px;height:16px;accent-color:var(--accent,#6e8efb);cursor:pointer;">
+                ${label}
+              </label>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+
+      <div id="s-msg" style="font-size:13px;font-family:monospace;margin-bottom:12px;display:none"></div>
+
+      <button onclick="_saveSettings()"
+        style="width:100%;background:var(--accent,#6e8efb);color:#fff;border:none;border-radius:8px;
+          padding:11px;font-size:14px;font-weight:500;cursor:pointer;">
+        Save Settings
+      </button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+  // Load existing settings
+  const token = _getToken();
+  if (token) {
+    fetch('/api/user-preferences', { headers: { Authorization: token } })
+      .then(r => r.json())
+      .then(({ notifications: n = {} }) => {
+        if (n.phone)    document.getElementById('s-phone').value    = n.phone;
+        if (n.carrier)  document.getElementById('s-carrier').value  = n.carrier;
+        ['notify_login','notify_meal_save','notify_daily_digest'].forEach(k => {
+          const el = document.getElementById(`s-${k}`);
+          if (el) el.checked = !!n[k];
+        });
+      }).catch(() => {});
+  }
+}
+
+async function _saveSettings() {
+  const phone   = document.getElementById('s-phone')?.value.replace(/\D/g,'');
+  const carrier = document.getElementById('s-carrier')?.value;
+  const notifs  = { phone, carrier };
+  ['notify_login','notify_meal_save','notify_daily_digest'].forEach(k => {
+    notifs[k] = !!document.getElementById(`s-${k}`)?.checked;
+  });
+
+  const msgEl = document.getElementById('s-msg');
+  const token = _getToken();
+  if (!token) { _showSettingsMsg('Not logged in', 'error'); return; }
+
+  try {
+    const res = await fetch('/api/user-preferences', {
+      method: 'POST',
+      headers: { Authorization: token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notifications: notifs }),
+    });
+    if (res.ok) {
+      _showSettingsMsg('Settings saved!', 'success');
+      setTimeout(() => document.getElementById('settings-modal')?.remove(), 1200);
+    } else {
+      _showSettingsMsg('Save failed — try again.', 'error');
+    }
+  } catch(e) {
+    _showSettingsMsg('Network error.', 'error');
+  }
+}
+
+function _showSettingsMsg(text, type) {
+  const el = document.getElementById('s-msg');
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = type === 'error' ? '#f87171' : '#7bcf8e';
+  el.style.display = 'block';
+}
+
 // ── INIT ──
 document.addEventListener('DOMContentLoaded', () => {
   // Restore collapse
@@ -146,11 +274,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     const ui = footer.querySelector('.user-info');
     if (ui) footer.insertBefore(sw, ui); else footer.prepend(sw);
+
+    // Settings button
+    const sb = document.createElement('button');
+    sb.title = 'Settings';
+    sb.style.cssText = 'background:none;border:none;color:var(--text2,#b0b5c4);cursor:pointer;display:flex;align-items:center;gap:6px;font-size:13px;padding:6px 4px;width:100%;';
+    sb.innerHTML = `<span style="width:16px;height:16px;display:inline-flex">${_SVG.settings}</span> Settings`;
+    sb.onclick = openSettings;
+    if (ui) footer.insertBefore(sb, ui); else footer.appendChild(sb);
   }
 
   // Apply saved theme (also calls _updateIcons)
   setTheme(getTheme());
-  _loadThemeFromServer(); // sync from server (no flash: localStorage applied first)
+  _loadPrefsFromServer(); // sync from server (no flash: localStorage applied first)
 
   // Last updated
   const el = document.getElementById('last-updated-date');
