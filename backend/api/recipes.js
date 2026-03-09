@@ -15,7 +15,7 @@ module.exports = async function recipesHandler(req, res) {
     // 1. Fetch user's own recipes
     const { ok: recOk, data: recData } = await pbList(
       "recipes",
-      { sort: "-created" },
+      {},
       token
     );
 
