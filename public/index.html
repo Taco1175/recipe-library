@@ -1377,7 +1377,7 @@ async function autoFetchRecipe(url) {
   if (!srcField.value) srcField.value = guessSourceFromUrl(url);
 
   try {
-    // Use our Netlify function — handles JustTheRecipe + fallback parsers server-side
+    // Use our API — handles JustTheRecipe + fallback parsers server-side
     const hdrs = await Auth.headers();
     const res = await fetch("/api/fetch-recipe", {
       method: "POST",
@@ -3131,7 +3131,7 @@ showApp();
 })();
 </script>
 <script>
-// Unregister any lingering service workers (old Supabase-era SW cached API errors)
+// Unregister any lingering service workers (SW may cache stale API responses)
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
 }
