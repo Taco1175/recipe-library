@@ -1,5 +1,6 @@
 // backend/api/fetch-recipe.js
-const cheerio = require("cheerio");
+let cheerio;
+try { cheerio = require("cheerio"); } catch { /* will use regex fallback */ }
 const { getUserFromRequest, send } = require("./_pb-helper");
 
 module.exports = async function fetchRecipeHandler(req, res) {
@@ -54,22 +55,28 @@ async function fetchHTML(url) {
 // ── Main parser ────────────────────────────────────────────────────────────
 function parseRecipe(html, url) {
   const result = { url, name: "", ingredients: [], steps: [], image_url: null, servings: 4 };
-  const $ = cheerio.load(html);
+  const $ = cheerio ? cheerio.load(html) : null;
 
   // Ingredients — try each strategy until we have some
   tryJsonLd(html, result);
   if (!result.ingredients.length) tryWprmJson(html, result);
-  if (!result.ingredients.length) tryCheerioIngredients($, result);
-  if (!result.ingredients.length) tryGenericUl($, result);
+  if ($) {
+    if (!result.ingredients.length) tryCheerioIngredients($, result);
+    if (!result.ingredients.length) tryGenericUl($, result);
+  }
 
   // Steps — always run independently of ingredient strategy
-  if (!result.steps.length) tryCheerioSteps($, result);
-  if (!result.steps.length) tryWprmJson(html, result);  // wprm JS has steps too
-  if (!result.steps.length) tryGenericOl($, result);
-  if (!result.steps.length) tryPlainText($, result);
+  if ($) {
+    if (!result.steps.length) tryCheerioSteps($, result);
+  }
+  if (!result.steps.length) tryWprmJson(html, result);
+  if ($) {
+    if (!result.steps.length) tryGenericOl($, result);
+    if (!result.steps.length) tryPlainText($, result);
+  }
 
   // Name fallback
-  if (!result.name) {
+  if (!result.name && $) {
     const h1 = $("h1").first().text().trim();
     if (h1) result.name = h1;
     else {
@@ -77,14 +84,23 @@ function parseRecipe(html, url) {
       if (title) result.name = title.split(/[|\-–]/)[0].trim();
     }
   }
+  if (!result.name) {
+    const m = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    if (m) result.name = decodeEntities(m[1]).split(/[|\-–]/)[0].trim();
+  }
 
   // Image fallback chain: og:image → twitter:image
-  if (!result.image_url) {
+  if (!result.image_url && $) {
     result.image_url = $("meta[property='og:image']").attr("content")
                     || $("meta[name='og:image']").attr("content")
                     || null;
   }
   if (!result.image_url) {
+    const m = html.match(/<meta[^>]+(?:property="og:image"|name="og:image")[^>]+content="([^"]+)"/i)
+           || html.match(/<meta[^>]+content="([^"]+)"[^>]+(?:property="og:image"|name="og:image")/i);
+    if (m) result.image_url = m[1];
+  }
+  if (!result.image_url && $) {
     result.image_url = $("meta[name='twitter:image']").attr("content") || null;
   }
 
