@@ -67,7 +67,7 @@ function _updateIcons(theme) {
     const n = el.dataset.icon;
     el.innerHTML = (fun && _FUN[n]) ? _FUN[n] : (_SVG[n] || '');
   });
-  const si = document.querySelector('.sidebar-signout .sign-icon');
+  const si = document.querySelector('.sign-icon');
   if (si) si.innerHTML = fun ? '🚪' : _SVG.signout;
   const mark = document.querySelector('.sidebar-logo-mark');
   if (mark) mark.textContent = '🍽';
@@ -296,40 +296,39 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('sidebar-layout')?.classList.add('collapsed');
   }
 
-  // Build theme switcher and insert before user-info in footer
-  const footer = document.querySelector('.sidebar-footer');
-  if (footer && !footer.querySelector('.theme-switcher')) {
+  // Build dropdown items: theme switcher + settings + sign out
+  const dropdown = document.getElementById('user-dropdown');
+  if (dropdown && !dropdown.querySelector('.theme-switcher')) {
+    // Separator
+    const sep = document.createElement('div');
+    sep.className = 'dd-sep';
+    dropdown.appendChild(sep);
+
+    // Theme switcher
     const sw = document.createElement('div');
     sw.className = 'theme-switcher';
     [['dark','Dark'],['light','Light'],['fun','Fun']].forEach(([t, lbl]) => {
       const b = document.createElement('button');
       b.className = 'theme-btn'; b.dataset.theme = t; b.textContent = lbl;
-      b.onclick = () => { setTheme(t); _saveThemeToServer(t); };
+      b.onclick = e => { e.stopPropagation(); setTheme(t); _saveThemeToServer(t); };
       sw.appendChild(b);
     });
-    const ui = footer.querySelector('.user-info');
-    if (ui) footer.insertBefore(sw, ui); else footer.prepend(sw);
+    dropdown.appendChild(sw);
 
     // Settings button
     const sb = document.createElement('button');
     sb.id = 'sidebar-settings-btn';
     sb.title = 'Settings';
-    sb.style.cssText = 'background:none;border:none;color:var(--text2,#b0b5c4);cursor:pointer;display:flex;align-items:center;gap:6px;font-size:13px;padding:6px 4px;width:100%;';
-    sb.innerHTML = `<span style="width:16px;height:16px;display:inline-flex">${_SVG.settings}</span> Settings`;
-    sb.onclick = openSettings;
-    if (ui) footer.insertBefore(sb, ui); else footer.appendChild(sb);
-  }
+    sb.innerHTML = `<span style="width:15px;height:15px;display:inline-flex">${_SVG.settings}</span> Settings`;
+    sb.onclick = e => { e.stopPropagation(); openSettings(); };
+    dropdown.appendChild(sb);
 
-  // Settings button guard (independent of theme-switcher check)
-  if (footer && !document.getElementById('sidebar-settings-btn')) {
-    const ui = footer.querySelector('.user-info');
-    const sb = document.createElement('button');
-    sb.id = 'sidebar-settings-btn';
-    sb.title = 'Settings';
-    sb.style.cssText = 'background:none;border:none;color:var(--text2,#b0b5c4);cursor:pointer;display:flex;align-items:center;gap:6px;font-size:13px;padding:6px 4px;width:100%;';
-    sb.innerHTML = `<span style="width:16px;height:16px;display:inline-flex">${_SVG.settings}</span> Settings`;
-    sb.onclick = openSettings;
-    if (ui) footer.insertBefore(sb, ui); else footer.appendChild(sb);
+    // Sign out button
+    const so = document.createElement('button');
+    so.className = 'signout-btn';
+    so.innerHTML = `<span class="sign-icon" style="width:15px;height:15px;display:inline-flex"></span> <span class="sign-label">Sign out</span>`;
+    so.onclick = e => { e.stopPropagation(); Auth.signOut(); };
+    dropdown.appendChild(so);
   }
 
   // Apply saved theme (also calls _updateIcons)
