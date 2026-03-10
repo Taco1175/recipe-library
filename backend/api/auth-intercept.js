@@ -16,12 +16,13 @@ const CORS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
-// Read the allowed_emails list from app_settings.
-// Requires a valid user token (the one PocketBase just issued via OAuth).
+// Read the allowed_emails list from app_settings using the admin token,
+// so the read always succeeds regardless of who is logging in.
 // Returns [] if the collection doesn't exist or has no records (open access).
-async function getAllowedEmails(token) {
+async function getAllowedEmails() {
   try {
-    const { ok, data } = await pbFetch("collections/app_settings/records?perPage=1", "GET", null, token);
+    const adminToken = await getAdminToken();
+    const { ok, data } = await pbFetch("collections/app_settings/records?perPage=1", "GET", null, adminToken);
     if (!ok || !data?.items?.length) return [];
     return JSON.parse(data.items[0].allowed_emails || "[]");
   } catch(e) {
@@ -83,9 +84,9 @@ module.exports = async function authInterceptHandler(req, res) {
 
   const email = (data?.record?.email || "").toLowerCase();
 
-  // Check allowed list (empty list = allow everyone)
-  // Pass the freshly issued OAuth token so app_settings can require @request.auth.id != ""
-  const allowedEmails = await getAllowedEmails(data.token);
+  // Check allowed list (empty list = allow everyone).
+  // Admin token is used internally so the read works regardless of who is logging in.
+  const allowedEmails = await getAllowedEmails();
   if (allowedEmails.length > 0 && !allowedEmails.includes(email)) {
     console.warn(`[AuthIntercept] Blocked unauthorized login: ${email}`);
 

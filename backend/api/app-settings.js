@@ -1,9 +1,10 @@
 // backend/api/app-settings.js
-// App-wide settings (not per-user).
+// App-wide settings (not per-user). Owner-only access.
 // Requires an "app_settings" collection in PocketBase with:
 //   allowed_emails — Text
-// List/View API rules: empty (public read)
-// Create/Update API rules: @request.auth.id != "" (any logged-in user)
+// All API rules: @request.auth.email = "cowlingpush2016@gmail.com"
+
+const OWNER_EMAIL = "cowlingpush2016@gmail.com";
 
 const { pbFetch, pbFirst, getUserFromRequest, CORS } = require("./_pb-helper");
 
@@ -19,21 +20,21 @@ function parseAllowedEmails(rec) {
 module.exports = async function appSettingsHandler(req, res) {
   if (req.method === "OPTIONS") return send(res, 200, {});
 
-  // GET — requires auth (so PocketBase can enforce @request.auth.id != "")
+  // All methods require the owner account
+  const auth = await getUserFromRequest(req);
+  if (!auth) return send(res, 401, { error: "Unauthorized" });
+  if (auth.user.email !== OWNER_EMAIL) return send(res, 403, { error: "Forbidden" });
+  const { token } = auth;
+
+  // GET
   if (req.method === "GET") {
-    const auth = await getUserFromRequest(req);
-    if (!auth) return send(res, 401, { error: "Unauthorized" });
-    const { token } = auth;
     const { ok, data } = await pbFetch("collections/app_settings/records?perPage=1", "GET", null, token);
     const rec = data?.items?.[0] || null;
     return send(res, 200, { allowed_emails: parseAllowedEmails(rec) });
   }
 
-  // POST — requires auth
+  // POST
   if (req.method === "POST") {
-    const auth = await getUserFromRequest(req);
-    if (!auth) return send(res, 401, { error: "Unauthorized" });
-    const { token } = auth;
 
     const raw = req.body?.allowed_emails;
     // Accept either an array or a newline/comma-separated string
