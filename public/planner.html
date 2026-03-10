@@ -169,15 +169,7 @@
       <span class="sidebar-logo-text">Mealplannr</span>
       <button class="sidebar-collapse-btn" id="sidebar-collapse-btn" onclick="toggleSidebarCollapse()" title="Collapse"></button>
     </div>
-    <div class="sidebar-nav">
-      <a class="nav-item" href="/"><span class="nav-icon" data-icon="library"></span><span class="nav-label">Library</span></a>
-      <a class="nav-item active" href="/planner.html"><span class="nav-icon" data-icon="planner"></span><span class="nav-label">Plan Week</span></a>
-      <div class="nav-divider"></div>
-      <div class="nav-item" onclick="location.href='/?fridge=1'"><span class="nav-icon" data-icon="fridge"></span><span class="nav-label">In my fridge</span></div>
-      <div class="nav-item" onclick="location.href='/?share=1'"><span class="nav-icon" data-icon="share"></span><span class="nav-label">Share Library</span></div>
-      <div class="nav-item" onclick="location.href='/?tutorial=1'"><span class="nav-icon" data-icon="tutorial"></span><span class="nav-label">Tutorial</span></div>
-    </div>
-    <div class="sidebar-footer">
+    <div class="sidebar-user">
       <div class="user-info" onclick="toggleUserMenu(event)" id="user-info-btn">
         <div class="user-avatar" id="user-avatar">?</div>
         <span class="user-name" id="user-email-short"></span>
@@ -186,10 +178,14 @@
       <div class="user-dropdown" id="user-dropdown">
         <div class="dd-email" id="user-email-full"></div>
       </div>
-      <div class="sidebar-signout" onclick="Auth.signOut()">
-        <span class="sign-icon"></span>
-        <span class="sign-label">Sign out</span>
-      </div>
+    </div>
+    <div class="sidebar-nav">
+      <a class="nav-item" href="/"><span class="nav-icon" data-icon="library"></span><span class="nav-label">Library</span></a>
+      <a class="nav-item active" href="/planner.html"><span class="nav-icon" data-icon="planner"></span><span class="nav-label">Plan Week</span></a>
+      <div class="nav-divider"></div>
+      <div class="nav-item" onclick="location.href='/?fridge=1'"><span class="nav-icon" data-icon="fridge"></span><span class="nav-label">In my fridge</span></div>
+      <div class="nav-item" onclick="location.href='/?share=1'"><span class="nav-icon" data-icon="share"></span><span class="nav-label">Share Library</span></div>
+      <div class="nav-item" onclick="location.href='/?tutorial=1'"><span class="nav-icon" data-icon="tutorial"></span><span class="nav-label">Tutorial</span></div>
     </div>
   </nav>
   <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
@@ -340,7 +336,7 @@ async function handleAuthCallback() {
     const res = await fetch(`${API}/google-auth`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code })
+      body: JSON.stringify({ code, redirect_uri: location.origin + "/planner.html" })
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
@@ -488,7 +484,8 @@ async function init() {
     if (_fl) _fl.textContent = _u.email;
   }
   try {
-    recipes = await apiFetch("recipes");
+    const _recipesData = await apiFetch("recipes");
+    recipes = Array.isArray(_recipesData) ? _recipesData : (_recipesData?.items || []);
     // Load cart from localStorage (set by main page)
     try {
       const saved = localStorage.getItem("recipe-cart");
