@@ -177,14 +177,21 @@ function openSettings() {
             ${[
               ['notify_login',        '🔒 Alert me when someone unauthorized tries to log in'],
               ['notify_meal_save',    '🍽 Text me when a meal is added to the planner'],
-              ['notify_daily_digest', '☀️ Morning digest — text me today\'s meal plan (7–10am)'],
+              ['notify_daily_digest', '☀️ Morning digest — text me today\'s meal plan'],
             ].map(([id, label]) => `
               <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text2,#b0b5c4)">
                 <input type="checkbox" id="s-${id}"
-                  style="width:16px;height:16px;accent-color:var(--accent,#6e8efb);cursor:pointer;">
+                  style="width:16px;height:16px;accent-color:var(--accent,#6e8efb);cursor:pointer;"
+                  ${id === 'notify_daily_digest' ? 'onchange="document.getElementById(\'s-digest-time-row\').style.display=this.checked?\'flex\':\'none\'"' : ''}>
                 ${label}
               </label>
             `).join('')}
+          <div id="s-digest-time-row" style="display:none;align-items:center;gap:10px;padding-left:26px;margin-top:2px;">
+            <label style="font-size:12px;color:var(--text2,#b0b5c4);white-space:nowrap;">Send at</label>
+            <input type="time" id="s-digest-time" value="07:00"
+              style="background:var(--bg3,#1e2330);border:1px solid var(--border,#2a2f3e);
+                border-radius:8px;padding:6px 10px;color:var(--text,#E8E4DC);font-size:13px;outline:none;">
+          </div>
           </div>
         </div>
       </div>
@@ -232,12 +239,17 @@ function openSettings() {
     fetch('/api/user-preferences', { headers: { Authorization: token } })
       .then(r => r.json())
       .then(({ notifications: n = {} }) => {
-        if (n.phone)    document.getElementById('s-phone').value    = n.phone;
-        if (n.carrier)  document.getElementById('s-carrier').value  = n.carrier;
+        if (n.phone)         document.getElementById('s-phone').value         = n.phone;
+        if (n.carrier)       document.getElementById('s-carrier').value       = n.carrier;
+        if (n.digest_time)   document.getElementById('s-digest-time').value   = n.digest_time;
         ['notify_login','notify_meal_save','notify_daily_digest'].forEach(k => {
           const el = document.getElementById(`s-${k}`);
           if (el) el.checked = !!n[k];
         });
+        // Show time picker if digest is already enabled
+        if (n.notify_daily_digest) {
+          document.getElementById('s-digest-time-row').style.display = 'flex';
+        }
       }).catch(() => {});
 
     // Load allowed emails — owner only (403 for anyone else, which is fine)
@@ -251,9 +263,10 @@ function openSettings() {
 }
 
 async function _saveSettings() {
-  const phone   = document.getElementById('s-phone')?.value.replace(/\D/g,'');
-  const carrier = document.getElementById('s-carrier')?.value;
-  const notifs  = { phone, carrier };
+  const phone       = document.getElementById('s-phone')?.value.replace(/\D/g,'');
+  const carrier     = document.getElementById('s-carrier')?.value;
+  const digest_time = document.getElementById('s-digest-time')?.value || '07:00';
+  const notifs      = { phone, carrier, digest_time };
   ['notify_login','notify_meal_save','notify_daily_digest'].forEach(k => {
     notifs[k] = !!document.getElementById(`s-${k}`)?.checked;
   });

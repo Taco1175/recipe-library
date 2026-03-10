@@ -1002,9 +1002,25 @@ async function _notifyMealSave(ds, recipeId) {
 async function _sendDailyDigestIfNeeded() {
   const today = new Date().toISOString().slice(0, 10);
   const lastDigest = localStorage.getItem('mp-last-digest');
-  if (lastDigest === today) return;                         // already sent today
-  const hour = new Date().getHours();
-  if (hour < 7 || hour > 10) return;                       // only 7am–10am window
+  if (lastDigest === today) return; // already sent today
+
+  // Fetch digest_time from user preferences (default 07:00)
+  let digestTime = '07:00';
+  try {
+    const h = await Auth.headers();
+    if (h) {
+      const pref = await fetch('/api/user-preferences', { headers: h }).then(r => r.json());
+      digestTime = pref?.notifications?.digest_time || '07:00';
+    }
+  } catch(e) {}
+
+  // Only fire within a 30-minute window after the chosen time
+  const now = new Date();
+  const [tHour, tMin] = digestTime.split(':').map(Number);
+  const targetMinutes = tHour * 60 + tMin;
+  const nowMinutes    = now.getHours() * 60 + now.getMinutes();
+  if (nowMinutes < targetMinutes || nowMinutes > targetMinutes + 30) return;
+
   const ids = plan[today] || [];
   if (!ids.length) return;
   const mealNames = ids.map(id => {
