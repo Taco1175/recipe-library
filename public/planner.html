@@ -708,6 +708,7 @@ function addToPlan(ds, id) {
   if (!plan[ds].includes(id)) plan[ds].push(id);
   savePlan();
   renderWeek();
+  _notifyMealSave(ds, id);
 }
 
 function removeMeal(ds, id) {
@@ -985,7 +986,61 @@ function onDayDrop(e) {
   renderPicker(recipes);
 }
 
+// ── Notifications ──────────────────────────────────────────────────────────
+
+async function _notifyMealSave(ds, recipeId) {
+  try {
+    const h = await Auth.headers();
+    if (!h) return;
+    await fetch('/api/notify-meal', {
+      method: 'POST', headers: h,
+      body: JSON.stringify({ type: 'save', recipeId, date: ds }),
+    });
+  } catch(e) {}
+}
+
+async function _sendDailyDigestIfNeeded() {
+  const today = new Date().toISOString().slice(0, 10);
+  const lastDigest = localStorage.getItem('mp-last-digest');
+  if (lastDigest === today) return; // already sent today
+
+  // Fetch digest_time from user preferences (default 07:00)
+  let digestTime = '07:00';
+  try {
+    const h = await Auth.headers();
+    if (h) {
+      const pref = await fetch('/api/user-preferences', { headers: h }).then(r => r.json());
+      digestTime = pref?.notifications?.digest_time || '07:00';
+    }
+  } catch(e) {}
+
+  // Only fire within a 30-minute window after the chosen time
+  const now = new Date();
+  const [tHour, tMin] = digestTime.split(':').map(Number);
+  const targetMinutes = tHour * 60 + tMin;
+  const nowMinutes    = now.getHours() * 60 + now.getMinutes();
+  if (nowMinutes < targetMinutes || nowMinutes > targetMinutes + 30) return;
+
+  const ids = plan[today] || [];
+  if (!ids.length) return;
+  const mealNames = ids.map(id => {
+    const r = (recipes || []).find(x => x.id === id);
+    return r ? r.name : null;
+  }).filter(Boolean);
+  try {
+    const h = await Auth.headers();
+    if (!h) return;
+    const res = await fetch('/api/notify-meal', {
+      method: 'POST', headers: h,
+      body: JSON.stringify({ type: 'digest', meals: mealNames }),
+    });
+    if (res.ok) localStorage.setItem('mp-last-digest', today);
+  } catch(e) {}
+}
+
+
 init();
+_sendDailyDigestIfNeeded();
 </script>
 <script>
 if ("serviceWorker" in navigator) {
