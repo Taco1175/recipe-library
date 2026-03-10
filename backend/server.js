@@ -26,6 +26,7 @@ const matchIngredientsHandler = require("./api/match-ingredients");
 const userPreferencesHandler  = require("./api/user-preferences");
 const authInterceptHandler    = require("./api/auth-intercept");
 const notifyMealHandler       = require("./api/notify-meal");
+const appSettingsHandler      = require("./api/app-settings");
 
 const PORT        = process.env.PORT || 3000;
 const PB_INTERNAL = process.env.PB_URL || "http://localhost:8090";
@@ -133,6 +134,7 @@ const API_ROUTES = {
   "/api/match-ingredients":  matchIngredientsHandler,
   "/api/user-preferences":   userPreferencesHandler,
   "/api/notify-meal":        notifyMealHandler,
+  "/api/app-settings":       appSettingsHandler,
   "/api/collections/users/auth-with-oauth2": authInterceptHandler,
 };
 
