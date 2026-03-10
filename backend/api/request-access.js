@@ -84,9 +84,10 @@ module.exports = async function requestAccessHandler(req, res) {
   }
   recentRequests.set(email, Date.now());
 
+  const base = `Mealplannr: ${email}`;
   const smsText = message
-    ? `Mealplannr access request: ${email} — ${message}`
-    : `Mealplannr access request: ${email}`;
+    ? `${base} — ${message}`.slice(0, 160)
+    : base;
 
   sendSms(smsText).catch(e => console.error("[request-access] SMS error:", e.message));
 
