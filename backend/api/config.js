@@ -1,9 +1,10 @@
 // backend/api/config.js
 // Exposes safe public config to the frontend (no secrets).
 
+const ALLOWED_ORIGIN = process.env.APP_URL || "https://mealplannr.xyz";
 const CORS = {
   "Content-Type": "application/json",
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 

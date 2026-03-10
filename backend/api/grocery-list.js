@@ -1,5 +1,5 @@
 // backend/api/grocery-list.js
-const { pbList, getUserFromRequest, send } = require("./_pb-helper");
+const { pbList, getUserFromRequest, send, pbEscape } = require("./_pb-helper");
 
 module.exports = async function groceryListHandler(req, res) {
   // Handle CORS preflight for Cloudflare
@@ -19,7 +19,7 @@ module.exports = async function groceryListHandler(req, res) {
 
     try {
       // Create a PocketBase filter string: (recipe="id1" || recipe="id2" || ...)
-      const idFilter = recipe_ids.map(id => `recipe="${id}"`).join(" || ");
+      const idFilter = recipe_ids.map(id => `recipe="${pbEscape(id)}"`).join(" || ");
       
       const { ok, data } = await pbList("structured_ingredients", { 
         filter: `(${idFilter})`,

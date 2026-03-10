@@ -6,10 +6,10 @@
 // Reads notification preferences from the user's user_preferences record.
 // Requires "notifications" text field in PocketBase's user_preferences collection.
 
-const { pbFirst, getUserFromRequest } = require("./_pb-helper");
+const { pbFirst, getUserFromRequest, pbEscape } = require("./_pb-helper");
 const { sendSMS } = require("./_notify");
 
-const CORS = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" };
+const CORS = { "Content-Type": "application/json", "Access-Control-Allow-Origin": process.env.APP_URL || "https://mealplannr.xyz" };
 
 function send(res, status, body) {
   res.writeHead(status, CORS);
@@ -43,7 +43,7 @@ module.exports = async function notifyMealHandler(req, res) {
     // Look up the recipe name so the SMS is readable
     let mealName = recipeId;
     if (recipeId) {
-      const recipe = await pbFirst("recipes", `id="${recipeId}"`, token);
+      const recipe = await pbFirst("recipes", `id="${pbEscape(recipeId)}"`, token);
       if (recipe?.name) mealName = recipe.name;
     }
     const dateLabel = date
