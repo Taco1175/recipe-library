@@ -670,7 +670,7 @@ const MI={"Slow Cooker":"","Oven":"","Stovetop":"","Air Fryer":"","No Cook":"","
 // ── State ──
 let recipes = [...BASE];  // replaced by DB data in loadData()
 let details = {};
-let checked = new Set(JSON.parse(localStorage.getItem("recipe-cart") || "[]"));
+let checked = new Set();
 let archivedOpen = false;
 let archiveChecked = new Set();
 let viewMode = "table";
@@ -793,6 +793,8 @@ async function showApp() {
   }
   if (params.get('grocery') === '1') {
     history.replaceState({}, '', '/');
+    // Restore cart from planner before opening
+    try { checked = new Set(JSON.parse(localStorage.getItem("recipe-cart") || "[]")); } catch {}
     openGrocery();
   }
 }
