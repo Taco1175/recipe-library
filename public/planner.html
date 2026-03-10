@@ -315,7 +315,7 @@ async function startGoogleAuth() {
     } catch(e) {}
   }
   if (!clientId) {
-    alert("Google Client ID not configured. Add GOOGLE_CLIENT_ID to your server environment variables.");
+    showToast("Google Calendar not configured — add GOOGLE_CLIENT_ID to backend/.env and restart the server.");
     return;
   }
   const scope = "https://www.googleapis.com/auth/calendar";
@@ -471,6 +471,12 @@ async function init() {
   try {
     const cfg = await fetch(`${API}/config`).then(r => r.json());
     window.__GOOGLE_CLIENT_ID__ = cfg.googleClientId;
+    if (!cfg.googleClientId) {
+      const banner = document.getElementById("gcal-banner");
+      const gcalBtn = document.getElementById("gcal-btn");
+      if (banner) banner.style.display = "none";
+      if (gcalBtn) gcalBtn.style.display = "none";
+    }
   } catch(e) {}
   const ok = await Auth.require();
   if (!ok) return;
