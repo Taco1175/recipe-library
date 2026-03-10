@@ -173,6 +173,20 @@ function openSettings() {
             </select>
           </div>
 
+          <div>
+            <label style="font-size:12px;color:var(--text2,#b0b5c4);display:block;margin-bottom:4px">Timezone</label>
+            <select id="s-timezone"
+              style="width:100%;background:var(--bg3,#1e2330);border:1px solid var(--border,#2a2f3e);
+                border-radius:8px;padding:9px 12px;color:var(--text,#E8E4DC);font-size:14px;outline:none;">
+              <option value="America/Chicago">Central (CT)</option>
+              <option value="America/New_York">Eastern (ET)</option>
+              <option value="America/Denver">Mountain (MT)</option>
+              <option value="America/Los_Angeles">Pacific (PT)</option>
+              <option value="America/Anchorage">Alaska (AKT)</option>
+              <option value="Pacific/Honolulu">Hawaii (HT)</option>
+            </select>
+          </div>
+
           <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
             ${[
               ['notify_login',        '🔒 Alert me when someone unauthorized tries to log in'],
@@ -196,23 +210,6 @@ function openSettings() {
         </div>
       </div>
 
-      <!-- Allowed emails (owner-only section, hidden for other users via JS) -->
-      <div id="s-allowed-section" style="display:none;margin-bottom:20px;padding-top:16px;border-top:1px solid var(--border,#2a2f3e);">
-        <p style="font-size:11px;font-family:monospace;color:var(--text3,#667);letter-spacing:.06em;margin-bottom:8px">
-          ALLOWED SIGN-INS
-        </p>
-        <label style="font-size:12px;color:var(--text2,#b0b5c4);display:block;margin-bottom:4px">
-          Permitted Google accounts (one per line)
-        </label>
-        <textarea id="s-allowed-emails" placeholder="you@gmail.com&#10;family@gmail.com" rows="3"
-          style="width:100%;background:var(--bg3,#1e2330);border:1px solid var(--border,#2a2f3e);
-            border-radius:8px;padding:9px 12px;color:var(--text,#E8E4DC);font-size:13px;
-            font-family:monospace;resize:vertical;outline:none;"></textarea>
-        <p style="font-size:11px;color:var(--text3,#667);margin-top:5px">
-          Leave empty to allow anyone with a Google account to sign in.
-        </p>
-      </div>
-
       <div id="s-msg" style="font-size:13px;font-family:monospace;margin-bottom:12px;display:none"></div>
 
       <button onclick="_saveSettings()"
@@ -225,39 +222,30 @@ function openSettings() {
   document.body.appendChild(modal);
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
 
-  // Load existing settings
+  // Default timezone to CST, then auto-detect browser timezone if it matches an option
+  const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const tzSelect = document.getElementById('s-timezone');
+  if (tzSelect && [...tzSelect.options].some(o => o.value === detectedTz)) {
+    tzSelect.value = detectedTz;
+  }
+
+  // Load existing settings from server
   const token = _getToken();
   if (token) {
-    // Show the Allowed Sign-ins section only for the owner
-    try {
-      const ownerEmail = typeof Auth !== 'undefined' ? Auth.getUser()?.email : null;
-      if (ownerEmail === 'cowlingpush2016@gmail.com') {
-        document.getElementById('s-allowed-section').style.display = 'block';
-      }
-    } catch(e) {}
-
     fetch('/api/user-preferences', { headers: { Authorization: token } })
       .then(r => r.json())
       .then(({ notifications: n = {} }) => {
-        if (n.phone)         document.getElementById('s-phone').value         = n.phone;
-        if (n.carrier)       document.getElementById('s-carrier').value       = n.carrier;
-        if (n.digest_time)   document.getElementById('s-digest-time').value   = n.digest_time;
+        if (n.phone)       document.getElementById('s-phone').value       = n.phone;
+        if (n.carrier)     document.getElementById('s-carrier').value     = n.carrier;
+        if (n.timezone)    document.getElementById('s-timezone').value    = n.timezone;
+        if (n.digest_time) document.getElementById('s-digest-time').value = n.digest_time;
         ['notify_login','notify_meal_save','notify_daily_digest'].forEach(k => {
           const el = document.getElementById(`s-${k}`);
           if (el) el.checked = !!n[k];
         });
-        // Show time picker if digest is already enabled
         if (n.notify_daily_digest) {
           document.getElementById('s-digest-time-row').style.display = 'flex';
         }
-      }).catch(() => {});
-
-    // Load allowed emails — owner only (403 for anyone else, which is fine)
-    fetch('/api/app-settings', { headers: { Authorization: token } })
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        const el = document.getElementById('s-allowed-emails');
-        if (el && d?.allowed_emails?.length) el.value = d.allowed_emails.join('\n');
       }).catch(() => {});
   }
 }
@@ -265,32 +253,23 @@ function openSettings() {
 async function _saveSettings() {
   const phone       = document.getElementById('s-phone')?.value.replace(/\D/g,'');
   const carrier     = document.getElementById('s-carrier')?.value;
+  const timezone    = document.getElementById('s-timezone')?.value || 'America/Chicago';
   const digest_time = document.getElementById('s-digest-time')?.value || '07:00';
-  const notifs      = { phone, carrier, digest_time };
+  const notifs      = { phone, carrier, timezone, digest_time };
   ['notify_login','notify_meal_save','notify_daily_digest'].forEach(k => {
     notifs[k] = !!document.getElementById(`s-${k}`)?.checked;
   });
-
-  const rawEmails = document.getElementById('s-allowed-emails')?.value || '';
-  const allowedEmails = rawEmails.split(/[\n,]+/).map(e => e.trim().toLowerCase()).filter(Boolean);
 
   const token = _getToken();
   if (!token) { _showSettingsMsg('Not logged in', 'error'); return; }
 
   try {
-    const [prefRes, appRes] = await Promise.all([
-      fetch('/api/user-preferences', {
-        method: 'POST',
-        headers: { Authorization: token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notifications: notifs }),
-      }),
-      fetch('/api/app-settings', {
-        method: 'POST',
-        headers: { Authorization: token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ allowed_emails: allowedEmails }),
-      }),
-    ]);
-    if (prefRes.ok && appRes.ok) {
+    const res = await fetch('/api/user-preferences', {
+      method: 'POST',
+      headers: { Authorization: token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notifications: notifs }),
+    });
+    if (res.ok) {
       _showSettingsMsg('Settings saved!', 'success');
       setTimeout(() => document.getElementById('settings-modal')?.remove(), 1200);
     } else {
