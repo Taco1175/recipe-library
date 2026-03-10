@@ -1,40 +1,62 @@
 // backend/api/request-access.js
-// Sends an SMS to the owner via TextBelt when someone requests access.
-// Uses built-in https — no extra packages required.
+// Sends an SMS to the owner via Gmail SMTP → carrier email-to-SMS gateway.
+// Gmail is trusted by carriers (Verizon/Spectrum @vtext.com etc) unlike
+// transactional email services.
 //
-// Free tier: TEXTBELT_KEY=textbelt in .env (1 SMS/day — fine for access requests)
-// Paid tier: buy credits at textbelt.com and set TEXTBELT_KEY=<your-key>
+// Add to backend/.env:
+//   GMAIL_USER=you@gmail.com
+//   GMAIL_APP_PASSWORD=xxxx xxxx xxxx xxxx   (16-char App Password, spaces OK)
+//   OWNER_PHONE=3143309786
+//   OWNER_CARRIER=spectrum   (att|verizon|tmobile|sprint|uscellular|boost|cricket|metro|spectrum)
 
-const https = require("https");
-const querystring = require("querystring");
+const nodemailer = require("nodemailer");
 
-const OWNER_PHONE  = process.env.OWNER_PHONE   || "3143309786";
-const TEXTBELT_KEY = process.env.TEXTBELT_KEY  || "textbelt";
+const CARRIERS = {
+  att:        "@txt.att.net",
+  verizon:    "@vtext.com",
+  tmobile:    "@tmomail.net",
+  sprint:     "@messaging.sprintpcs.com",
+  uscellular: "@email.uscc.net",
+  boost:      "@sms.myboostmobile.com",
+  cricket:    "@mms.cricketwireless.net",
+  metro:      "@mymetropcs.com",
+  spectrum:   "@vtext.com",
+};
+
+const OWNER_PHONE   = (process.env.OWNER_PHONE   || "3143309786").replace(/\D/g, "");
+const OWNER_CARRIER = (process.env.OWNER_CARRIER || "spectrum").toLowerCase();
+const GMAIL_USER    = process.env.GMAIL_USER;
+const GMAIL_PASS    = (process.env.GMAIL_APP_PASSWORD || "").replace(/\s/g, "");
 
 const recentRequests = new Map();
 const RATE_LIMIT_MS  = 10 * 60 * 1000;
 
-function sendSms(phone, message) {
-  return new Promise((resolve, reject) => {
-    const body = querystring.stringify({ phone, message, key: TEXTBELT_KEY });
-    const req = https.request(
-      {
-        hostname: "textbelt.com",
-        path:     "/text",
-        method:   "POST",
-        headers:  { "Content-Type": "application/x-www-form-urlencoded", "Content-Length": Buffer.byteLength(body) },
-      },
-      res => {
-        let data = "";
-        res.on("data", c => (data += c));
-        res.on("end", () => { try { resolve(JSON.parse(data)); } catch { resolve({ success: false }); } });
-      }
-    );
-    req.setTimeout(8000, () => { req.destroy(); reject(new Error("timeout")); });
-    req.on("error", reject);
-    req.write(body);
-    req.end();
-  });
+let transporter = null;
+function getTransporter() {
+  if (!transporter && GMAIL_USER && GMAIL_PASS) {
+    transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: GMAIL_USER, pass: GMAIL_PASS },
+    });
+  }
+  return transporter;
+}
+
+async function sendSms(message) {
+  const gateway = CARRIERS[OWNER_CARRIER];
+  if (!gateway) { console.error("[request-access] Unknown carrier:", OWNER_CARRIER); return false; }
+  const t = getTransporter();
+  if (!t) { console.error("[request-access] GMAIL_USER/GMAIL_APP_PASSWORD not set in .env"); return false; }
+
+  const to = OWNER_PHONE + gateway;
+  try {
+    await t.sendMail({ from: GMAIL_USER, to, subject: "", text: message });
+    console.log(`[request-access] SMS sent to ${to}`);
+    return true;
+  } catch (e) {
+    console.error("[request-access] Send failed:", e.message);
+    return false;
+  }
 }
 
 module.exports = async function requestAccessHandler(req, res) {
@@ -70,19 +92,10 @@ module.exports = async function requestAccessHandler(req, res) {
   recentRequests.set(email, Date.now());
 
   const smsText = message
-    ? `Mealplannr access request:\n${email}\nMessage: ${message}`
-    : `Mealplannr access request:\n${email}`;
+    ? `Mealplannr access request: ${email} — ${message}`
+    : `Mealplannr access request: ${email}`;
 
-  try {
-    const result = await sendSms(OWNER_PHONE, smsText);
-    if (result.success) {
-      console.log(`[request-access] SMS sent for ${email} | quota remaining: ${result.quotaRemaining}`);
-    } else {
-      console.error("[request-access] TextBelt error:", result.error);
-    }
-  } catch (e) {
-    console.error("[request-access] SMS failed:", e.message);
-  }
+  await sendSms(smsText);  // fire-and-forget — always return ok to user
 
   res.writeHead(200, { "Content-Type": "application/json" });
   res.end(JSON.stringify({ ok: true }));
