@@ -10,6 +10,9 @@
 // Start: node backend/server.js
 // PM2:   pm2 start backend/server.js --name mealplannr-api
 
+// Load .env file
+require("dotenv").config({ path: require("path").join(__dirname, ".env") });
+
 const http    = require("http");
 const https   = require("https");
 const fs      = require("fs");
