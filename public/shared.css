@@ -169,20 +169,15 @@ a { color: var(--accent); text-decoration: none; }
 }
 .user-dropdown.show { display: block; }
 .user-dropdown .dd-email { font-size: 11px; color: var(--text3); font-family: 'Geist Mono', monospace; padding: 4px 8px 7px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.user-dropdown .dd-sep { height: 1px; background: var(--border); margin: 2px 0 4px; }
 .user-dropdown button {
   width: 100%; text-align: left; background: none; border: none;
   color: var(--text2); font-size: 12px; padding: 6px 8px; border-radius: 4px;
   cursor: pointer; display: flex; align-items: center; gap: 7px;
 }
 .user-dropdown button:hover { background: var(--bg4); color: var(--text); }
-.sidebar-signout {
-  display: flex; align-items: center; gap: 9px; padding: 7px 8px 2px;
-  color: var(--text3); font-size: 12px; cursor: pointer; border-radius: 6px;
-  transition: color 0.12s; white-space: nowrap; overflow: hidden;
-}
-.sidebar-signout:hover { color: var(--red); }
-.sidebar-signout .sign-icon { width: 26px; text-align: center; flex-shrink: 0; font-size: 14px; }
-.sidebar.collapsed .sidebar-signout .sign-label { display: none; }
+.user-dropdown .signout-btn { color: var(--text3); }
+.user-dropdown .signout-btn:hover { color: var(--red); background: var(--bg4); }
 .sidebar.collapsed .user-caret { display: none; }
 
 /* ── THEME SWITCHER ── */

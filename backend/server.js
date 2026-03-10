@@ -26,6 +26,10 @@ const matchIngredientsHandler = require("./api/match-ingredients");
 const userPreferencesHandler  = require("./api/user-preferences");
 const authInterceptHandler    = require("./api/auth-intercept");
 const notifyMealHandler       = require("./api/notify-meal");
+const configHandler           = require("./api/config");
+const googleAuthHandler       = require("./api/google-auth");
+const googleCalendarHandler   = require("./api/google-calendar");
+const gcalEventHandler        = require("./api/gcal-event");
 
 const PORT        = process.env.PORT || 3000;
 const PB_INTERNAL = process.env.PB_URL || "http://localhost:8090";
@@ -133,6 +137,10 @@ const API_ROUTES = {
   "/api/match-ingredients":  matchIngredientsHandler,
   "/api/user-preferences":   userPreferencesHandler,
   "/api/notify-meal":        notifyMealHandler,
+  "/api/config":             configHandler,
+  "/api/google-auth":        googleAuthHandler,
+  "/api/google-calendar":    googleCalendarHandler,
+  "/api/gcal-event":         gcalEventHandler,
   "/api/collections/users/auth-with-oauth2": authInterceptHandler,
 };
 

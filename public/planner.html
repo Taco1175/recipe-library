@@ -186,10 +186,6 @@
       <div class="user-dropdown" id="user-dropdown">
         <div class="dd-email" id="user-email-full"></div>
       </div>
-      <div class="sidebar-signout" onclick="Auth.signOut()">
-        <span class="sign-icon"></span>
-        <span class="sign-label">Sign out</span>
-      </div>
     </div>
   </nav>
   <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
@@ -340,7 +336,7 @@ async function handleAuthCallback() {
     const res = await fetch(`${API}/google-auth`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code })
+      body: JSON.stringify({ code, redirect_uri: location.origin + "/planner.html" })
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
@@ -488,7 +484,8 @@ async function init() {
     if (_fl) _fl.textContent = _u.email;
   }
   try {
-    recipes = await apiFetch("recipes");
+    const _recipesData = await apiFetch("recipes");
+    recipes = Array.isArray(_recipesData) ? _recipesData : (_recipesData?.items || []);
     // Load cart from localStorage (set by main page)
     try {
       const saved = localStorage.getItem("recipe-cart");
