@@ -128,6 +128,7 @@ const CARRIER_LABELS = {
   boost:      'Boost Mobile',
   cricket:    'Cricket',
   metro:      'Metro by T-Mobile',
+  spectrum:   'Spectrum Mobile',
 };
 
 function openSettings() {
