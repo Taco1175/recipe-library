@@ -19,9 +19,12 @@ function parseAllowedEmails(rec) {
 module.exports = async function appSettingsHandler(req, res) {
   if (req.method === "OPTIONS") return send(res, 200, {});
 
-  // GET — public, no auth required
+  // GET — requires auth (so PocketBase can enforce @request.auth.id != "")
   if (req.method === "GET") {
-    const { ok, data } = await pbFetch("collections/app_settings/records?perPage=1");
+    const auth = await getUserFromRequest(req);
+    if (!auth) return send(res, 401, { error: "Unauthorized" });
+    const { token } = auth;
+    const { ok, data } = await pbFetch("collections/app_settings/records?perPage=1", "GET", null, token);
     const rec = data?.items?.[0] || null;
     return send(res, 200, { allowed_emails: parseAllowedEmails(rec) });
   }
