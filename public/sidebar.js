@@ -188,6 +188,23 @@ function openSettings() {
         </div>
       </div>
 
+      <!-- Allowed emails (app-wide — who can sign in) -->
+      <div style="margin-bottom:20px;padding-top:16px;border-top:1px solid var(--border,#2a2f3e);">
+        <p style="font-size:11px;font-family:monospace;color:var(--text3,#667);letter-spacing:.06em;margin-bottom:8px">
+          ALLOWED SIGN-INS
+        </p>
+        <label style="font-size:12px;color:var(--text2,#b0b5c4);display:block;margin-bottom:4px">
+          Permitted Google accounts (one per line)
+        </label>
+        <textarea id="s-allowed-emails" placeholder="you@gmail.com&#10;family@gmail.com" rows="3"
+          style="width:100%;background:var(--bg3,#1e2330);border:1px solid var(--border,#2a2f3e);
+            border-radius:8px;padding:9px 12px;color:var(--text,#E8E4DC);font-size:13px;
+            font-family:monospace;resize:vertical;outline:none;"></textarea>
+        <p style="font-size:11px;color:var(--text3,#667);margin-top:5px">
+          Leave empty to allow anyone with a Google account to sign in.
+        </p>
+      </div>
+
       <div id="s-msg" style="font-size:13px;font-family:monospace;margin-bottom:12px;display:none"></div>
 
       <button onclick="_saveSettings()"
@@ -213,6 +230,14 @@ function openSettings() {
           if (el) el.checked = !!n[k];
         });
       }).catch(() => {});
+
+    // Load allowed emails (app-wide setting — no auth needed but pass token anyway)
+    fetch('/api/app-settings')
+      .then(r => r.json())
+      .then(({ allowed_emails = [] }) => {
+        const el = document.getElementById('s-allowed-emails');
+        if (el && allowed_emails.length) el.value = allowed_emails.join('\n');
+      }).catch(() => {});
   }
 }
 
@@ -224,17 +249,26 @@ async function _saveSettings() {
     notifs[k] = !!document.getElementById(`s-${k}`)?.checked;
   });
 
-  const msgEl = document.getElementById('s-msg');
+  const rawEmails = document.getElementById('s-allowed-emails')?.value || '';
+  const allowedEmails = rawEmails.split(/[\n,]+/).map(e => e.trim().toLowerCase()).filter(Boolean);
+
   const token = _getToken();
   if (!token) { _showSettingsMsg('Not logged in', 'error'); return; }
 
   try {
-    const res = await fetch('/api/user-preferences', {
-      method: 'POST',
-      headers: { Authorization: token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ notifications: notifs }),
-    });
-    if (res.ok) {
+    const [prefRes, appRes] = await Promise.all([
+      fetch('/api/user-preferences', {
+        method: 'POST',
+        headers: { Authorization: token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notifications: notifs }),
+      }),
+      fetch('/api/app-settings', {
+        method: 'POST',
+        headers: { Authorization: token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ allowed_emails: allowedEmails }),
+      }),
+    ]);
+    if (prefRes.ok && appRes.ok) {
       _showSettingsMsg('Settings saved!', 'success');
       setTimeout(() => document.getElementById('settings-modal')?.remove(), 1200);
     } else {
