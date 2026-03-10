@@ -4,16 +4,20 @@ const APP_URL = process.env.APP_URL || "https://mealplannr.xyz";
 
 async function sendEmail({ to, subject, html }) {
   if (!RESEND_API_KEY) { console.warn("[Email] No RESEND_API_KEY set — skipping"); return { ok: false, error: "No API key" }; }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({ from: FROM_EMAIL, to, subject, html }),
+      signal: controller.signal,
     });
     const data = await res.json();
     if (!res.ok) console.error(`[Email] FAILED:`, JSON.stringify(data));
     return { ok: res.ok, data };
   } catch(e) { return { ok: false, error: e.message }; }
+  finally { clearTimeout(timer); }
 }
 
 function shareInviteEmail({ ownerEmail, recipientEmail, permission, appUrl }) {
