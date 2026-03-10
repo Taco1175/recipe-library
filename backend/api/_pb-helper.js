@@ -6,8 +6,9 @@ const PB_INTERNAL = process.env.PB_URL || "http://localhost:8090";
 const PB_ADMIN_EMAIL = process.env.PB_ADMIN_EMAIL;
 const PB_ADMIN_PASSWORD = process.env.PB_ADMIN_PASSWORD;
 
+const ALLOWED_ORIGIN = process.env.APP_URL || "https://mealplannr.xyz";
 const CORS = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
   "Content-Type": "application/json",
 };
 
@@ -67,6 +68,13 @@ async function getUserFromRequest(req) {
 }
 
 
+// ── PocketBase filter escaping ─────────────────────────────────────────────
+// Escapes a value for use inside a double-quoted PocketBase filter string.
+// e.g.  filter(`email="${pbEscape(email)}"`)
+function pbEscape(val) {
+  return String(val).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
 // ── Collection helpers ─────────────────────────────────────────────────────
 
 // GET list from a collection, with optional filter
@@ -109,7 +117,7 @@ async function pbFirst(collection, filter, token) {
 async function findUserByEmail(email) {
   try {
     const adminToken = await getAdminToken();
-    const result = await pbFirst("users", `email="${email}"`, adminToken);
+    const result = await pbFirst("users", `email="${pbEscape(email)}"`, adminToken);
     return result;
   } catch (e) { return null; }
 }
@@ -140,6 +148,6 @@ function ok(body) {
 
 module.exports = {
   pbFetch, pbList, pbGet, pbCreate, pbUpdate, pbDelete, pbFirst,
-  getAdminToken, getUserFromRequest, findUserByEmail,
+  getAdminToken, getUserFromRequest, findUserByEmail, pbEscape,
   send, unauthorized, badRequest, serverError, ok, CORS,
 };

@@ -345,6 +345,9 @@
 </div>
 
 <script>
+function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function safeUrl(u){const s=String(u||"").trim();return/^https?:\/\//i.test(s)?s.replace(/"/g,"&quot;"):"#";}
+
 async function apiFetch(fn, method="GET", body=null) {
   const hdrs = await Auth.headers();
   if (!hdrs) { Auth.signOut(); throw new Error("Not authenticated"); }
@@ -446,7 +449,7 @@ async function init() {
     const icon = MI[recipe.method] || "🍴";
 
     const heroHtml = recipe.image_url
-      ? `<img class="hero-img" src="${recipe.image_url}" alt="${recipe.name}">`
+      ? `<img class="hero-img" src="${safeUrl(recipe.image_url)}" alt="${esc(recipe.name)}">`
       : `<div class="hero-placeholder">${icon}</div>`;
 
     const ingredientsHtml = rawIngredients.length
@@ -459,7 +462,7 @@ async function init() {
           </div>
         </div>
         <ul class="ing-list">
-          ${rawIngredients.map(i => `<li onclick="toggleIng(this)">${i}</li>`).join("")}
+          ${rawIngredients.map(i => `<li onclick="toggleIng(this)">${esc(i)}</li>`).join("")}
         </ul>`
       : `<div class="no-details" style="padding:16px;font-size:13px">No ingredients saved yet.<br>Go back and fetch the recipe URL.</div>`;
 
@@ -467,12 +470,12 @@ async function init() {
       ? detail.steps.map((s, i) => `
           <div class="step">
             <div class="step-num">${i+1}</div>
-            <div class="step-text">${s}</div>
+            <div class="step-text">${esc(s)}</div>
           </div>`).join("")
       : `<div class="no-details">No steps saved yet.</div>`;
 
     const sourceHtml = recipe.url
-      ? `<a class="source-link" href="${recipe.url}" target="_blank">↗ View Original Recipe</a>`
+      ? `<a class="source-link" href="${safeUrl(recipe.url)}" target="_blank">↗ View Original Recipe</a>`
       : "";
 
     document.getElementById("app").innerHTML = `
@@ -480,11 +483,11 @@ async function init() {
         ${heroHtml}
         <div class="hero-overlay">
           <div class="hero-text">
-            <h1 class="hero-title">${recipe.name}</h1>
+            <h1 class="hero-title">${esc(recipe.name)}</h1>
             <div class="hero-meta">
-              ${recipe.category ? `<span class="hero-pill pill-cat">${recipe.category}</span>` : ""}
-              ${recipe.method ? `<span class="hero-pill pill-method">${icon} ${recipe.method}</span>` : ""}
-              ${recipe.cost ? `<span class="hero-pill pill-cost">${recipe.cost}</span>` : ""}
+              ${recipe.category ? `<span class="hero-pill pill-cat">${esc(recipe.category)}</span>` : ""}
+              ${recipe.method ? `<span class="hero-pill pill-method">${icon} ${esc(recipe.method)}</span>` : ""}
+              ${recipe.cost ? `<span class="hero-pill pill-cost">${esc(recipe.cost)}</span>` : ""}
               ${currentServings ? `<span class="hero-pill pill-servings">${currentServings} servings</span>` : ""}
             </div>
           </div>
@@ -507,7 +510,7 @@ async function init() {
       </div>
     `;
   } catch(e) {
-    document.getElementById("app").innerHTML = `<div class="loading-state">Error loading recipe: ${e.message}</div>`;
+    document.getElementById("app").innerHTML = `<div class="loading-state">Error loading recipe: ${esc(e.message)}</div>`;
   }
 }
 

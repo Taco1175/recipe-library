@@ -355,6 +355,8 @@
 <div class="toast" id="toast"></div>
 
 <script>
+function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+
 const API = "/api";
 async function apiFetch(path, method="GET", body=null) {
   const hdrs = await Auth.headers();
@@ -420,9 +422,9 @@ async function handleAuthCallback() {
     gToken = data.access_token;
     gRefreshToken = data.refresh_token;
     gTokenExpiry = Date.now() + (data.expires_in * 1000);
-    localStorage.setItem("gcal-refresh", gRefreshToken);
-    localStorage.setItem("gcal-expiry", gTokenExpiry);
-    localStorage.setItem("gcal-token", gToken);
+    sessionStorage.setItem("gcal-refresh", gRefreshToken);
+    sessionStorage.setItem("gcal-expiry", gTokenExpiry);
+    sessionStorage.setItem("gcal-token", gToken);
     return true;
   } catch(e) {
     console.error("Auth failed:", e);
@@ -432,7 +434,7 @@ async function handleAuthCallback() {
 
 async function ensureToken() {
   if (gToken && Date.now() < gTokenExpiry - 60000) return true;
-  const refresh = gRefreshToken || localStorage.getItem("gcal-refresh");
+  const refresh = gRefreshToken || sessionStorage.getItem("gcal-refresh");
   if (!refresh) return false;
   try {
     const res = await fetch(`${API}/google-auth`, {
@@ -444,8 +446,8 @@ async function ensureToken() {
     if (data.error) throw new Error(data.error);
     gToken = data.access_token;
     gTokenExpiry = Date.now() + (data.expires_in * 1000);
-    localStorage.setItem("gcal-token", gToken);
-    localStorage.setItem("gcal-expiry", gTokenExpiry);
+    sessionStorage.setItem("gcal-token", gToken);
+    sessionStorage.setItem("gcal-expiry", gTokenExpiry);
     return true;
   } catch(e) {
     disconnectGoogle();
@@ -455,9 +457,9 @@ async function ensureToken() {
 
 function disconnectGoogle() {
   gToken = null; gRefreshToken = null; gTokenExpiry = 0;
-  localStorage.removeItem("gcal-refresh");
-  localStorage.removeItem("gcal-token");
-  localStorage.removeItem("gcal-expiry");
+  sessionStorage.removeItem("gcal-refresh");
+  sessionStorage.removeItem("gcal-token");
+  sessionStorage.removeItem("gcal-expiry");
   localStorage.removeItem("gcal-selected-cals");
   selectedCalendars.clear();
   calendarEvents = {};
@@ -501,7 +503,7 @@ async function loadCalendars() {
       const color = c.backgroundColor || GCAL_COLORS[c.colorId] || "#6e8efb";
       const sel = selectedCalendars.has(c.id);
       return `<div class="cal-chip${sel?" selected":""}" onclick="toggleCal('${c.id}',this)" data-id="${c.id}">
-        <span class="cal-dot" style="background:${color}"></span>${c.summary}
+        <span class="cal-dot" style="background:${color}"></span>${esc(c.summary)}
       </div>`;
     }).join("");
 
@@ -583,9 +585,9 @@ async function init() {
 
     // Restore existing Google session
     if (!authed) {
-      const savedToken = localStorage.getItem("gcal-token");
-      const savedExpiry = parseInt(localStorage.getItem("gcal-expiry") || "0");
-      const savedRefresh = localStorage.getItem("gcal-refresh");
+      const savedToken = sessionStorage.getItem("gcal-token");
+      const savedExpiry = parseInt(sessionStorage.getItem("gcal-expiry") || "0");
+      const savedRefresh = sessionStorage.getItem("gcal-refresh");
       if (savedRefresh) {
         gRefreshToken = savedRefresh;
         gToken = savedToken;
@@ -665,8 +667,8 @@ function renderWeek() {
     const mealsHtml = dayMeals.length
       ? dayMeals.map(r => `
           <div class="meal-chip" draggable="true" onclick="openRecipePopup('${r.id}')" ondragstart="onMealDragStart(event,'${ds}','${r.id}')" ondragend="onMealDragEnd(event)">
-            <div class="chip-name">${r.name}</div>
-            <div class="chip-cat">${r.category}</div>
+            <div class="chip-name">${esc(r.name)}</div>
+            <div class="chip-cat">${esc(r.category)}</div>
             <button class="chip-remove" onclick="event.stopPropagation();removeMeal('${ds}','${r.id}')" title="Remove">×</button>
           </div>`).join("")
       : `<div class="day-empty">No meals</div>`;
@@ -676,7 +678,7 @@ function renderWeek() {
     const eventsHtml = dayEvents.length
       ? `<div class="cal-events-section">${dayEvents.map(ev => {
           const col = ev.color || "#6e8efb";
-          return `<div class="cal-event" style="background:${col}22;color:${col};border-left:2px solid ${col}" title="${ev.title}">${ev.title}</div>`;
+          return `<div class="cal-event" style="background:${col}22;color:${col};border-left:2px solid ${col}" title="${esc(ev.title)}">${esc(ev.title)}</div>`;
         }).join("")}</div>`
       : "";
 

@@ -3,7 +3,7 @@
 
 const {
   pbList, pbCreate, pbUpdate, pbDelete, pbFirst,
-  findUserByEmail, getUserFromRequest, CORS,
+  findUserByEmail, getUserFromRequest, CORS, pbEscape,
 } = require("./_pb-helper");
 
 const { sendEmail, shareInviteEmail } = require("./_email-helper");
@@ -19,7 +19,7 @@ module.exports = async function librarySharesHandler(req, res) {
   if (req.method === "GET") {
     const { ok, data } = await pbList(
       "library_shares",
-      { filter: `owner="${user.id}"`, sort: "-created" },
+      { filter: `owner="${pbEscape(user.id)}"`, sort: "-created" },
       token
     );
     if (!ok) return send(res, 500, { error: "DB error" });
@@ -40,7 +40,7 @@ module.exports = async function librarySharesHandler(req, res) {
     // Check if share already exists
     const existing = await pbFirst(
       "library_shares",
-      `owner="${user.id}" && shared_with_email="${email}"`,
+      `owner="${pbEscape(user.id)}" && shared_with_email="${pbEscape(email)}"`,
       token
     );
 
@@ -80,7 +80,7 @@ module.exports = async function librarySharesHandler(req, res) {
     if (!id || !permission) return send(res, 400, { error: "Missing fields" });
 
     // Verify ownership
-    const existing = await pbFirst("library_shares", `id="${id}" && owner="${user.id}"`, token);
+    const existing = await pbFirst("library_shares", `id="${pbEscape(id)}" && owner="${pbEscape(user.id)}"`, token);
     if (!existing) return send(res, 404, { error: "Share not found" });
 
     const { ok } = await pbUpdate("library_shares", id, { permission }, token);
@@ -93,7 +93,7 @@ module.exports = async function librarySharesHandler(req, res) {
     const id = new URL(req.url, "http://x").searchParams.get("id");
     if (!id) return send(res, 400, { error: "Missing id" });
 
-    const existing = await pbFirst("library_shares", `id="${id}" && owner="${user.id}"`, token);
+    const existing = await pbFirst("library_shares", `id="${pbEscape(id)}" && owner="${pbEscape(user.id)}"`, token);
     if (!existing) return send(res, 404, { error: "Share not found" });
 
     await pbDelete("library_shares", id, token);
