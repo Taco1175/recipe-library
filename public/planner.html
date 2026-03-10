@@ -156,6 +156,43 @@
 /* ── Grocery from week ── */
 @media (max-width: 900px) { .suggest-bar { padding: 0 14px; } .suggest-cards { padding: 12px 14px; } .suggest-card { min-width: 140px; } .suggest-actions { padding: 0 14px 14px; } }
 
+/* Meal chip draggable */
+.meal-chip { cursor: grab; }
+.meal-chip.dragging { opacity: 0.4; cursor: grabbing; }
+
+/* Recipe detail popup */
+.recipe-popup-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.72); z-index: 200; align-items: center; justify-content: center; padding: 16px; }
+.recipe-popup-overlay.show { display: flex; }
+.recipe-popup { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; width: 100%; max-width: 520px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
+.rp-header { padding: 20px 20px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 12px; }
+.rp-header > div { flex: 1; min-width: 0; }
+.rp-category { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); font-family: var(--mono); margin-bottom: 4px; }
+.rp-name { font-size: 20px; font-family: 'Playfair Display', serif; color: var(--text); margin: 0 0 4px; }
+.rp-close { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 22px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; flex-shrink: 0; }
+.rp-close:hover { background: var(--bg4); color: var(--text); }
+.rp-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
+.rp-section { margin-bottom: 18px; }
+.rp-section h4 { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); font-family: var(--mono); margin: 0 0 8px; }
+.rp-section ul, .rp-section ol { margin: 0; padding-left: 18px; }
+.rp-section li { font-size: 13px; color: var(--text2); line-height: 1.7; }
+.rp-none { font-size: 13px; color: var(--text3); font-style: italic; }
+.rp-footer { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.rp-add-btn { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 8px 18px; font-size: 13px; font-family: 'DM Sans', sans-serif; font-weight: 500; cursor: pointer; }
+.rp-add-btn:hover { opacity: 0.85; }
+.rp-link { font-size: 13px; color: var(--accent); text-decoration: none; margin-left: auto; }
+.rp-link:hover { text-decoration: underline; }
+
+/* Add-meal modal */
+.add-meal-modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; width: 380px; max-height: 72vh; display: flex; flex-direction: column; overflow: hidden; }
+.add-meal-modal h3 { padding: 16px 20px 0; font-size: 15px; color: var(--text); margin: 0; }
+.add-meal-search { margin: 10px 16px 0; padding: 8px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; width: calc(100% - 32px); box-sizing: border-box; }
+.add-meal-search:focus { border-color: var(--accent); }
+.add-meal-list { overflow-y: auto; flex: 1; margin-top: 8px; }
+.add-meal-item { padding: 10px 16px; border-bottom: 1px solid var(--bg3); cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.1s; }
+.add-meal-item:hover { background: var(--bg3); }
+.add-meal-item .ami-icon { font-size: 18px; flex-shrink: 0; }
+.add-meal-item .ami-name { font-size: 13px; color: var(--text); font-weight: 500; line-height: 1.3; }
+.add-meal-item .ami-cat { font-size: 11px; color: var(--text3); font-family: var(--mono); }
 
 </style>
 
@@ -273,6 +310,43 @@
     <p>Which day would you like to add this to?</p>
     <div class="day-pick-grid" id="dpick-grid"></div>
     <button class="day-pick-cancel" onclick="closeDayPick()">Cancel</button>
+  </div>
+</div>
+
+<!-- Add meal modal -->
+<div class="day-pick-overlay" id="add-meal-overlay" onclick="if(event.target===this)closeAddMeal()">
+  <div class="add-meal-modal">
+    <h3 id="add-meal-label"></h3>
+    <input class="add-meal-search" id="add-meal-search" placeholder="Search recipes…" oninput="filterAddMeal(this.value)">
+    <div class="add-meal-list" id="add-meal-list"></div>
+    <button class="day-pick-cancel" style="margin:10px 16px 14px;width:calc(100% - 32px)" onclick="closeAddMeal()">Cancel</button>
+  </div>
+</div>
+
+<!-- Recipe detail popup -->
+<div class="recipe-popup-overlay" id="recipe-popup-overlay" onclick="if(event.target===this)closeRecipePopup()">
+  <div class="recipe-popup">
+    <div class="rp-header">
+      <div>
+        <div class="rp-category" id="rp-category"></div>
+        <h2 class="rp-name" id="rp-name"></h2>
+      </div>
+      <button class="rp-close" onclick="closeRecipePopup()">×</button>
+    </div>
+    <div class="rp-body">
+      <div class="rp-section" id="rp-ingredients-section">
+        <h4>Ingredients</h4>
+        <div id="rp-ingredients"></div>
+      </div>
+      <div class="rp-section" id="rp-steps-section">
+        <h4>Steps</h4>
+        <div id="rp-steps"></div>
+      </div>
+    </div>
+    <div class="rp-footer">
+      <button class="rp-add-btn" onclick="addPopupRecipeToDay()">+ Add to Calendar</button>
+      <a class="rp-link" id="rp-link" href="#" target="_blank" style="display:none">View full recipe →</a>
+    </div>
   </div>
 </div>
 
@@ -490,7 +564,10 @@ async function init() {
     if (_fl) _fl.textContent = _u.email;
   }
   try {
-    const _recipesData = await apiFetch("recipes");
+    const [_recipesData] = await Promise.all([
+      apiFetch("recipes"),
+      loadRecipeDetails(),
+    ]);
     recipes = Array.isArray(_recipesData) ? _recipesData : (_recipesData?.items || []);
     // Load cart from localStorage (set by main page)
     try {
@@ -585,7 +662,7 @@ function renderWeek() {
 
     const mealsHtml = dayMeals.length
       ? dayMeals.map(r => `
-          <div class="meal-chip" onclick="openRecipe(${r.id})">
+          <div class="meal-chip" draggable="true" onclick="openRecipePopup(${r.id})" ondragstart="onMealDragStart(event,'${ds}',${r.id})" ondragend="onMealDragEnd(event)">
             <div class="chip-name">${r.name}</div>
             <div class="chip-cat">${r.category}</div>
             <button class="chip-remove" onclick="event.stopPropagation();removeMeal('${ds}',${r.id})" title="Remove">×</button>
@@ -656,32 +733,55 @@ function filterPicker(q) {
 }
 
 // ── Add meal flow ──
-let pendingDay = null;
+let addMealDay = null;
 
 function addMealToDay(ds) {
-  // Pre-select day and open picker — just scroll to picker and set pending day
-  pendingDay = ds;
-  showToast(`Now click a recipe to add it to ${new Date(ds+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})}`);
-  document.getElementById("picker-search").focus();
-  document.querySelector(".picker").scrollIntoView({ behavior:"smooth" });
+  addMealDay = ds;
+  const label = new Date(ds + "T12:00:00").toLocaleDateString("en-US", { weekday:"long", month:"short", day:"numeric" });
+  document.getElementById("add-meal-label").textContent = "Add to " + label;
+  document.getElementById("add-meal-search").value = "";
+  renderAddMealList(recipes.filter(r => !r.archived));
+  document.getElementById("add-meal-overlay").classList.add("show");
+  setTimeout(() => document.getElementById("add-meal-search").focus(), 80);
+}
+
+function renderAddMealList(list) {
+  const el = document.getElementById("add-meal-list");
+  if (!list.length) {
+    el.innerHTML = '<div style="padding:24px;text-align:center;font-size:13px;color:var(--text3)">No recipes found</div>';
+    return;
+  }
+  el.innerHTML = list.map(r => {
+    const icon = MI[r.method] || "🍴";
+    return `<div class="add-meal-item" onclick="selectAddMealRecipe(${r.id})">
+      <span class="ami-icon">${icon}</span>
+      <div><div class="ami-name">${r.name}</div><div class="ami-cat">${r.category}</div></div>
+    </div>`;
+  }).join("");
+}
+
+function filterAddMeal(q) {
+  const list = recipes.filter(r => !r.archived &&
+    (r.name.toLowerCase().includes(q.toLowerCase()) || r.category.toLowerCase().includes(q.toLowerCase())));
+  renderAddMealList(list);
+}
+
+function selectAddMealRecipe(id) {
+  if (!addMealDay) return;
+  const r = recipes.find(x => x.id === id);
+  if (!r) return;
+  addToPlan(addMealDay, id);
+  showToast(`${r.name} added!`);
+  closeAddMeal();
+}
+
+function closeAddMeal() {
+  document.getElementById("add-meal-overlay").classList.remove("show");
+  addMealDay = null;
 }
 
 function pickRecipe(id) {
-  const r = recipes.find(x => x.id === id);
-  if (!r) return;
-
-  if (pendingDay) {
-    // Add directly to pending day
-    addToPlan(pendingDay, id);
-    pendingDay = null;
-    showToast(`${r.name} added!`);
-  } else {
-    // Show day picker modal
-    pendingRecipe = r;
-    document.getElementById("dpick-recipe-name").textContent = r.name;
-    buildDayPickGrid();
-    document.getElementById("day-pick-overlay").classList.add("show");
-  }
+  openRecipePopup(id);
 }
 
 function buildDayPickGrid() {
@@ -722,8 +822,59 @@ function removeMeal(ds, id) {
   renderWeek();
 }
 
-function openRecipe(id) {
-  window.open(`/recipe.html?id=${id}`, "_blank");
+// ── Recipe detail popup ──
+let recipeDetails = {};
+let popupRecipeId = null;
+
+async function loadRecipeDetails() {
+  try {
+    const data = await apiFetch("recipe-details");
+    (data.items || []).forEach(d => { recipeDetails[d.recipe] = d; });
+  } catch(e) {}
+}
+
+function openRecipePopup(id) {
+  const r = recipes.find(x => x.id === id);
+  if (!r) return;
+  popupRecipeId = id;
+  const det = recipeDetails[id] || {};
+
+  document.getElementById("rp-name").textContent = r.name;
+  document.getElementById("rp-category").textContent = [r.category, r.method].filter(Boolean).join(" · ");
+
+  const ingredients = Array.isArray(det.ingredients) ? det.ingredients : [];
+  const ingEl = document.getElementById("rp-ingredients");
+  ingEl.innerHTML = ingredients.length
+    ? `<ul>${ingredients.map(i => `<li>${i}</li>`).join("")}</ul>`
+    : `<p class="rp-none">No ingredients saved yet.</p>`;
+
+  const steps = Array.isArray(det.steps) ? det.steps : [];
+  const stepsEl = document.getElementById("rp-steps");
+  stepsEl.innerHTML = steps.length
+    ? `<ol>${steps.map(s => `<li>${s}</li>`).join("")}</ol>`
+    : `<p class="rp-none">No steps saved yet.</p>`;
+
+  const link = document.getElementById("rp-link");
+  if (r.url) { link.href = r.url; link.style.display = ""; }
+  else { link.style.display = "none"; }
+
+  document.getElementById("recipe-popup-overlay").classList.add("show");
+}
+
+function closeRecipePopup() {
+  document.getElementById("recipe-popup-overlay").classList.remove("show");
+  popupRecipeId = null;
+}
+
+function addPopupRecipeToDay() {
+  if (!popupRecipeId) return;
+  const id = popupRecipeId;
+  closeRecipePopup();
+  pendingRecipe = recipes.find(x => x.id === id);
+  if (!pendingRecipe) return;
+  document.getElementById("dpick-recipe-name").textContent = pendingRecipe.name;
+  buildDayPickGrid();
+  document.getElementById("day-pick-overlay").classList.add("show");
 }
 
 // ── Google Calendar Export ──
@@ -787,7 +938,7 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove("show"), 3000);
 }
 
-document.addEventListener("keydown", e => { if (e.key === "Escape") { closeDayPick(); pendingDay = null; } });
+document.addEventListener("keydown", e => { if (e.key === "Escape") { closeDayPick(); closeAddMeal(); closeRecipePopup(); } });
 
 // ── Suggest a Week ──
 let suggestedMeals = [];
@@ -908,16 +1059,23 @@ function groceryFromWeek() {
   setTimeout(() => { location.href = "/?grocery=1"; }, 1200);
 }
 
-// ── Drag from suggest cards to calendar ──
+// ── Drag state ──
 let draggingIdx = null;
+let draggingPickerId = null;
+let draggingMeal = null; // { ds, id } for moving chips between days
 
+function getDayCol(el) {
+  while (el && !el.classList.contains("day-col")) el = el.parentElement;
+  return el;
+}
+
+// ── Drag from suggest cards ──
 function onSuggestDragStart(e, idx) {
-  draggingIdx = idx;
+  draggingIdx = idx; draggingPickerId = null; draggingMeal = null;
   e.dataTransfer.effectAllowed = "copy";
   e.currentTarget.classList.add("dragging");
   addDayDropListeners();
 }
-
 function onSuggestDragEnd(e) {
   e.currentTarget.classList.remove("dragging");
   draggingIdx = null;
@@ -925,54 +1083,81 @@ function onSuggestDragEnd(e) {
 }
 
 // ── Drag from picker panel ──
-let draggingPickerId = null;
-
 function onPickerDragStart(e, id) {
-  draggingPickerId = id;
-  draggingIdx = null; // clear suggest drag
+  draggingPickerId = id; draggingIdx = null; draggingMeal = null;
   e.dataTransfer.effectAllowed = "copy";
   e.currentTarget.classList.add("dragging");
   addDayDropListeners();
 }
-
 function onPickerDragEnd(e) {
   e.currentTarget.classList.remove("dragging");
   draggingPickerId = null;
   removeDayDropListeners();
 }
 
+// ── Drag meal chip (move between days) ──
+function onMealDragStart(e, ds, id) {
+  draggingMeal = { ds, id }; draggingIdx = null; draggingPickerId = null;
+  e.dataTransfer.effectAllowed = "move";
+  e.currentTarget.classList.add("dragging");
+  addDayDropListeners();
+}
+function onMealDragEnd(e) {
+  e.currentTarget.classList.remove("dragging");
+  draggingMeal = null;
+  removeDayDropListeners();
+}
+
+// ── Drop zone — event delegation on the grid ──
 function addDayDropListeners() {
-  document.querySelectorAll(".day-col").forEach(col => {
-    col.addEventListener("dragover", onDayDragOver);
-    col.addEventListener("dragleave", onDayDragLeave);
-    col.addEventListener("drop", onDayDrop);
-  });
+  const grid = document.getElementById("days-grid");
+  if (grid._dropListening) return;
+  grid.addEventListener("dragover", onGridDragOver);
+  grid.addEventListener("dragleave", onGridDragLeave);
+  grid.addEventListener("drop", onGridDrop);
+  grid._dropListening = true;
 }
 
 function removeDayDropListeners() {
-  document.querySelectorAll(".day-col").forEach(col => {
-    col.classList.remove("drag-over");
-    col.removeEventListener("dragover", onDayDragOver);
-    col.removeEventListener("dragleave", onDayDragLeave);
-    col.removeEventListener("drop", onDayDrop);
-  });
+  const grid = document.getElementById("days-grid");
+  grid.removeEventListener("dragover", onGridDragOver);
+  grid.removeEventListener("dragleave", onGridDragLeave);
+  grid.removeEventListener("drop", onGridDrop);
+  grid._dropListening = false;
+  document.querySelectorAll(".day-col.drag-over").forEach(c => c.classList.remove("drag-over"));
 }
 
-function onDayDragOver(e) {
+function onGridDragOver(e) {
+  const col = getDayCol(e.target);
+  if (!col) return;
   e.preventDefault();
-  e.dataTransfer.dropEffect = "copy";
-  this.classList.add("drag-over");
+  e.dataTransfer.dropEffect = draggingMeal ? "move" : "copy";
+  document.querySelectorAll(".day-col.drag-over").forEach(c => c.classList.remove("drag-over"));
+  col.classList.add("drag-over");
 }
 
-function onDayDragLeave(e) {
-  this.classList.remove("drag-over");
+function onGridDragLeave(e) {
+  if (!e.relatedTarget || !e.currentTarget.contains(e.relatedTarget)) {
+    document.querySelectorAll(".day-col.drag-over").forEach(c => c.classList.remove("drag-over"));
+  }
 }
 
-function onDayDrop(e) {
+function onGridDrop(e) {
   e.preventDefault();
-  this.classList.remove("drag-over");
-  const ds = this.dataset.date;
+  const col = getDayCol(e.target);
+  document.querySelectorAll(".day-col.drag-over").forEach(c => c.classList.remove("drag-over"));
+  if (!col) return;
+  const ds = col.dataset.date;
   if (!ds) return;
+
+  if (draggingMeal) {
+    if (draggingMeal.ds !== ds) {
+      removeMeal(draggingMeal.ds, draggingMeal.id);
+      addToPlan(ds, draggingMeal.id);
+      showToast(`Moved to ${new Date(ds+"T12:00").toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})}`);
+    }
+    return;
+  }
 
   let r = null;
   if (draggingIdx !== null && suggestedMeals[draggingIdx]) {
