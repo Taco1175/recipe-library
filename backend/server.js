@@ -33,6 +33,7 @@ const configHandler           = require("./api/config");
 const googleAuthHandler       = require("./api/google-auth");
 const googleCalendarHandler   = require("./api/google-calendar");
 const gcalEventHandler        = require("./api/gcal-event");
+const requestAccessHandler    = require("./api/request-access");
 
 const PORT        = process.env.PORT || 3000;
 const PB_INTERNAL = process.env.PB_URL || "http://localhost:8090";
@@ -145,6 +146,7 @@ const API_ROUTES = {
   "/api/google-calendar":    googleCalendarHandler,
   "/api/gcal-event":         gcalEventHandler,
   "/api/collections/users/auth-with-oauth2": authInterceptHandler,
+  "/api/request-access": requestAccessHandler,
 };
 
 // ── Main server ────────────────────────────────────────────────────────────
