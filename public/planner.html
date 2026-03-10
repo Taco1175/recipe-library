@@ -662,10 +662,10 @@ function renderWeek() {
 
     const mealsHtml = dayMeals.length
       ? dayMeals.map(r => `
-          <div class="meal-chip" draggable="true" onclick="openRecipePopup(${r.id})" ondragstart="onMealDragStart(event,'${ds}',${r.id})" ondragend="onMealDragEnd(event)">
+          <div class="meal-chip" draggable="true" onclick="openRecipePopup('${r.id}')" ondragstart="onMealDragStart(event,'${ds}','${r.id}')" ondragend="onMealDragEnd(event)">
             <div class="chip-name">${r.name}</div>
             <div class="chip-cat">${r.category}</div>
-            <button class="chip-remove" onclick="event.stopPropagation();removeMeal('${ds}',${r.id})" title="Remove">×</button>
+            <button class="chip-remove" onclick="event.stopPropagation();removeMeal('${ds}','${r.id}')" title="Remove">×</button>
           </div>`).join("")
       : `<div class="day-empty">No meals</div>`;
 
@@ -696,7 +696,7 @@ function recipeCard(r, isCart=false) {
   const img = r.image_url
     ? `<img src="${r.image_url}" alt="" onerror="this.style.display='none'">`
     : `<div class="pr-placeholder">${icon}</div>`;
-  return `<div class="picker-recipe${isCart?" cart-item":""}" draggable="true" data-id="${r.id}" onclick="pickRecipe(${r.id})" ondragstart="onPickerDragStart(event,${r.id})" ondragend="onPickerDragEnd(event)">
+  return `<div class="picker-recipe${isCart?" cart-item":""}" draggable="true" data-id="${r.id}" onclick="pickRecipe('${r.id}')" ondragstart="onPickerDragStart(event,'${r.id}')" ondragend="onPickerDragEnd(event)">
     ${img}
     <div>
       <div class="pr-name">${r.name}</div>
@@ -753,7 +753,7 @@ function renderAddMealList(list) {
   }
   el.innerHTML = list.map(r => {
     const icon = MI[r.method] || "🍴";
-    return `<div class="add-meal-item" onclick="selectAddMealRecipe(${r.id})">
+    return `<div class="add-meal-item" onclick="selectAddMealRecipe('${r.id}')">
       <span class="ami-icon">${icon}</span>
       <div><div class="ami-name">${r.name}</div><div class="ami-cat">${r.category}</div></div>
     </div>`;
