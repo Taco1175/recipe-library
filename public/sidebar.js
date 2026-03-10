@@ -188,8 +188,8 @@ function openSettings() {
         </div>
       </div>
 
-      <!-- Allowed emails (app-wide — who can sign in) -->
-      <div style="margin-bottom:20px;padding-top:16px;border-top:1px solid var(--border,#2a2f3e);">
+      <!-- Allowed emails (owner-only section, hidden for other users via JS) -->
+      <div id="s-allowed-section" style="display:none;margin-bottom:20px;padding-top:16px;border-top:1px solid var(--border,#2a2f3e);">
         <p style="font-size:11px;font-family:monospace;color:var(--text3,#667);letter-spacing:.06em;margin-bottom:8px">
           ALLOWED SIGN-INS
         </p>
@@ -220,6 +220,14 @@ function openSettings() {
   // Load existing settings
   const token = _getToken();
   if (token) {
+    // Show the Allowed Sign-ins section only for the owner
+    try {
+      const ownerEmail = typeof Auth !== 'undefined' ? Auth.getUser()?.email : null;
+      if (ownerEmail === 'cowlingpush2016@gmail.com') {
+        document.getElementById('s-allowed-section').style.display = 'block';
+      }
+    } catch(e) {}
+
     fetch('/api/user-preferences', { headers: { Authorization: token } })
       .then(r => r.json())
       .then(({ notifications: n = {} }) => {
@@ -231,12 +239,12 @@ function openSettings() {
         });
       }).catch(() => {});
 
-    // Load allowed emails (app-wide setting — no auth needed but pass token anyway)
-    fetch('/api/app-settings')
-      .then(r => r.json())
-      .then(({ allowed_emails = [] }) => {
+    // Load allowed emails — owner only (403 for anyone else, which is fine)
+    fetch('/api/app-settings', { headers: { Authorization: token } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
         const el = document.getElementById('s-allowed-emails');
-        if (el && allowed_emails.length) el.value = allowed_emails.join('\n');
+        if (el && d?.allowed_emails?.length) el.value = d.allowed_emails.join('\n');
       }).catch(() => {});
   }
 }
