@@ -1,7 +1,7 @@
 // backend/api/auth-intercept.js
 // Intercepts Google OAuth completions at /api/collections/users/auth-with-oauth2.
 //
-// If allowed_emails is configured in app_settings (via the app's Settings UI):
+// If allowed_emails is configured in site_config (via the app's Settings UI):
 //   - Blocks any email not on the list (returns 403)
 //   - Texts ALL users who have notify_login enabled in their notification prefs
 //
@@ -16,17 +16,17 @@ const CORS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
-// Read the allowed_emails list from app_settings using the admin token,
+// Read the allowed_emails list from site_config using the admin token,
 // so the read always succeeds regardless of who is logging in.
 // Returns [] if the collection doesn't exist or has no records (open access).
 async function getAllowedEmails() {
   try {
     const adminToken = await getAdminToken();
-    const { ok, data } = await pbFetch("collections/app_settings/records?perPage=1", "GET", null, adminToken);
+    const { ok, data } = await pbFetch("collections/site_config/records?perPage=1", "GET", null, adminToken);
     if (!ok || !data?.items?.length) return [];
     return JSON.parse(data.items[0].allowed_emails || "[]");
   } catch(e) {
-    console.warn("[AuthIntercept] Could not read app_settings:", e.message);
+    console.warn("[AuthIntercept] Could not read site_config:", e.message);
     return [];
   }
 }

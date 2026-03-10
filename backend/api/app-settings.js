@@ -1,6 +1,6 @@
 // backend/api/app-settings.js
 // App-wide settings (not per-user). Owner-only access.
-// Requires an "app_settings" collection in PocketBase with:
+// Requires an "site_config" collection in PocketBase with:
 //   allowed_emails — Text
 // All API rules: @request.auth.email = "cowlingpush2016@gmail.com"
 
@@ -28,7 +28,7 @@ module.exports = async function appSettingsHandler(req, res) {
 
   // GET
   if (req.method === "GET") {
-    const { ok, data } = await pbFetch("collections/app_settings/records?perPage=1", "GET", null, token);
+    const { ok, data } = await pbFetch("collections/site_config/records?perPage=1", "GET", null, token);
     const rec = data?.items?.[0] || null;
     return send(res, 200, { allowed_emails: parseAllowedEmails(rec) });
   }
@@ -46,12 +46,12 @@ module.exports = async function appSettingsHandler(req, res) {
     }
 
     const update = { allowed_emails: JSON.stringify(emails) };
-    const existing = await pbFirst("app_settings", "", token);
+    const existing = await pbFirst("site_config", "", token);
 
     if (existing) {
-      await pbFetch(`collections/app_settings/records/${existing.id}`, "PATCH", update, token);
+      await pbFetch(`collections/site_config/records/${existing.id}`, "PATCH", update, token);
     } else {
-      await pbFetch("collections/app_settings/records", "POST", update, token);
+      await pbFetch("collections/site_config/records", "POST", update, token);
     }
 
     return send(res, 200, { ok: true, allowed_emails: emails });
