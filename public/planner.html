@@ -1232,7 +1232,7 @@ function groceryFromWeek() {
   openGrocery([...cartIds]);
 }
 
-async function openGrocery(ids) {
+function openGrocery(ids) {
   const overlay = document.getElementById("grocery-overlay");
   overlay.classList.add("show");
 
@@ -1250,29 +1250,13 @@ async function openGrocery(ids) {
     return;
   }
 
-  body.innerHTML = `<div class="g-loading"><div class="g-spinner"></div>Organizing your grocery list…</div>`;
-
-  const ings = [];
-  withD.forEach(r => recipeDetails[r.id].ingredients.forEach(i => ings.push(`- ${i} (from: ${r.name})`)));
-
-  try {
-    const txt = await claudeProxy(`Organize these grocery ingredients into categories. Consolidate duplicates smartly.
-${ings.join("\n")}
-Return ONLY valid JSON:
-{"Meat & Seafood":[{"item":"description","recipes":["name"]}],"Produce":[...],"Dairy & Eggs":[...],"Pantry & Dry Goods":[...],"Canned & Jarred":[...],"Frozen":[...],"Condiments & Sauces":[...],"Bread & Tortillas":[...],"Spices & Seasonings":[...],"Other":[...]}
-Only include categories with items.`);
-
-    const j = JSON.parse(txt.replace(/^```json\n?|^```\n?|```$/gm, "").trim());
-    let html = Object.entries(j).filter(([, v]) => v?.length).map(([cat, items]) =>
-      `<div class="g-section"><h3>${esc(cat)}</h3>${items.map(x =>
-        `<div class="g-item">${esc(x.item)}<span class="g-from">${(x.recipes || []).map(esc).join(", ")}</span></div>`
-      ).join("")}</div>`
-    ).join("");
-    if (noD.length) html += `<div style="margin-top:14px;padding:10px 12px;background:var(--bg3,#1e2330);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text2)"><strong style="color:var(--text)">⚠ No ingredients saved:</strong> ${noD.map(r => `<em>${esc(r.name)}</em>`).join(", ")}</div>`;
-    body.innerHTML = html;
-  } catch(err) {
-    body.innerHTML = `<p style="color:#e07070;font-size:13px">⚠ ${esc(err.message)}</p>`;
-  }
+  let html = withD.map(r =>
+    `<div class="g-section"><h3>${esc(r.name)}</h3>${recipeDetails[r.id].ingredients.map(i =>
+      `<div class="g-item">${esc(i)}</div>`
+    ).join("")}</div>`
+  ).join("");
+  if (noD.length) html += `<div style="margin-top:14px;padding:10px 12px;background:var(--bg3,#1e2330);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text2)"><strong style="color:var(--text)">⚠ No ingredients saved:</strong> ${noD.map(r => `<em>${esc(r.name)}</em>`).join(", ")}</div>`;
+  body.innerHTML = html;
 }
 
 function closeGrocery() {
@@ -1293,14 +1277,6 @@ function copyGroceryList() {
   });
 }
 
-async function claudeProxy(prompt) {
-  const h = await Auth.headers();
-  if (!h) throw new Error("Not authenticated");
-  const res = await fetch(`${API}/claude`, { method: "POST", headers: h, body: JSON.stringify({ prompt }) });
-  const d = await res.json();
-  if (!res.ok) throw new Error(d.error || "AI request failed");
-  return d.text;
-}
 
 // ── Drag state ──
 let draggingIdx = null;
