@@ -1112,8 +1112,14 @@ function groceryFromWeek() {
     (plan[ds] || []).forEach(id => weekIds.add(id));
   }
 
+  // Fall back to cart items if nothing is scheduled this week
   if (!weekIds.size) {
-    showToast("No meals planned this week!");
+    if (!cartIds.size) {
+      showToast("No meals planned this week!");
+      return;
+    }
+    showToast(`Opening grocery list for ${cartIds.size} cart item${cartIds.size !== 1 ? 's' : ''}…`);
+    setTimeout(() => { location.href = "/?grocery=1"; }, 1200);
     return;
   }
 
@@ -1274,7 +1280,9 @@ async function _sendDailyDigestIfNeeded() {
   const nowMinutes    = now.getHours() * 60 + now.getMinutes();
   if (nowMinutes < targetMinutes || nowMinutes > targetMinutes + 30) return;
 
-  const ids = plan[today] || [];
+  // Use today's scheduled meals; fall back to cart items if none are scheduled
+  let ids = plan[today] || [];
+  if (!ids.length) ids = [...cartIds];
   if (!ids.length) return;
   const mealNames = ids.map(id => {
     const r = (recipes || []).find(x => x.id === id);
