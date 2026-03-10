@@ -3,6 +3,8 @@
 // Run once after deploying:  node backend/setup-meal-plans.js
 //
 // Safe to re-run — skips creation if the collection already exists.
+// If the collection exists but has no rules (from a failed previous run),
+// delete it via the PocketBase Admin UI first, then re-run.
 
 require("dotenv").config({ path: require("path").join(__dirname, ".env") });
 
@@ -29,9 +31,8 @@ async function pb(path, method = "GET", body = null, token = null) {
 }
 
 async function main() {
-  // 1. Get admin token
   console.log("Authenticating as admin…");
-  const { ok: authOk, data: authData } = await pb("admins/auth-with-password", "POST", {
+  const { ok: authOk, data: authData } = await pb("collections/_superusers/auth-with-password", "POST", {
     identity: ADMIN_EMAIL,
     password: ADMIN_PASSWORD,
   });
@@ -42,50 +43,28 @@ async function main() {
   const adminToken = authData.token;
   console.log("Admin auth OK.");
 
-  // 2. Check if collection already exists
-  const { ok: listOk, data: listData } = await pb("collections/meal_plans", "GET", null, adminToken);
+  const { ok: listOk } = await pb("collections/meal_plans", "GET", null, adminToken);
   if (listOk) {
     console.log("Collection `meal_plans` already exists — nothing to do.");
     return;
   }
 
-  // 3. Create the collection
+  // Create collection with owner field (avoid reserved word "user") + rules in one shot
   console.log("Creating `meal_plans` collection…");
   const { ok, data } = await pb("collections", "POST", {
     name: "meal_plans",
     type: "base",
-    schema: [
-      {
-        name: "user",
-        type: "text",
-        required: true,
-        options: {},
-      },
-      {
-        name: "recipe",
-        type: "text",
-        required: true,
-        options: {},
-      },
-      {
-        name: "date",
-        type: "text",
-        required: true,
-        options: {},
-      },
-      {
-        name: "status",
-        type: "text",
-        required: false,
-        options: {},
-      },
+    fields: [
+      { name: "owner",  type: "text", required: true  },
+      { name: "recipe", type: "text", required: true  },
+      { name: "date",   type: "text", required: true  },
+      { name: "status", type: "text", required: false },
     ],
-    // Only the owning user can see/edit their entries
-    listRule:   "@request.auth.id != \"\" && user = @request.auth.id",
-    viewRule:   "@request.auth.id != \"\" && user = @request.auth.id",
+    listRule:   "@request.auth.id != \"\" && owner = @request.auth.id",
+    viewRule:   "@request.auth.id != \"\" && owner = @request.auth.id",
     createRule: "@request.auth.id != \"\"",
-    updateRule: "@request.auth.id != \"\" && user = @request.auth.id",
-    deleteRule: "@request.auth.id != \"\" && user = @request.auth.id",
+    updateRule: "@request.auth.id != \"\" && owner = @request.auth.id",
+    deleteRule: "@request.auth.id != \"\" && owner = @request.auth.id",
   }, adminToken);
 
   if (!ok) {

@@ -27,7 +27,7 @@ module.exports = async function mealPlanHandler(req, res) {
     const from = url.searchParams.get("from");
     const to   = url.searchParams.get("to");
 
-    let filter = `user="${pbEscape(user.id)}" && status="active"`;
+    let filter = `owner="${pbEscape(user.id)}" && status="active"`;
     if (from && DATE_RE.test(from)) filter += ` && date>="${pbEscape(from)}"`;
     if (to   && DATE_RE.test(to))   filter += ` && date<="${pbEscape(to)}"`;
 
@@ -46,7 +46,7 @@ module.exports = async function mealPlanHandler(req, res) {
     // Upsert: if an archived entry exists for this user+recipe+date, reactivate it
     const existing = await pbFirst(
       "meal_plans",
-      `user="${pbEscape(user.id)}" && recipe="${pbEscape(recipe)}" && date="${pbEscape(date)}"`,
+      `owner="${pbEscape(user.id)}" && recipe="${pbEscape(recipe)}" && date="${pbEscape(date)}"`,
       token
     );
 
@@ -58,7 +58,7 @@ module.exports = async function mealPlanHandler(req, res) {
     }
 
     const { ok, data } = await pbCreate("meal_plans", {
-      user:   user.id,
+      owner:  user.id,
       recipe,
       date,
       status: "active",
@@ -77,7 +77,7 @@ module.exports = async function mealPlanHandler(req, res) {
     // Verify ownership before archiving
     const existing = await pbFirst(
       "meal_plans",
-      `id="${pbEscape(id)}" && user="${pbEscape(user.id)}"`,
+      `id="${pbEscape(id)}" && owner="${pbEscape(user.id)}"`,
       token
     );
     if (!existing) return send(res, 404, { error: "Entry not found" });
