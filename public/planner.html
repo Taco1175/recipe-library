@@ -255,6 +255,7 @@
   <button onclick="changeWeek(-1)">← Prev</button>
   <span class="week-label" id="week-label"></span>
   <button onclick="changeWeek(1)">Next →</button>
+  <button class="grocery-week-btn" id="planner-cart-btn" onclick="groceryFromWeek()" style="margin-left:8px">🛒 Grocery List<span id="planner-cart-count" style="display:none;margin-left:6px;background:var(--accent);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:700"></span></button>
 </div>
 
 <div class="suggest-bar">
@@ -286,7 +287,6 @@
     <div id="suggest-cards-area"></div>
     <div class="suggest-actions" id="suggest-actions" style="display:none">
       <button class="add-all-btn" onclick="addAllToCalendar()">Add All to Calendar + Cart</button>
-      <button class="grocery-week-btn" onclick="groceryFromWeek()">🛒 Grocery List from This Week</button>
     </div>
   </div>
 </div>
@@ -707,6 +707,17 @@ function recipeCard(r, isCart=false) {
   </div>`;
 }
 
+function updateCartBadge() {
+  const badge = document.getElementById("planner-cart-count");
+  if (!badge) return;
+  if (cartIds.size > 0) {
+    badge.textContent = cartIds.size;
+    badge.style.display = "inline";
+  } else {
+    badge.style.display = "none";
+  }
+}
+
 function renderPicker(list) {
   const el = document.getElementById("picker-recipes");
   const active = list.filter(r => !r.archived);
@@ -723,6 +734,7 @@ function renderPicker(list) {
   }
   html += rest.map(r => recipeCard(r, false)).join("");
   el.innerHTML = html;
+  updateCartBadge();
 }
 
 function filterPicker(q) {
@@ -820,8 +832,15 @@ function removeMeal(ds, id) {
   if (!plan[ds]) return;
   plan[ds] = plan[ds].filter(x => x !== id);
   if (!plan[ds].length) delete plan[ds];
+  // Remove from cart if this recipe no longer appears anywhere in the plan
+  const stillPlanned = Object.values(plan).some(ids => ids.includes(id));
+  if (!stillPlanned) {
+    cartIds.delete(id);
+    localStorage.setItem("recipe-cart", JSON.stringify([...cartIds]));
+  }
   savePlan();
   renderWeek();
+  renderPicker(recipes);
 }
 
 // ── Recipe detail popup ──
