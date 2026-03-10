@@ -323,6 +323,17 @@ input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--accent); c
       <span class="sidebar-logo-text">Mealplannr</span>
       <button class="sidebar-collapse-btn" id="sidebar-collapse-btn" onclick="toggleSidebarCollapse()" title="Collapse"></button>
     </div>
+    <div class="sidebar-user">
+      <div class="user-info" onclick="toggleUserMenu(event)" id="user-info-btn">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <span class="user-name" id="user-email-short"></span>
+        <span class="user-caret">▾</span>
+      </div>
+      <div class="user-dropdown" id="user-dropdown">
+        <div class="dd-email" id="user-email-full"></div>
+        <button id="backfill-btn" onclick="event.stopPropagation();backfillImages()">Backfill Images</button>
+      </div>
+    </div>
     <div class="sidebar-nav">
       <button class="sidebar-add-btn" onclick="toggleAdd()">
         <span class="nav-icon" data-icon="add" style="opacity:1"></span>
@@ -354,17 +365,6 @@ input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--accent); c
       <div class="nav-item" onclick="startTutorial()">
         <span class="nav-icon" data-icon="tutorial"></span>
         <span class="nav-label">Tutorial</span>
-      </div>
-    </div>
-    <div class="sidebar-footer">
-      <div class="user-info" onclick="toggleUserMenu(event)" id="user-info-btn">
-        <div class="user-avatar" id="user-avatar">?</div>
-        <span class="user-name" id="user-email-short"></span>
-        <span class="user-caret">▾</span>
-      </div>
-      <div class="user-dropdown" id="user-dropdown">
-        <div class="dd-email" id="user-email-full"></div>
-        <button id="backfill-btn" onclick="event.stopPropagation();backfillImages()">Backfill Images</button>
       </div>
     </div>
   </nav>

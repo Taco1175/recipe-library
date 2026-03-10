@@ -147,7 +147,7 @@ a { color: var(--accent); text-decoration: none; }
 .nav-item.active .nav-icon { opacity: 1; }
 .nav-divider { height: 1px; background: var(--border); margin: 6px 10px; }
 
-.sidebar-footer { padding: 10px 10px 12px; border-top: 1px solid var(--border); flex-shrink: 0; }
+.sidebar-user { padding: 8px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .user-info {
   display: flex; align-items: center; gap: 9px; cursor: pointer;
   border-radius: 6px; padding: 7px 8px; transition: background 0.12s;
