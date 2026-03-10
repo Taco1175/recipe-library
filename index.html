@@ -314,7 +314,7 @@ function buildPills(){
   recipes.forEach(r=>counts[r.category]=(counts[r.category]||0)+1);
   document.getElementById("pills").innerHTML=Object.entries(counts).map(([cat,n])=>{
     const c=CAT_COLORS[cat]||{bg:"#333",text:"#ccc",dot:"#888"};
-    return`<span class="pill${fCat===cat?" active":""}" data-cat="${cat}" style="--bg:${c.bg};--text:${c.text};--dot:${c.dot}"><span class="dot"></span>${cat} · ${n}</span>`;
+    return`<span class="pill${fCat===cat?" active":""}" data-cat="${esc(cat)}" style="--bg:${c.bg};--text:${c.text};--dot:${c.dot}"><span class="dot"></span>${esc(cat)} · ${n}</span>`;
   }).join("");
   document.getElementById("pills").querySelectorAll(".pill").forEach(p=>p.addEventListener("click",()=>{fCat=fCat===p.dataset.cat?"":p.dataset.cat;render();}));
 }
@@ -324,8 +324,8 @@ function buildSelects(){
   const meths=[...new Set(recipes.map(r=>r.method))].sort();
   const pc=document.getElementById("filterProt"),mc=document.getElementById("filterMeth");
   const cv=pc.value,mv=mc.value;
-  pc.innerHTML=`<option value="">All Proteins</option>`+prots.map(p=>`<option${p===cv?" selected":""}>${p}</option>`).join("");
-  mc.innerHTML=`<option value="">All Methods</option>`+meths.map(m=>`<option${m===mv?" selected":""}>${m}</option>`).join("");
+  pc.innerHTML=`<option value="">All Proteins</option>`+prots.map(p=>`<option value="${esc(p)}"${p===cv?" selected":""}>${esc(p)}</option>`).join("");
+  mc.innerHTML=`<option value="">All Methods</option>`+meths.map(m=>`<option value="${esc(m)}"${m===mv?" selected":""}>${esc(m)}</option>`).join("");
 }
 
 function render(){
@@ -347,15 +347,15 @@ function render(){
     <div style="display:flex;align-items:center;justify-content:center"><input type="checkbox"${checked.has(r.id)?" checked":""} onclick="chk(event,${r.id})"></div>
     <div class="recipe-name">
       <span class="expand-icon">▶</span>
-      ${r.name}
+      ${esc(r.name)}
       ${!hd?'<span class="no-details-hint">· click to fetch</span>':''}
     </div>
-    <div><span class="badge" style="background:${c.bg};color:${c.text}"><span class="dot" style="background:${c.dot}"></span>${r.category}</span></div>
-    <div class="meta">${r.protein}</div>
-    <div class="meta">${MI[r.method]||"🍴"} ${r.method}</div>
-    <div class="source-col">${r.source}</div>
-    <div class="cost">${r.cost}</div>
-    <div><a href="${r.url}" target="_blank" class="link-btn" onclick="event.stopPropagation()">↗</a></div>
+    <div><span class="badge" style="background:${c.bg};color:${c.text}"><span class="dot" style="background:${c.dot}"></span>${esc(r.category)}</span></div>
+    <div class="meta">${esc(r.protein)}</div>
+    <div class="meta">${MI[r.method]||"🍴"} ${esc(r.method)}</div>
+    <div class="source-col">${esc(r.source)}</div>
+    <div class="cost">${esc(r.cost)}</div>
+    <div><a href="${safeUrl(r.url)}" target="_blank" class="link-btn" onclick="event.stopPropagation()">↗</a></div>
   </div>
   <div class="detail-panel" id="dp-${r.id}">${hd?detailHTML(r.id):fetchPromptHTML(r.id)}</div>
 </div>`;
@@ -379,7 +379,8 @@ function fetchPromptHTML(id){
   </div>`;
 }
 
-function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function safeUrl(u){const s=String(u||"").trim();return/^https?:\/\//i.test(s)?s.replace(/"/g,"&quot;"):"#";}
 
 function rowClick(e,id){
   if(e.target.type==="checkbox"||e.target.tagName==="A")return;
@@ -400,7 +401,7 @@ function clearF(){fCat="";fProt="";fMeth="";q="";document.getElementById("search
 async function fetchDetails(id){
   const r=recipes.find(x=>x.id===id);
   const dp=document.getElementById("dp-"+id);
-  dp.innerHTML=`<div class="detail-loading"><div class="spinner"></div>Fetching from ${r.source}…</div>`;
+  dp.innerHTML=`<div class="detail-loading"><div class="spinner"></div>Fetching from ${esc(r.source)}…</div>`;
   try{
     const txt=await claude(`You are a recipe parser. Visit and extract the recipe at: ${r.url}
 Return ONLY valid JSON, no markdown fences:
@@ -412,11 +413,11 @@ Get ALL ingredients with exact quantities. Get ALL steps as clear complete sente
     const wrap=document.getElementById("wrap-"+id);
     wrap.querySelector(".trow").classList.add("has-details");
     const nm=wrap.querySelector(".recipe-name");
-    nm.innerHTML=`<span class="expand-icon" style="transform:rotate(90deg)">▶</span>${r.name}`;
+    nm.innerHTML=`<span class="expand-icon" style="transform:rotate(90deg)">▶</span>${esc(r.name)}`;
     dp.innerHTML=detailHTML(id);
     wrap.classList.add("open");
   }catch(err){
-    dp.innerHTML=`<div style="padding:14px 0;color:#e07070;font-size:13px">⚠ ${err.message} <button class="btn btn-outline" style="margin-left:8px;font-size:12px" onclick="fetchDetails(${id})">Retry</button></div>`;
+    dp.innerHTML=`<div style="padding:14px 0;color:#e07070;font-size:13px">⚠ ${esc(err.message)} <button class="btn btn-outline" style="margin-left:8px;font-size:12px" onclick="fetchDetails(${id})">Retry</button></div>`;
   }
 }
 
@@ -447,7 +448,7 @@ For method use: Slow Cooker, Oven, Stovetop, Air Fryer, No Cook, Microwave, or c
     document.getElementById("new-cost").value=j.cost||"";
     pendingDetails={ingredients:j.ingredients||[],steps:j.steps||[]};
     msg("✅ Done! Review the fields above then click Save Recipe.","success");
-  }catch(err){msg("⚠ "+err.message,"error");}
+  }catch(err){msg("⚠ "+esc(err.message),"error");}
   setFB(false);
 }
 
@@ -492,11 +493,11 @@ Return ONLY valid JSON:
 Only include categories with items.`);
     const j=JSON.parse(txt.replace(/^```json\n?|^```\n?|```$/gm,"").trim());
     let html=Object.entries(j).filter(([,v])=>v&&v.length).map(([cat,items])=>
-      `<div class="g-section"><h3>${cat}</h3>${items.map(x=>`<div class="g-item">${esc(x.item)}<span class="g-from">${(x.recipes||[]).join(", ")}</span></div>`).join("")}</div>`
+      `<div class="g-section"><h3>${esc(cat)}</h3>${items.map(x=>`<div class="g-item">${esc(x.item)}<span class="g-from">${(x.recipes||[]).map(esc).join(", ")}</span></div>`).join("")}</div>`
     ).join("");
-    if(noD.length)html+=`<div style="margin-top:16px;padding:12px;background:#1a1f2e;border:1px solid #2a2f3e;border-radius:8px;font-size:12px;color:#8a8f9e"><strong style="color:#aaa">⚠ Missing details:</strong> ${noD.map(r=>`<em>${r.name}</em>`).join(", ")}</div>`;
+    if(noD.length)html+=`<div style="margin-top:16px;padding:12px;background:#1a1f2e;border:1px solid #2a2f3e;border-radius:8px;font-size:12px;color:#8a8f9e"><strong style="color:#aaa">⚠ Missing details:</strong> ${noD.map(r=>`<em>${esc(r.name)}</em>`).join(", ")}</div>`;
     body.innerHTML=html;
-  }catch(err){body.innerHTML=`<p style="color:#e07070;font-size:13px">⚠ ${err.message}</p>`;}
+  }catch(err){body.innerHTML=`<p style="color:#e07070;font-size:13px">⚠ ${esc(err.message)}</p>`;}
 }
 
 function closeGrocery(){document.getElementById("grocery-modal").classList.remove("show");}
@@ -511,12 +512,14 @@ function copyList(){
   navigator.clipboard.writeText(text).then(()=>{const b=event.target;b.textContent="✅ Copied!";setTimeout(()=>b.textContent="📋 Copy",2000);});
 }
 
-// Claude API
+// Claude API — proxied through backend so the API key stays server-side
 async function claude(prompt){
-  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:4000,messages:[{role:"user",content:prompt}]})});
+  let token="";
+  try{const pb=JSON.parse(localStorage.getItem("pb_auth")||"{}");token=pb.token||"";}catch(e){}
+  const res=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({prompt})});
   const d=await res.json();
-  if(d.error)throw new Error(d.error.message);
-  return d.content[0].text;
+  if(!res.ok)throw new Error(d.error||"AI request failed");
+  return d.text;
 }
 
 // Events

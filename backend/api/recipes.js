@@ -1,6 +1,6 @@
 const {
   pbList, pbCreate, pbUpdate, pbDelete, pbFirst,
-  getUserFromRequest, unauthorized, badRequest, serverError, ok, CORS,
+  getUserFromRequest, unauthorized, badRequest, serverError, ok, CORS, pbEscape,
 } = require("./_pb-helper");
 
 module.exports = async function recipesHandler(req, res) {
@@ -27,7 +27,7 @@ module.exports = async function recipesHandler(req, res) {
     // 2. Fetch shared recipes
     const { data: shareData } = await pbList(
       "library_shares",
-      { filter: `shared_with="${user.id}"` },
+      { filter: `shared_with="${pbEscape(user.id)}"` },
       token
     );
     
@@ -39,7 +39,7 @@ module.exports = async function recipesHandler(req, res) {
       const ownerShare = shares.find(s => s.owner === ownerId);
       const { data: owned } = await pbList(
         "recipes",
-        { filter: `user="${ownerId}"` },
+        { filter: `user="${pbEscape(ownerId)}"` },
         token
       );
       
@@ -70,7 +70,7 @@ module.exports = async function recipesHandler(req, res) {
 
     // Full upsert
     if (id) {
-      const existing = await pbFirst("recipes", `id="${id}" && user="${user.id}"`, token);
+      const existing = await pbFirst("recipes", `id="${pbEscape(id)}" && user="${pbEscape(user.id)}"`, token);
       if (existing) {
         const result = await pbUpdate("recipes", id, { ...fields, user: user.id }, token);
         if (!result.ok) return send(res, 500, { error: "Update failed", detail: result.data });
@@ -89,7 +89,7 @@ module.exports = async function recipesHandler(req, res) {
     const id = new URL(req.url, "http://x").searchParams.get("id");
     if (!id) return send(res, 400, { error: "Missing id" });
 
-    const existing = await pbFirst("recipes", `id="${id}" && user="${user.id}"`, token);
+    const existing = await pbFirst("recipes", `id="${pbEscape(id)}" && user="${pbEscape(user.id)}"`, token);
     if (!existing) return send(res, 404, { error: "Not found" });
 
     await pbDelete("recipes", id, token);

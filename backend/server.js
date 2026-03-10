@@ -34,10 +34,36 @@ const googleAuthHandler       = require("./api/google-auth");
 const googleCalendarHandler   = require("./api/google-calendar");
 const gcalEventHandler        = require("./api/gcal-event");
 const requestAccessHandler    = require("./api/request-access");
+const claudeProxyHandler      = require("./api/claude-proxy");
+const mealPlanHandler         = require("./api/meal-plan");
 
 const PORT        = process.env.PORT || 3000;
 const PB_INTERNAL = process.env.PB_URL || "http://localhost:8090";
 const STATIC_DIR  = path.join(__dirname, "pb_public");
+
+// ── Rate limiter (per IP, applies to /api/* routes) ────────────────────────
+const _rateLimits = new Map();
+const RATE_LIMIT_MAX    = 120;       // requests allowed per window
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+
+function isRateLimited(ip) {
+  const now = Date.now();
+  const entry = _rateLimits.get(ip);
+  if (!entry || now - entry.start > RATE_LIMIT_WINDOW) {
+    _rateLimits.set(ip, { count: 1, start: now });
+    return false;
+  }
+  entry.count++;
+  return entry.count > RATE_LIMIT_MAX;
+}
+
+// Prune stale entries every 5 minutes to prevent unbounded memory growth
+setInterval(() => {
+  const cutoff = Date.now() - RATE_LIMIT_WINDOW;
+  for (const [ip, entry] of _rateLimits) {
+    if (entry.start < cutoff) _rateLimits.delete(ip);
+  }
+}, 5 * 60 * 1000).unref();
 
 // ── MIME types for static serving ─────────────────────────────────────────
 const MIME = {
@@ -147,6 +173,8 @@ const API_ROUTES = {
   "/api/gcal-event":         gcalEventHandler,
   "/api/collections/users/auth-with-oauth2": authInterceptHandler,
   "/api/request-access": requestAccessHandler,
+  "/api/claude":         claudeProxyHandler,
+  "/api/meal-plan":      mealPlanHandler,
 };
 
 // ── Main server ────────────────────────────────────────────────────────────
@@ -156,7 +184,7 @@ const server = http.createServer(async (req, res) => {
   // CORS preflight
   if (req.method === "OPTIONS") {
     res.writeHead(200, {
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": process.env.APP_URL || "https://mealplannr.xyz",
       "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
     });
@@ -166,6 +194,16 @@ const server = http.createServer(async (req, res) => {
   // PocketBase pass-through (for admin UI and direct SDK use)
   if (pathname.startsWith("/pb-api/")) {
     return proxyToPocketBase(req, res);
+  }
+
+  // Rate limit all /api/* requests
+  if (pathname.startsWith("/api/")) {
+    const ip = req.headers["x-forwarded-for"]?.split(",")[0].trim() || req.socket.remoteAddress || "unknown";
+    if (isRateLimited(ip)) {
+      res.writeHead(429, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Too many requests" }));
+      return;
+    }
   }
 
   // Our API routes

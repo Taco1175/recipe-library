@@ -196,6 +196,26 @@
 .add-meal-item .ami-name { font-size: 13px; color: var(--text); font-weight: 500; line-height: 1.3; }
 .add-meal-item .ami-cat { font-size: 11px; color: var(--text3); font-family: var(--mono); }
 
+/* Grocery modal */
+.grocery-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 400; align-items: center; justify-content: center; padding: 16px; }
+.grocery-overlay.show { display: flex; }
+.grocery-modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; width: 100%; max-width: 500px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
+.grocery-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 10px; }
+.grocery-header h2 { margin: 0; font-size: 16px; color: var(--text); }
+.grocery-subtitle { margin: 0 20px 10px; font-size: 12px; color: var(--text2); font-family: var(--mono); }
+.grocery-body { flex: 1; overflow-y: auto; padding: 4px 20px 12px; }
+.grocery-footer { display: flex; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--border); }
+.g-section { margin-bottom: 16px; }
+.g-section h3 { font-size: 11px; color: var(--text3, #667); font-family: var(--mono); letter-spacing: .06em; text-transform: uppercase; margin: 0 0 8px; }
+.g-item { font-size: 13px; color: var(--text); padding: 5px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; gap: 8px; }
+.g-from { font-size: 11px; color: var(--text3, #667); font-family: var(--mono); flex-shrink: 0; }
+.g-loading { display: flex; align-items: center; gap: 10px; color: var(--text2); font-size: 13px; padding: 20px 0; }
+.g-spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.pill-btn { flex: 1; padding: 9px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text2); font-size: 13px; cursor: pointer; }
+.pill-btn:hover { border-color: var(--accent); color: var(--accent); }
+.pill-btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.pill-btn-primary:hover { opacity: 0.88; }
 </style>
 
 <script src="/auth.js"></script>
@@ -352,9 +372,27 @@
   </div>
 </div>
 
+<!-- Grocery modal -->
+<div class="grocery-overlay" id="grocery-overlay" onclick="if(event.target===this)closeGrocery()">
+  <div class="grocery-modal">
+    <div class="grocery-header">
+      <h2>🛒 Grocery List</h2>
+      <button class="rp-close" onclick="closeGrocery()">×</button>
+    </div>
+    <p class="grocery-subtitle" id="grocery-subtitle"></p>
+    <div class="grocery-body" id="grocery-body"></div>
+    <div class="grocery-footer">
+      <button class="pill-btn" onclick="copyGroceryList()">📋 Copy</button>
+      <button class="pill-btn pill-btn-primary" onclick="closeGrocery()">Done</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
+function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+
 const API = "/api";
 async function apiFetch(path, method="GET", body=null) {
   const hdrs = await Auth.headers();
@@ -371,6 +409,7 @@ const MI = {"Slow Cooker":"🥘","Oven":"🔥","Stovetop":"🍳","Air Fryer":"�
 let recipes = [];
 let weekOffset = 0;  // 0 = current week
 let plan = {};  // { "2026-02-24": [recipeId, ...], ... }
+let planRecordIds = {};  // { "YYYY-MM-DD_recipeId": pbRecordId } — for archiving
 let pendingRecipe = null;  // recipe being assigned to a day
 
 // ── Google Auth ──
@@ -420,9 +459,9 @@ async function handleAuthCallback() {
     gToken = data.access_token;
     gRefreshToken = data.refresh_token;
     gTokenExpiry = Date.now() + (data.expires_in * 1000);
-    localStorage.setItem("gcal-refresh", gRefreshToken);
-    localStorage.setItem("gcal-expiry", gTokenExpiry);
-    localStorage.setItem("gcal-token", gToken);
+    sessionStorage.setItem("gcal-refresh", gRefreshToken);
+    sessionStorage.setItem("gcal-expiry", gTokenExpiry);
+    sessionStorage.setItem("gcal-token", gToken);
     return true;
   } catch(e) {
     console.error("Auth failed:", e);
@@ -432,7 +471,7 @@ async function handleAuthCallback() {
 
 async function ensureToken() {
   if (gToken && Date.now() < gTokenExpiry - 60000) return true;
-  const refresh = gRefreshToken || localStorage.getItem("gcal-refresh");
+  const refresh = gRefreshToken || sessionStorage.getItem("gcal-refresh");
   if (!refresh) return false;
   try {
     const res = await fetch(`${API}/google-auth`, {
@@ -444,8 +483,8 @@ async function ensureToken() {
     if (data.error) throw new Error(data.error);
     gToken = data.access_token;
     gTokenExpiry = Date.now() + (data.expires_in * 1000);
-    localStorage.setItem("gcal-token", gToken);
-    localStorage.setItem("gcal-expiry", gTokenExpiry);
+    sessionStorage.setItem("gcal-token", gToken);
+    sessionStorage.setItem("gcal-expiry", gTokenExpiry);
     return true;
   } catch(e) {
     disconnectGoogle();
@@ -455,9 +494,9 @@ async function ensureToken() {
 
 function disconnectGoogle() {
   gToken = null; gRefreshToken = null; gTokenExpiry = 0;
-  localStorage.removeItem("gcal-refresh");
-  localStorage.removeItem("gcal-token");
-  localStorage.removeItem("gcal-expiry");
+  sessionStorage.removeItem("gcal-refresh");
+  sessionStorage.removeItem("gcal-token");
+  sessionStorage.removeItem("gcal-expiry");
   localStorage.removeItem("gcal-selected-cals");
   selectedCalendars.clear();
   calendarEvents = {};
@@ -501,7 +540,7 @@ async function loadCalendars() {
       const color = c.backgroundColor || GCAL_COLORS[c.colorId] || "#6e8efb";
       const sel = selectedCalendars.has(c.id);
       return `<div class="cal-chip${sel?" selected":""}" onclick="toggleCal('${c.id}',this)" data-id="${c.id}">
-        <span class="cal-dot" style="background:${color}"></span>${c.summary}
+        <span class="cal-dot" style="background:${color}"></span>${esc(c.summary)}
       </div>`;
     }).join("");
 
@@ -583,9 +622,9 @@ async function init() {
 
     // Restore existing Google session
     if (!authed) {
-      const savedToken = localStorage.getItem("gcal-token");
-      const savedExpiry = parseInt(localStorage.getItem("gcal-expiry") || "0");
-      const savedRefresh = localStorage.getItem("gcal-refresh");
+      const savedToken = sessionStorage.getItem("gcal-token");
+      const savedExpiry = parseInt(sessionStorage.getItem("gcal-expiry") || "0");
+      const savedRefresh = sessionStorage.getItem("gcal-refresh");
       if (savedRefresh) {
         gRefreshToken = savedRefresh;
         gToken = savedToken;
@@ -605,18 +644,75 @@ async function init() {
   } catch(e) { console.error(e); renderWeek(); renderPicker(recipes || []); }
 }
 
-// ── Plan persistence (Supabase via a simple key in localStorage for now, upgrade later) ──
-function planKey() { return "meal-plan-v1"; }
+// ── Plan persistence ────────────────────────────────────────────────────────
 
-async function loadPlan() {
-  try {
-    const saved = localStorage.getItem(planKey());
-    plan = saved ? JSON.parse(saved) : {};
-  } catch(e) { plan = {}; }
+function savePlanLocal() {
+  localStorage.setItem("meal-plan-v1", JSON.stringify(plan));
 }
 
-function savePlan() {
-  localStorage.setItem(planKey(), JSON.stringify(plan));
+async function loadPlan() {
+  // 1. Load from localStorage immediately for instant render
+  try {
+    const saved = localStorage.getItem("meal-plan-v1");
+    plan = saved ? JSON.parse(saved) : {};
+  } catch(e) { plan = {}; }
+
+  // 2. Fetch from PocketBase (source of truth) — wide window covers history
+  try {
+    const h = await Auth.headers();
+    if (!h) return;
+    const from = new Date(); from.setMonth(from.getMonth() - 6);
+    const to   = new Date(); to.setMonth(to.getMonth() + 3);
+    const fromStr = from.toISOString().slice(0, 10);
+    const toStr   = to.toISOString().slice(0, 10);
+
+    const res = await fetch(`${API}/meal-plan?from=${fromStr}&to=${toStr}`, { headers: h });
+    if (!res.ok) return;
+    const entries = await res.json();
+
+    // Rebuild plan and record-ID map from server data
+    plan = {};
+    planRecordIds = {};
+    for (const entry of entries) {
+      if (!plan[entry.date]) plan[entry.date] = [];
+      if (!plan[entry.date].includes(entry.recipe)) plan[entry.date].push(entry.recipe);
+      planRecordIds[`${entry.date}_${entry.recipe}`] = entry.id;
+    }
+
+    // Migrate any localStorage-only entries that aren't in PB yet
+    try {
+      const local = JSON.parse(localStorage.getItem("meal-plan-v1") || "{}");
+      for (const [date, ids] of Object.entries(local)) {
+        for (const id of ids) {
+          if (!planRecordIds[`${date}_${id}`]) {
+            // Exists in localStorage but not in PB — push it up silently
+            _syncMealAdd(date, id);
+          }
+        }
+      }
+    } catch(e) {}
+
+    savePlanLocal();
+    renderWeek();
+  } catch(e) {
+    console.warn("[meal-plan] API load failed, using localStorage:", e.message);
+  }
+}
+
+// Fire-and-forget helper to create a PB record (used during migration + addToPlan)
+async function _syncMealAdd(date, recipe) {
+  try {
+    const h = await Auth.headers();
+    if (!h) return;
+    const res = await fetch(`${API}/meal-plan`, {
+      method: "POST", headers: h,
+      body: JSON.stringify({ recipe, date }),
+    });
+    if (res.ok) {
+      const record = await res.json();
+      planRecordIds[`${date}_${recipe}`] = record.id;
+    }
+  } catch(e) {}
 }
 
 // ── Week helpers ──
@@ -665,8 +761,8 @@ function renderWeek() {
     const mealsHtml = dayMeals.length
       ? dayMeals.map(r => `
           <div class="meal-chip" draggable="true" onclick="openRecipePopup('${r.id}')" ondragstart="onMealDragStart(event,'${ds}','${r.id}')" ondragend="onMealDragEnd(event)">
-            <div class="chip-name">${r.name}</div>
-            <div class="chip-cat">${r.category}</div>
+            <div class="chip-name">${esc(r.name)}</div>
+            <div class="chip-cat">${esc(r.category)}</div>
             <button class="chip-remove" onclick="event.stopPropagation();removeMeal('${ds}','${r.id}')" title="Remove">×</button>
           </div>`).join("")
       : `<div class="day-empty">No meals</div>`;
@@ -676,7 +772,7 @@ function renderWeek() {
     const eventsHtml = dayEvents.length
       ? `<div class="cal-events-section">${dayEvents.map(ev => {
           const col = ev.color || "#6e8efb";
-          return `<div class="cal-event" style="background:${col}22;color:${col};border-left:2px solid ${col}" title="${ev.title}">${ev.title}</div>`;
+          return `<div class="cal-event" style="background:${col}22;color:${col};border-left:2px solid ${col}" title="${esc(ev.title)}">${esc(ev.title)}</div>`;
         }).join("")}</div>`
       : "";
 
@@ -822,9 +918,12 @@ function closeDayPick() {
 
 function addToPlan(ds, id) {
   if (!plan[ds]) plan[ds] = [];
-  if (!plan[ds].includes(id)) plan[ds].push(id);
-  savePlan();
-  renderWeek();
+  if (!plan[ds].includes(id)) {
+    plan[ds].push(id);
+    savePlanLocal();
+    renderWeek();
+    _syncMealAdd(ds, id);  // persist to PB
+  }
   _notifyMealSave(ds, id);
 }
 
@@ -838,9 +937,20 @@ function removeMeal(ds, id) {
     cartIds.delete(id);
     localStorage.setItem("recipe-cart", JSON.stringify([...cartIds]));
   }
-  savePlan();
+  savePlanLocal();
   renderWeek();
   renderPicker(recipes);
+
+  // Archive in PB
+  const key = `${ds}_${id}`;
+  const recordId = planRecordIds[key];
+  if (recordId) {
+    delete planRecordIds[key];
+    Auth.headers().then(h => {
+      if (!h) return;
+      fetch(`${API}/meal-plan?id=${recordId}`, { method: "DELETE", headers: h }).catch(() => {});
+    });
+  }
 }
 
 // ── Recipe detail popup ──
@@ -1110,17 +1220,63 @@ function groceryFromWeek() {
     (plan[ds] || []).forEach(id => weekIds.add(id));
   }
 
-  if (!weekIds.size) {
+  // Merge week plan into cart
+  weekIds.forEach(id => cartIds.add(id));
+  if (cartIds.size) localStorage.setItem("recipe-cart", JSON.stringify([...cartIds]));
+
+  if (!cartIds.size) {
     showToast("No meals planned this week!");
     return;
   }
 
-  // Add all to cart and navigate to main page grocery list
-  weekIds.forEach(id => cartIds.add(id));
-  localStorage.setItem("recipe-cart", JSON.stringify([...cartIds]));
-  showToast(`Adding ${weekIds.size} meals to cart — opening grocery list…`);
-  setTimeout(() => { location.href = "/?grocery=1"; }, 1200);
+  openGrocery([...cartIds]);
 }
+
+function openGrocery(ids) {
+  const overlay = document.getElementById("grocery-overlay");
+  overlay.classList.add("show");
+
+  const sel = (ids || []).map(id => recipes.find(r => r.id === id)).filter(Boolean);
+  const withD = sel.filter(r => recipeDetails[r.id]?.ingredients?.length);
+  const noD   = sel.filter(r => !recipeDetails[r.id]?.ingredients?.length);
+
+  document.getElementById("grocery-subtitle").textContent =
+    `${sel.length} recipe${sel.length !== 1 ? "s" : ""} · ${withD.length} with ingredient lists`;
+
+  const body = document.getElementById("grocery-body");
+
+  if (!withD.length) {
+    body.innerHTML = `<p style="color:var(--text2);font-size:13px">None of these recipes have saved ingredients yet. Open each recipe and use "Fetch Ingredients &amp; Steps" first.</p>`;
+    return;
+  }
+
+  let html = withD.map(r =>
+    `<div class="g-section"><h3>${esc(r.name)}</h3>${recipeDetails[r.id].ingredients.map(i =>
+      `<div class="g-item">${esc(i)}</div>`
+    ).join("")}</div>`
+  ).join("");
+  if (noD.length) html += `<div style="margin-top:14px;padding:10px 12px;background:var(--bg3,#1e2330);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text2)"><strong style="color:var(--text)">⚠ No ingredients saved:</strong> ${noD.map(r => `<em>${esc(r.name)}</em>`).join(", ")}</div>`;
+  body.innerHTML = html;
+}
+
+function closeGrocery() {
+  document.getElementById("grocery-overlay").classList.remove("show");
+}
+
+function copyGroceryList() {
+  let text = "🛒 GROCERY LIST\n\n";
+  document.querySelectorAll("#grocery-body .g-section").forEach(s => {
+    text += s.querySelector("h3").textContent + "\n";
+    s.querySelectorAll(".g-item").forEach(i => text += "☐ " + i.firstChild.textContent.trim() + "\n");
+    text += "\n";
+  });
+  navigator.clipboard.writeText(text).then(() => {
+    const b = document.querySelector("#grocery-overlay .pill-btn");
+    b.textContent = "✅ Copied!";
+    setTimeout(() => b.textContent = "📋 Copy", 2000);
+  });
+}
+
 
 // ── Drag state ──
 let draggingIdx = null;
@@ -1272,7 +1428,9 @@ async function _sendDailyDigestIfNeeded() {
   const nowMinutes    = now.getHours() * 60 + now.getMinutes();
   if (nowMinutes < targetMinutes || nowMinutes > targetMinutes + 30) return;
 
-  const ids = plan[today] || [];
+  // Use today's scheduled meals; fall back to cart items if none are scheduled
+  let ids = plan[today] || [];
+  if (!ids.length) ids = [...cartIds];
   if (!ids.length) return;
   const mealNames = ids.map(id => {
     const r = (recipes || []).find(x => x.id === id);

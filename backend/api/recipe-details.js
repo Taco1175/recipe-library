@@ -1,5 +1,5 @@
 // backend/api/recipe-details.js
-const { pbList, pbCreate, pbUpdate, pbFirst, getUserFromRequest, send } = require("./_pb-helper");
+const { pbList, pbCreate, pbUpdate, pbFirst, getUserFromRequest, send, pbEscape } = require("./_pb-helper");
 
 module.exports = async function recipeDetailsHandler(req, res) {
   // Handle CORS preflight
@@ -33,7 +33,7 @@ module.exports = async function recipeDetailsHandler(req, res) {
 
     // 1. Check if details already exist for this recipe
     // Note: In your PB schema, ensure the relation field is named 'recipe'
-    const existing = await pbFirst("recipe_details", `recipe="${recipe_id}"`, token);
+    const existing = await pbFirst("recipe_details", `recipe="${pbEscape(recipe_id)}"`, token);
 
     const payload = {
       recipe: recipe_id,
