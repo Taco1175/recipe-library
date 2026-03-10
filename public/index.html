@@ -193,6 +193,9 @@ input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--accent); c
 .ing-list li { font-size: 12px; color: var(--text2); padding: 3px 0 3px 12px; border-bottom: 1px solid var(--border); position: relative; line-height: 1.5; }
 .ing-list li:last-child { border-bottom: none; }
 .ing-list li::before { content: "—"; color: var(--accent); position: absolute; left: 0; font-size: 10px; }
+.ing-list li.ing-group-header { font-size: 10px; font-family: var(--mono); color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; padding-left: 0; margin-top: 6px; border-bottom: none; font-weight: 600; }
+.ing-list li.ing-group-header::before { display: none; }
+.modal-ing-list li.ing-group-header { font-size: 10px; font-family: var(--mono); color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 0 2px; font-weight: 600; border-bottom: none; }
 .steps-list { list-style: none; counter-reset: steps; }
 .steps-list li { font-size: 12px; color: var(--text2); padding: 6px 0 6px 28px; border-bottom: 1px solid var(--border); position: relative; counter-increment: steps; line-height: 1.5; }
 .steps-list li:last-child { border-bottom: none; }
@@ -387,7 +390,7 @@ input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--accent); c
         <button id="btn-grid" onclick="setView('grid')" title="Grid view">⊞</button>
       </div>
       <div class="search-wrap">
-        <input type="text" id="search" placeholder="Search recipes…" oninput="onSearch(this.value)">
+        <input type="text" id="search" placeholder="Search recipes…" oninput="onSearch(this.value)" onkeydown="if(event.key==='ArrowDown'){event.preventDefault();_kbFocusRow(0);_getRecipeRows()[0]?.scrollIntoView({block:'nearest'});}">
         <button class="search-clear" id="search-clear-btn" onclick="clearSearch()" title="Clear" style="display:none">×</button>
       </div>
       <select class="flt" id="filterProt" onchange="fProt=this.value;render()"><option value="">All Proteins</option></select>
@@ -465,21 +468,27 @@ input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--accent); c
         </div>
         <div class="field"><label>Protein</label><input type="text" id="new-protein" placeholder="e.g. Chicken"></div>
         <div class="field"><label>Method</label><input type="text" id="new-method" placeholder="e.g. Slow Cooker"></div>
-        <div class="field"><label>Source</label><input type="text" id="new-source" placeholder="e.g. Kay Nutrition"></div>
+        <div class="field"><label>Cuisine</label><input type="text" id="new-cuisine" placeholder="e.g. Asian, Mexican, Italian"></div>
+        <div class="field"><label>Effort</label>
+          <select id="new-effort">
+            <option value="">— select —</option>
+            <option value="Low">Low</option>
+            <option value="Med">Med</option>
+            <option value="High">High</option>
+          </select>
+        </div>
         <div class="field"><label>Est. Aldi Cost</label><input type="text" id="new-cost" placeholder="e.g. $10-13"></div>
         <div class="field"><label>Servings</label><input type="number" id="new-servings" placeholder="e.g. 4" min="1" max="24"></div>
       </div>
       <div id="add-msg" style="display:none" class="add-msg"></div>
-      <div id="fetch-preview" style="display:none;margin-top:12px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
-          <div style="padding:12px 14px;border-right:1px solid var(--border)">
-            <div style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);font-family:var(--mono);margin-bottom:8px">Ingredients</div>
-            <ul id="preview-ingredients" style="margin:0;padding:0 0 0 16px;font-size:12px;color:#b0b5c4;line-height:1.8"></ul>
-          </div>
-          <div style="padding:12px 14px">
-            <div style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);font-family:var(--mono);margin-bottom:8px">Steps</div>
-            <ol id="preview-steps" style="margin:0;padding:0 0 0 16px;font-size:12px;color:#b0b5c4;line-height:1.8"></ol>
-          </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+        <div>
+          <label style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);font-family:var(--mono);display:block;margin-bottom:6px">Ingredients <span style="text-transform:none;letter-spacing:0">(one per line)</span></label>
+          <textarea id="new-ingredients" placeholder="1 cup flour&#10;2 eggs&#10;½ tsp salt" rows="7" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:12px;font-family:var(--mono);resize:vertical;outline:none;line-height:1.7"></textarea>
+        </div>
+        <div>
+          <label style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);font-family:var(--mono);display:block;margin-bottom:6px">Steps <span style="text-transform:none;letter-spacing:0">(one per line)</span></label>
+          <textarea id="new-steps" placeholder="Preheat oven to 375°F&#10;Mix dry ingredients&#10;Bake for 25 minutes" rows="7" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:12px;font-family:var(--mono);resize:vertical;outline:none;line-height:1.7"></textarea>
         </div>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
@@ -659,6 +668,7 @@ const MI={"Slow Cooker":"","Oven":"","Stovetop":"","Air Fryer":"","No Cook":"","
 let recipes = [...BASE];  // replaced by DB data in loadData()
 let details = {};
 let checked = new Set();
+let archiveChecked = new Set();
 let viewMode = "table";
 let servingsMap = {};  // recipe id -> current servings (for scaling)
 
@@ -691,8 +701,7 @@ function changeServings(e, id, delta) {
       const mult = def > 0 ? sv / def : 1;
       ingList.innerHTML = details[id].ingredients.map(ing => {
         const scaled = mult !== 1 ? scaleIngredientText(ing, mult) : ing;
-        const changed = scaled !== ing;
-        return `<li${changed ? ' style="color:#a8d8a8"' : ""}>${esc(scaled)}</li>`;
+        return ingHTML(ing, scaled, scaled !== ing);
       }).join("");
     }
   }
@@ -704,7 +713,7 @@ function setSort(col) {
   else { sort = col; sortDir = 1; }
   document.getElementById("sortBy").value = sort;
   // Update header indicators
-  ["name","category","method","source","cost"].forEach(c => {
+  ["name","category","method","cuisine","cost"].forEach(c => {
     const el = document.getElementById("shdr-" + c);
     if (!el) return;
     el.className = sort === c ? (sortDir === 1 ? "active" : "active asc") : "";
@@ -837,7 +846,7 @@ function getFiltered() {
     const d = details[r.id];
     const ingText = (d?.ingredients||[]).join(' ').toLowerCase();
     const stepText = (d?.steps||[]).join(' ').toLowerCase();
-    return (!s || (r.name||'').toLowerCase().includes(s) || (r.protein||'').toLowerCase().includes(s) || (r.source||'').toLowerCase().includes(s) || ingText.includes(s) || stepText.includes(s))
+    return (!s || (r.name||'').toLowerCase().includes(s) || (r.protein||'').toLowerCase().includes(s) || (r.cuisine||'').toLowerCase().includes(s) || ingText.includes(s) || stepText.includes(s))
       && (!fCat || r.category === fCat)
       && (!fProt || r.protein === fProt)
       && (!fMeth || r.method === fMeth)
@@ -850,7 +859,7 @@ function getFiltered() {
     else if (sort==="name") v = a.name.localeCompare(b.name);
     else if (sort==="protein") v = a.protein.localeCompare(b.protein);
     else if (sort==="method") v = a.method.localeCompare(b.method);
-    else if (sort==="source") v = a.source.localeCompare(b.source);
+    else if (sort==="cuisine") v = (a.cuisine||"").localeCompare(b.cuisine||"");
     else if (sort==="cost") v = parseInt(a.cost||0)-parseInt(b.cost||0);
     return v * sortDir;
   });
@@ -936,9 +945,12 @@ function openRecipeModal(id) {
   else img.style.display = "none";
 
   // Meta badges
+  const effortColor = {Low:"#4a8a4a",Med:"#8a7a2a",High:"#8a3a3a"}[r.effort] || "var(--text3)";
   document.getElementById("rmodal-meta").innerHTML = `
     <span style="font-size:12px;background:${c.bg};color:${c.text};padding:2px 10px;border-radius:10px;font-family:var(--mono)">${r.category}</span>
     <span style="font-size:12px;color:var(--text2)">${MI[r.method]||""} ${r.method}</span>
+    ${r.cuisine ? `<span style="font-size:12px;color:var(--text2);font-family:var(--mono)">🌍 ${esc(r.cuisine)}</span>` : ""}
+    ${r.effort  ? `<span style="font-size:12px;color:${effortColor};font-family:var(--mono)">Effort: ${r.effort}</span>` : ""}
     ${dynamicCostStr(r) ? `<span style="font-size:12px;color:#7bcf8e;font-family:var(--mono);font-weight:600">${dynamicCostStr(r)}</span>` : ""}
     ${r.servings ? `<span style="font-size:12px;color:var(--text3);font-family:var(--mono)">${r.servings} servings</span>` : ""}
   `;
@@ -958,7 +970,7 @@ function openRecipeModal(id) {
   const ingList = document.getElementById("rmodal-ingredients");
   const stepList = document.getElementById("rmodal-steps");
   if (d?.ingredients?.length) {
-    ingList.innerHTML = d.ingredients.map(i => `<li>${esc(i)}</li>`).join("");
+    ingList.innerHTML = d.ingredients.map(i => ingHTML(i)).join("");
   } else {
     ingList.innerHTML = `<li style="color:#445;font-family:var(--mono)">No ingredients saved yet</li>`;
   }
@@ -1089,12 +1101,12 @@ function render() {
     const hd = !!details[r.id];
     const ms = matchScores[r.id];
     return `<div class="trow-wrap" id="wrap-${r.id}">
-  <div class="trow${hd?" has-details":" no-details"}" onclick="rowClick(event,'${r.id}')" style="${isArchived?"opacity:0.4;pointer-events:none;":""}">
-    <div style="display:flex;align-items:center;justify-content:center"><input type="checkbox"${checked.has(r.id)?" checked":""} onclick="chk(event,'${r.id}')"></div>
-    <div class="recipe-name">
+  <div class="trow${hd?" has-details":" no-details"}" onclick="${isArchived?"":"rowClick(event,'"+r.id+"')"}" style="${isArchived?"opacity:0.5;":""}">
+    <div style="display:flex;align-items:center;justify-content:center"><input type="checkbox"${(isArchived?archiveChecked:checked).has(r.id)?" checked":""} onclick="${isArchived?`archiveChk(event,'${r.id}')`:`chk(event,'${r.id}')`}"></div>
+    <div class="recipe-name" style="${isArchived?"pointer-events:none;":""}">
       <span class="expand-icon">▶</span>
-      <span class="recipe-name-text" onclick="event.stopPropagation();openRecipeModal('${r.id}')" style="cursor:pointer" title="Click to view recipe">${esc(r.name)}</span>
-      ${r.url ? `<a href="${r.url}" target="_blank" class="link-btn" onclick="event.stopPropagation()" title="Open recipe" style="flex-shrink:0;width:22px;height:22px;font-size:10px;margin-left:4px">↗</a>` : ""}
+      <span class="recipe-name-text" onclick="event.stopPropagation();openRecipeModal('${r.id}')" style="${isArchived?"":"cursor:pointer"}" title="${isArchived?"":"Click to view recipe"}">${esc(r.name)}</span>
+      ${r.url && !isArchived ? `<a href="${r.url}" target="_blank" class="link-btn" onclick="event.stopPropagation()" title="Open recipe" style="flex-shrink:0;width:22px;height:22px;font-size:10px;margin-left:4px">↗</a>` : ""}
       <div class="recipe-mobile-meta" style="display:none">${r.category} · ${MI[r.method]||""} ${r.method}</div>
     </div>
     <div style="font-size:11px;color:var(--accent);font-family:var(--mono);display:flex;align-items:center">${r._owner_label ? `<span title="Shared library">${esc(r._owner_label)}</span>` : ""}</div>
@@ -1102,19 +1114,16 @@ function render() {
     <div class="meta">${MI[r.method]||""} ${r.method}</div>
 
     <div class="cost" style="color:${dynamicCostStr(r) ? '#7bcf8e' : 'var(--text3)'}">${dynamicCostStr(r) || ''}</div>
-    <div style="display:flex;align-items:center;justify-content:center">
-      ${ms ? `<span class="match-badge ${ms.match==='full'?'match-full':'match-partial'}" title="${esc(ms.note)}">${ms.score}%</span>` : (matchActive ? `<span style="font-size:11px;color:#333;font-family:var(--mono)">—</span>` : "")}
-    </div>
-    <div style="display:flex;align-items:center;gap:5px;justify-content:center">
-      <button onclick="changeServings(event,'${r.id}',-1)" style="background:var(--bg4);border:1px solid var(--border);color:#aaa;border-radius:4px;width:20px;height:20px;cursor:pointer;font-size:13px;line-height:1;padding:0">−</button>
-      <span class="srv-count-${r.id}" style="font-size:13px;color:#c8d0e0;font-family:var(--mono);min-width:18px;text-align:center">${getServings(r.id)}</span>
-      <button onclick="changeServings(event,'${r.id}',+1)" style="background:var(--bg4);border:1px solid var(--border);color:#aaa;border-radius:4px;width:20px;height:20px;cursor:pointer;font-size:13px;line-height:1;padding:0">+</button>
-    </div>
-    <div style="pointer-events:all;display:flex;align-items:center;justify-content:center">
+    <div></div>
+    <div style="${isArchived?"pointer-events:none;":""}">&nbsp;</div>
+    <div style="pointer-events:all;display:flex;align-items:center;justify-content:center;gap:4px">
       ${isArchived
         ? `<button onclick="event.stopPropagation();unarchiveRecipe('${r.id}')" title="Restore"
             style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:var(--bg4);border:1px solid #2a4a2a;color:#4a8a4a;font-size:13px;cursor:pointer"
-            onmouseover="this.style.background='#1a3a1a'" onmouseout="this.style.background='var(--bg4)'">↩</button>`
+            onmouseover="this.style.background='#1a3a1a'" onmouseout="this.style.background='var(--bg4)'">↩</button>
+           <button onclick="event.stopPropagation();deleteRecipe('${r.id}')" title="Permanently delete"
+            style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:transparent;border:none;color:#4a2a2a;font-size:14px;font-weight:700;cursor:pointer;line-height:1"
+            onmouseover="this.style.color='#cc4444'" onmouseout="this.style.color='#4a2a2a'">🗑</button>`
         : `<button onclick="event.stopPropagation();archiveRecipe('${r.id}')" title="Archive"
             style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:transparent;border:none;color:#3a3a4a;font-size:16px;font-weight:700;cursor:pointer;line-height:1"
             onmouseover="this.style.color='#cc4444'" onmouseout="this.style.color='#3a3a4a'">✕</button>
@@ -1135,12 +1144,20 @@ function render() {
 
   if (archivedList.length) {
     html += `<div style="border-top:2px solid var(--bg4)">
-      <div id="archived-toggle" onclick="toggleArchived()"
-        style="padding:11px 14px;cursor:pointer;font-size:11px;font-family:var(--mono);color:#445;display:flex;align-items:center;gap:8px;user-select:none"
-        onmouseover="this.style.color='#778'" onmouseout="this.style.color='#445'">
-        <span id="archived-arrow" style="font-size:9px;display:inline-block;transition:transform .2s">▶</span>
-         Archived · ${archivedList.length} recipe${archivedList.length>1?"s":""}
-        <span style="color:#334;font-size:10px">click to expand</span>
+      <div style="display:flex;align-items:center;gap:8px;padding:11px 14px">
+        <div id="archived-toggle" onclick="toggleArchived()"
+          style="cursor:pointer;font-size:11px;font-family:var(--mono);color:#445;display:flex;align-items:center;gap:8px;user-select:none;flex:1"
+          onmouseover="this.style.color='#778'" onmouseout="this.style.color='#445'">
+          <span id="archived-arrow" style="font-size:9px;display:inline-block;transition:transform .2s">▶</span>
+          Archived · ${archivedList.length} recipe${archivedList.length>1?"s":""}
+          <span style="color:#334;font-size:10px">click to expand</span>
+        </div>
+        <button onclick="selectAllArchived()" title="Select all archived"
+          style="font-size:11px;font-family:var(--mono);background:none;border:1px solid #334;border-radius:5px;color:#556;padding:3px 9px;cursor:pointer"
+          onmouseover="this.style.color='#889'" onmouseout="this.style.color='#556'">Select All</button>
+        <button onclick="deleteArchiveSelected()" title="Delete selected archived recipes"
+          style="font-size:11px;font-family:var(--mono);background:none;border:1px solid #4a2a2a;border-radius:5px;color:#7a3a3a;padding:3px 9px;cursor:pointer"
+          onmouseover="this.style.color='#cc4444'" onmouseout="this.style.color='#7a3a3a'">Delete Selected</button>
       </div>
       <div id="archived-rows" style="display:none">
         ${archivedList.map(r => rowHTML(r, true)).join("")}
@@ -1170,8 +1187,64 @@ function archiveRecipe(id) {
 
 function unarchiveRecipe(id) {
   archivedRecipes.delete(id);
+  archiveChecked.delete(id);
   api("recipes", "POST", { id, archived: false }).catch(() => {});
   render();
+}
+
+function archiveChk(e, id) {
+  e.stopPropagation();
+  e.target.checked ? archiveChecked.add(id) : archiveChecked.delete(id);
+}
+
+async function deleteRecipe(id) {
+  const r = recipes.find(x => x.id === id);
+  if (!confirm(`Permanently delete "${r?.name}"?\nThis cannot be undone.`)) return;
+  try {
+    await api(`recipes?id=${id}`, "DELETE");
+  } catch(e) {
+    alert("Delete failed: " + e.message); return;
+  }
+  recipes = recipes.filter(x => x.id !== id);
+  delete details[id];
+  archivedRecipes.delete(id);
+  archiveChecked.delete(id);
+  checked.delete(id);
+  render();
+}
+
+function selectAllArchived() {
+  const archivedList = recipes.filter(r => archivedRecipes.has(r.id));
+  // If all selected, deselect all; otherwise select all
+  const allSelected = archivedList.every(r => archiveChecked.has(r.id));
+  archivedList.forEach(r => allSelected ? archiveChecked.delete(r.id) : archiveChecked.add(r.id));
+  // Expand archive section if collapsed
+  const rows = document.getElementById("archived-rows");
+  if (rows && rows.style.display === "none") toggleArchived();
+  render();
+}
+
+async function deleteArchiveSelected() {
+  if (!archiveChecked.size) { alert("No archived recipes selected."); return; }
+  const names = [...archiveChecked].map(id => recipes.find(r => r.id === id)?.name).filter(Boolean);
+  if (!confirm(`Permanently delete ${archiveChecked.size} recipe${archiveChecked.size>1?"s":""}?\n\n${names.join("\n")}\n\nThis cannot be undone.`)) return;
+  const ids = [...archiveChecked];
+  for (const id of ids) {
+    try { await api(`recipes?id=${id}`, "DELETE"); } catch(e) { console.error("Failed to delete", id, e); }
+    recipes = recipes.filter(r => r.id !== id);
+    delete details[id];
+    archivedRecipes.delete(id);
+    archiveChecked.delete(id);
+  }
+  render();
+}
+
+// Renders a single ingredient as a list item, treating "Label:" lines as group headers
+function ingHTML(ing, scaled, changed) {
+  const isHeader = ing.trimEnd().endsWith(":");
+  if (isHeader) return `<li class="ing-group-header">${esc(ing.replace(/:$/, ""))}</li>`;
+  const display = scaled !== undefined ? scaled : ing;
+  return `<li${changed ? ' style="color:#a8d8a8"' : ""}>${esc(display)}</li>`;
 }
 
 function detailHTML(r) {
@@ -1185,8 +1258,7 @@ function detailHTML(r) {
       <h3>Ingredients ${scaledNote}</h3>
       <ul class="ing-list">${d.ingredients.map(ing => {
         const scaled = mult !== 1 ? scaleIngredientText(ing, mult) : ing;
-        const changed = scaled !== ing;
-        return `<li${changed ? ' style="color:#a8d8a8"' : ""}>${esc(scaled)}</li>`;
+        return ingHTML(ing, scaled, scaled !== ing);
       }).join("")}</ul>
     </div>
     <div class="detail-section"><h3>Instructions</h3><ol class="steps-list">${d.steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol></div>
@@ -1423,9 +1495,6 @@ async function autoFetchRecipe(url) {
     .replace(/[?&]format=print[^&]*/g, "")
     .replace(/[?]$/, "");
 
-  // Auto-fill source immediately from URL
-  const srcField = document.getElementById("new-source");
-  if (!srcField.value) srcField.value = guessSourceFromUrl(url);
 
   try {
     // Use our API — handles JustTheRecipe + fallback parsers server-side
@@ -1446,14 +1515,11 @@ async function autoFetchRecipe(url) {
     if (data.servings) document.getElementById("new-servings").value = data.servings;
 
     if (data.ingredients?.length) {
-      pendingDetails = { ingredients: data.ingredients, steps: data.steps || [], servings: data.servings || 4, image_url: data.image_url || null };
-      addMsg(`Found ${data.ingredients.length} ingredients, ${data.steps.length} steps. Review below then save.`, "success");
-      const prev = document.getElementById("fetch-preview");
-      const ingList = document.getElementById("preview-ingredients");
-      const stepList = document.getElementById("preview-steps");
-      ingList.innerHTML = data.ingredients.map(i => `<li>${i}</li>`).join("");
-      stepList.innerHTML = (data.steps||[]).map(s => `<li>${s}</li>`).join("");
-      prev.style.display = "block";
+      pendingDetails = { image_url: data.image_url || null };
+      document.getElementById("new-ingredients").value = data.ingredients.join("\n");
+      document.getElementById("new-steps").value = (data.steps||[]).join("\n");
+      if (data.servings) document.getElementById("new-servings").value = data.servings;
+      addMsg(`Found ${data.ingredients.length} ingredients, ${data.steps.length} steps. Edit below then save.`, "success");
     } else {
       addMsg("Page loaded but couldn't find ingredients. Fill in manually.", "error");
     }
@@ -1469,7 +1535,7 @@ async function saveNew() {
   const saveBtn = document.getElementById("save-new-btn");
   saveBtn.disabled = true;
   addMsg("Saving...", "loading");
-  const payload = { name, category:document.getElementById("new-cat").value, protein:document.getElementById("new-protein").value||"Other", method:document.getElementById("new-method").value||"Stovetop", source:document.getElementById("new-source").value||"Unknown", url, cost:document.getElementById("new-cost").value||"TBD", image_url: pendingDetails?.image_url || null };
+  const payload = { name, category:document.getElementById("new-cat").value, protein:document.getElementById("new-protein").value||"Other", method:document.getElementById("new-method").value||"Stovetop", cuisine:document.getElementById("new-cuisine").value.trim(), effort:document.getElementById("new-effort").value, url, cost:document.getElementById("new-cost").value||"TBD", image_url: pendingDetails?.image_url || null };
   let saved;
   try { saved = await api("recipes","POST", payload); }
   catch(e) { addMsg("Save failed: " + e.message, "error"); saveBtn.disabled = false; return; }
@@ -1478,25 +1544,28 @@ async function saveNew() {
   recipes.push(nr);
   const servings = parseInt(document.getElementById("new-servings").value) || 4;
   nr.servings = servings;
+  const ingText  = document.getElementById("new-ingredients").value.trim();
+  const stepText = document.getElementById("new-steps").value.trim();
+  const ingredients = ingText  ? ingText.split("\n").map(s=>s.trim()).filter(Boolean) : [];
+  const steps       = stepText ? stepText.split("\n").map(s=>s.trim()).filter(Boolean) : [];
+  const imageUrl = pendingDetails?.image_url || null;
+  pendingDetails = null;
   let detailsErr = null;
-  if (pendingDetails) {
+  if (ingredients.length || steps.length) {
     try {
-      await api("recipe-details","POST",{ recipe_id:nid, ingredients:pendingDetails.ingredients, steps:pendingDetails.steps, servings: pendingDetails.servings || servings });
-      details[nid] = { ...pendingDetails, servings: pendingDetails.servings || servings };
+      await api("recipe-details","POST",{ recipe_id:nid, ingredients, steps, servings });
+      details[nid] = { ingredients, steps, servings, image_url: imageUrl };
     } catch(e) {
       console.error("Details save failed:", e.message);
       detailsErr = e.message;
     }
-    pendingDetails = null;
   }
   saveBtn.disabled = false;
   buildSelects();
-  ["new-url","new-name","new-protein","new-method","new-source","new-cost"].forEach(id=>document.getElementById(id).value="");
+  ["new-url","new-name","new-protein","new-method","new-cuisine","new-cost","new-ingredients","new-steps"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("new-effort").value = "";
   document.getElementById("add-panel").classList.remove("show");
   document.getElementById("add-msg").style.display = "none";
-  document.getElementById("fetch-preview").style.display = "none";
-  document.getElementById("preview-ingredients").innerHTML = "";
-  document.getElementById("preview-steps").innerHTML = "";
   render();
   if (detailsErr) {
     const t = document.createElement("div");
@@ -2491,7 +2560,8 @@ function openEditModal(id) {
   document.getElementById("edit-cat").value = r.category || "Lunch/Dinner";
   document.getElementById("edit-protein").value = r.protein || "";
   document.getElementById("edit-method").value = r.method || "";
-  document.getElementById("edit-source").value = r.source || "";
+  document.getElementById("edit-cuisine").value = r.cuisine || "";
+  document.getElementById("edit-effort").value = r.effort || "";
   document.getElementById("edit-cost").value = r.cost || "";
   document.getElementById("edit-url").value = r.url || "";
   document.getElementById("edit-servings").value = getServings(id);
@@ -2626,7 +2696,8 @@ async function saveEdit() {
     category: document.getElementById("edit-cat").value,
     protein: document.getElementById("edit-protein").value.trim() || "Other",
     method: document.getElementById("edit-method").value.trim() || "Stovetop",
-    source: document.getElementById("edit-source").value.trim(),
+    cuisine: document.getElementById("edit-cuisine").value.trim(),
+    effort: document.getElementById("edit-effort").value,
     cost: document.getElementById("edit-cost").value.trim(),
     url: document.getElementById("edit-url").value.trim(),
   };
@@ -2984,8 +3055,17 @@ showApp();
           <input id="edit-method" type="text" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:var(--sans)">
         </div>
         <div>
-          <label style="font-size:11px;color:var(--text3);font-family:var(--mono);letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Source</label>
-          <input id="edit-source" type="text" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:var(--sans)">
+          <label style="font-size:11px;color:var(--text3);font-family:var(--mono);letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Cuisine</label>
+          <input id="edit-cuisine" type="text" placeholder="e.g. Asian, Mexican, Italian" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:var(--sans)">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text3);font-family:var(--mono);letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Effort</label>
+          <select id="edit-effort" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;cursor:pointer">
+            <option value="">— select —</option>
+            <option value="Low">Low</option>
+            <option value="Med">Med</option>
+            <option value="High">High</option>
+          </select>
         </div>
         <div>
           <label style="font-size:11px;color:var(--text3);font-family:var(--mono);letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:5px">Est. Cost</label>
@@ -3318,11 +3398,10 @@ async function runOcr(imageUrl) {
       document.getElementById("new-servings").value = parsed.servings;
 
     if (parsed.ingredients.length) {
-      pendingDetails = { ingredients: parsed.ingredients, steps: parsed.steps, servings: parsed.servings || 4 };
-      document.getElementById("preview-ingredients").innerHTML = parsed.ingredients.map(i => `<li>${esc(i)}</li>`).join("");
-      document.getElementById("preview-steps").innerHTML = parsed.steps.map(s => `<li>${esc(s)}</li>`).join("");
-      document.getElementById("fetch-preview").style.display = "block";
-      addMsg(`Found ${parsed.ingredients.length} ingredients, ${parsed.steps.length} steps from photo.`, "success");
+      pendingDetails = null;
+      document.getElementById("new-ingredients").value = parsed.ingredients.join("\n");
+      document.getElementById("new-steps").value = parsed.steps.join("\n");
+      addMsg(`Found ${parsed.ingredients.length} ingredients, ${parsed.steps.length} steps from photo. Edit below then save.`, "success");
     } else {
       addMsg("Couldn't extract ingredients from photo. Try a clearer image.", "error");
     }
