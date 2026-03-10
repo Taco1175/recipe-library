@@ -18,6 +18,7 @@ const CARRIERS = {
   boost:      "@sms.myboostmobile.com",
   cricket:    "@mms.cricketwireless.net",
   metro:      "@mymetropcs.com",
+  spectrum:   "@vtext.com",   // Spectrum Mobile is a Verizon MVNO
 };
 
 async function sendSMS({ phone, carrier, message }) {
