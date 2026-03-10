@@ -49,8 +49,11 @@ async function sendSms(message) {
   if (!t) { console.error("[request-access] GMAIL_USER/GMAIL_APP_PASSWORD not set in .env"); return false; }
 
   const to = OWNER_PHONE + gateway;
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("SMTP timeout")), 10_000)
+  );
   try {
-    await t.sendMail({ from: GMAIL_USER, to, subject: "", text: message });
+    await Promise.race([t.sendMail({ from: GMAIL_USER, to, subject: "", text: message }), timeout]);
     console.log(`[request-access] SMS sent to ${to}`);
     return true;
   } catch (e) {
@@ -62,20 +65,10 @@ async function sendSms(message) {
 module.exports = async function requestAccessHandler(req, res) {
   if (req.method !== "POST") { res.writeHead(405); res.end(); return; }
 
-  let body = "";
-  req.on("data", c => { body += c; if (body.length > 4096) { res.writeHead(413); res.end(); } });
-  await new Promise(resolve => req.on("end", resolve));
-
-  let email, message;
-  try {
-    const parsed = JSON.parse(body);
-    email   = (parsed.email   || "").trim().toLowerCase();
-    message = (parsed.message || "").trim().slice(0, 300);
-  } catch {
-    res.writeHead(400, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ ok: false, error: "Invalid request" }));
-    return;
-  }
+  // server.js already parses JSON body into req.body before calling handlers
+  const parsed = req.body || {};
+  const email   = (parsed.email   || "").trim().toLowerCase();
+  const message = (parsed.message || "").trim().slice(0, 300);
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     res.writeHead(400, { "Content-Type": "application/json" });
@@ -95,7 +88,7 @@ module.exports = async function requestAccessHandler(req, res) {
     ? `Mealplannr access request: ${email} — ${message}`
     : `Mealplannr access request: ${email}`;
 
-  await sendSms(smsText);  // fire-and-forget — always return ok to user
+  sendSms(smsText).catch(e => console.error("[request-access] SMS error:", e.message));
 
   res.writeHead(200, { "Content-Type": "application/json" });
   res.end(JSON.stringify({ ok: true }));
