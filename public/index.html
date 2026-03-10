@@ -381,6 +381,9 @@ input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--accent); c
     <button class="btn btn-success" id="grocery-btn" onclick="openGrocery()" style="display:none">
       <span class="grocery-badge" id="grocery-count">0</span> in cart
     </button>
+    <button class="btn btn-outline" id="bulk-edit-btn" onclick="openBulkFieldEdit()" style="display:none;font-size:12px;padding:6px 13px">
+      ✏ Edit Fields
+    </button>
   </div>
   <div class="subheader">
     <div class="pills" id="pills"></div>
@@ -668,6 +671,7 @@ const MI={"Slow Cooker":"","Oven":"","Stovetop":"","Air Fryer":"","No Cook":"","
 let recipes = [...BASE];  // replaced by DB data in loadData()
 let details = {};
 let checked = new Set();
+let archivedOpen = false;
 let archiveChecked = new Set();
 let viewMode = "table";
 let servingsMap = {};  // recipe id -> current servings (for scaling)
@@ -1086,6 +1090,7 @@ function render() {
   const gb = document.getElementById("grocery-btn");
   gb.style.display = checked.size > 0 ? "inline-flex" : "none";
   document.getElementById("grocery-count").textContent = checked.size;
+  document.getElementById("bulk-edit-btn").style.display = checked.size > 0 ? "inline-flex" : "none";
 
   // Render grid or table
   if (viewMode === "grid") { renderGrid(list); return; }
@@ -1148,7 +1153,7 @@ function render() {
         <div id="archived-toggle" onclick="toggleArchived()"
           style="cursor:pointer;font-size:11px;font-family:var(--mono);color:#445;display:flex;align-items:center;gap:8px;user-select:none;flex:1"
           onmouseover="this.style.color='#778'" onmouseout="this.style.color='#445'">
-          <span id="archived-arrow" style="font-size:9px;display:inline-block;transition:transform .2s">▶</span>
+          <span id="archived-arrow" style="font-size:9px;display:inline-block;transition:transform .2s;transform:${archivedOpen?"rotate(90deg)":""}">▶</span>
           Archived · ${archivedList.length} recipe${archivedList.length>1?"s":""}
           <span style="color:#334;font-size:10px">click to expand</span>
         </div>
@@ -1159,7 +1164,7 @@ function render() {
           style="font-size:11px;font-family:var(--mono);background:none;border:1px solid #4a2a2a;border-radius:5px;color:#7a3a3a;padding:3px 9px;cursor:pointer"
           onmouseover="this.style.color='#cc4444'" onmouseout="this.style.color='#7a3a3a'">Delete Selected</button>
       </div>
-      <div id="archived-rows" style="display:none">
+      <div id="archived-rows" style="display:${archivedOpen?"block":"none"}">
         ${archivedList.map(r => rowHTML(r, true)).join("")}
       </div>
     </div>`;
@@ -1169,12 +1174,12 @@ function render() {
 }
 
 function toggleArchived() {
+  archivedOpen = !archivedOpen;
   const rows = document.getElementById("archived-rows");
   const arrow = document.getElementById("archived-arrow");
   if (!rows) return;
-  const open = rows.style.display === "none";
-  rows.style.display = open ? "block" : "none";
-  arrow.style.transform = open ? "rotate(90deg)" : "";
+  rows.style.display = archivedOpen ? "block" : "none";
+  arrow.style.transform = archivedOpen ? "rotate(90deg)" : "";
 }
 
 function archiveRecipe(id) {
@@ -1215,12 +1220,9 @@ async function deleteRecipe(id) {
 
 function selectAllArchived() {
   const archivedList = recipes.filter(r => archivedRecipes.has(r.id));
-  // If all selected, deselect all; otherwise select all
   const allSelected = archivedList.every(r => archiveChecked.has(r.id));
   archivedList.forEach(r => allSelected ? archiveChecked.delete(r.id) : archiveChecked.add(r.id));
-  // Expand archive section if collapsed
-  const rows = document.getElementById("archived-rows");
-  if (rows && rows.style.display === "none") toggleArchived();
+  if (!archivedOpen) archivedOpen = true; // auto-expand if collapsed
   render();
 }
 
@@ -1292,6 +1294,7 @@ function chk(e,id){
   const gb = document.getElementById("grocery-btn");
   gb.style.display = checked.size > 0 ? "inline-flex" : "none";
   document.getElementById("grocery-count").textContent = checked.size;
+  document.getElementById("bulk-edit-btn").style.display = checked.size > 0 ? "inline-flex" : "none";
   const countEl = document.getElementById("count");
   const selStr = checked.size > 0 ? ` · <span style="color:var(--accent);font-weight:600">${checked.size} selected</span>` : "";
   // Replace only the selected part — preserve the "Showing X of Y" text
@@ -2744,6 +2747,89 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 
+// ── BULK FIELD EDIT ──
+const BFE_OPTIONS = {
+  category: { type: "select", choices: ["Breakfast","Lunch/Dinner","Snack/Side","Dessert","Drink"] },
+  protein:  { type: "text" },
+  method:   { type: "select", choices: ["Stovetop","Oven","Slow Cooker","No Cook","Air Fryer","BBQ","Instant Pot","Microwave"] },
+  cuisine:  { type: "text" },
+  effort:   { type: "select", choices: ["Low","Med","High"] },
+  cost:     { type: "text" },
+};
+
+function openBulkFieldEdit() {
+  if (!checked.size) return;
+  const m = document.getElementById("bulk-field-modal");
+  document.getElementById("bfe-field").value = "";
+  document.getElementById("bfe-value-wrap").style.display = "none";
+  document.getElementById("bfe-preview").style.display = "none";
+  document.getElementById("bfe-msg").textContent = "";
+  document.getElementById("bfe-title").textContent = `${checked.size} recipe${checked.size>1?"s":""} selected`;
+  m.style.display = "flex";
+}
+
+function closeBulkFieldEdit() {
+  document.getElementById("bulk-field-modal").style.display = "none";
+}
+
+function updateBulkFieldInput() {
+  const field = document.getElementById("bfe-field").value;
+  const wrap = document.getElementById("bfe-value-wrap");
+  const textEl = document.getElementById("bfe-text");
+  const selEl  = document.getElementById("bfe-select");
+  const preview = document.getElementById("bfe-preview");
+  document.getElementById("bfe-msg").textContent = "";
+  if (!field) { wrap.style.display = "none"; preview.style.display = "none"; return; }
+  const cfg = BFE_OPTIONS[field];
+  wrap.style.display = "block";
+  document.getElementById("bfe-value-label").textContent = "New " + field;
+  if (cfg.type === "select") {
+    textEl.style.display = "none";
+    selEl.style.display = "block";
+    selEl.innerHTML = cfg.choices.map(c => `<option value="${c}">${c}</option>`).join("");
+  } else {
+    selEl.style.display = "none";
+    textEl.style.display = "block";
+    textEl.value = "";
+    textEl.focus();
+  }
+  // Show preview list of affected recipes
+  const names = [...checked].map(id => recipes.find(r => r.id===id)?.name).filter(Boolean);
+  preview.textContent = "Will update: " + names.join(", ");
+  preview.style.display = "block";
+}
+
+async function applyBulkFieldEdit() {
+  const field = document.getElementById("bfe-field").value;
+  if (!field) { document.getElementById("bfe-msg").textContent = "Pick a field first."; return; }
+  const cfg = BFE_OPTIONS[field];
+  const value = cfg.type === "select"
+    ? document.getElementById("bfe-select").value
+    : document.getElementById("bfe-text").value.trim();
+  if (!value) { document.getElementById("bfe-msg").textContent = "Enter a value first."; return; }
+
+  const btn = document.getElementById("bfe-apply-btn");
+  btn.disabled = true; btn.textContent = "Saving…";
+  const ids = [...checked];
+  let failed = 0;
+  for (const id of ids) {
+    try {
+      await api("recipes", "POST", { id, [field]: value });
+      const idx = recipes.findIndex(r => r.id === id);
+      if (idx !== -1) recipes[idx][field] = value;
+    } catch(e) { failed++; }
+  }
+  btn.disabled = false; btn.textContent = "Apply to all";
+  if (failed) {
+    document.getElementById("bfe-msg").textContent = `Done — ${failed} failed.`;
+  } else {
+    document.getElementById("bfe-msg").textContent = `✓ Updated ${ids.length} recipe${ids.length>1?"s":""}`;
+    buildSelects();
+    render();
+    setTimeout(closeBulkFieldEdit, 800);
+  }
+}
+
 // ── BULK RECIPE LOADER ──
 let bulkResults = [];
 
@@ -3313,6 +3399,42 @@ function closeSidebar() {
       </div>
     </div>
 
+
+<!-- Bulk Field Edit Modal -->
+<div id="bulk-field-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:510;align-items:center;justify-content:center;padding:24px 16px" onclick="if(event.target===this)closeBulkFieldEdit()">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;width:100%;max-width:420px;padding:28px 26px;position:relative">
+    <button onclick="closeBulkFieldEdit()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;line-height:1">×</button>
+    <div style="font-size:14px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px">Bulk Edit</div>
+    <div id="bfe-title" style="font-size:16px;color:var(--text);font-weight:600;margin-bottom:22px"></div>
+
+    <div style="margin-bottom:16px">
+      <label style="font-size:11px;color:var(--text3);font-family:var(--mono);letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:7px">Field to change</label>
+      <select id="bfe-field" onchange="updateBulkFieldInput()" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;cursor:pointer">
+        <option value="">— choose a field —</option>
+        <option value="category">Category</option>
+        <option value="protein">Protein</option>
+        <option value="method">Method</option>
+        <option value="cuisine">Cuisine</option>
+        <option value="effort">Effort</option>
+        <option value="cost">Est. Cost</option>
+      </select>
+    </div>
+
+    <div id="bfe-value-wrap" style="margin-bottom:22px;display:none">
+      <label id="bfe-value-label" style="font-size:11px;color:var(--text3);font-family:var(--mono);letter-spacing:0.05em;text-transform:uppercase;display:block;margin-bottom:7px">New value</label>
+      <input id="bfe-text" type="text" placeholder="Enter value…" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:var(--sans);box-sizing:border-box;display:none">
+      <select id="bfe-select" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;cursor:pointer;display:none"></select>
+    </div>
+
+    <div id="bfe-preview" style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:18px;display:none"></div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="closeBulkFieldEdit()" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 18px;color:var(--text2);font-size:13px;cursor:pointer">Cancel</button>
+      <button id="bfe-apply-btn" onclick="applyBulkFieldEdit()" style="background:var(--accent);border:none;border-radius:8px;padding:8px 22px;color:#fff;font-size:13px;font-weight:600;cursor:pointer">Apply to all</button>
+    </div>
+    <div id="bfe-msg" style="margin-top:12px;font-size:12px;text-align:center"></div>
+  </div>
+</div>
 
 <!-- Bulk Recipe Loader Modal -->
 <div id="bulk-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:500;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto">
