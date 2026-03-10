@@ -387,7 +387,7 @@ input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--accent); c
         <button id="btn-grid" onclick="setView('grid')" title="Grid view">⊞</button>
       </div>
       <div class="search-wrap">
-        <input type="text" id="search" placeholder="Search recipes…" oninput="onSearch(this.value)">
+        <input type="text" id="search" placeholder="Search recipes…" oninput="onSearch(this.value)" onkeydown="if(event.key==='ArrowDown'){event.preventDefault();_kbFocusRow(0);_getRecipeRows()[0]?.scrollIntoView({block:'nearest'});}">
         <button class="search-clear" id="search-clear-btn" onclick="clearSearch()" title="Clear" style="display:none">×</button>
       </div>
       <select class="flt" id="filterProt" onchange="fProt=this.value;render()"><option value="">All Proteins</option></select>
@@ -470,16 +470,14 @@ input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--accent); c
         <div class="field"><label>Servings</label><input type="number" id="new-servings" placeholder="e.g. 4" min="1" max="24"></div>
       </div>
       <div id="add-msg" style="display:none" class="add-msg"></div>
-      <div id="fetch-preview" style="display:none;margin-top:12px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
-          <div style="padding:12px 14px;border-right:1px solid var(--border)">
-            <div style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);font-family:var(--mono);margin-bottom:8px">Ingredients</div>
-            <ul id="preview-ingredients" style="margin:0;padding:0 0 0 16px;font-size:12px;color:#b0b5c4;line-height:1.8"></ul>
-          </div>
-          <div style="padding:12px 14px">
-            <div style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);font-family:var(--mono);margin-bottom:8px">Steps</div>
-            <ol id="preview-steps" style="margin:0;padding:0 0 0 16px;font-size:12px;color:#b0b5c4;line-height:1.8"></ol>
-          </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+        <div>
+          <label style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);font-family:var(--mono);display:block;margin-bottom:6px">Ingredients <span style="text-transform:none;letter-spacing:0">(one per line)</span></label>
+          <textarea id="new-ingredients" placeholder="1 cup flour&#10;2 eggs&#10;½ tsp salt" rows="7" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:12px;font-family:var(--mono);resize:vertical;outline:none;line-height:1.7"></textarea>
+        </div>
+        <div>
+          <label style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);font-family:var(--mono);display:block;margin-bottom:6px">Steps <span style="text-transform:none;letter-spacing:0">(one per line)</span></label>
+          <textarea id="new-steps" placeholder="Preheat oven to 375°F&#10;Mix dry ingredients&#10;Bake for 25 minutes" rows="7" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:12px;font-family:var(--mono);resize:vertical;outline:none;line-height:1.7"></textarea>
         </div>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
@@ -1446,14 +1444,11 @@ async function autoFetchRecipe(url) {
     if (data.servings) document.getElementById("new-servings").value = data.servings;
 
     if (data.ingredients?.length) {
-      pendingDetails = { ingredients: data.ingredients, steps: data.steps || [], servings: data.servings || 4, image_url: data.image_url || null };
-      addMsg(`Found ${data.ingredients.length} ingredients, ${data.steps.length} steps. Review below then save.`, "success");
-      const prev = document.getElementById("fetch-preview");
-      const ingList = document.getElementById("preview-ingredients");
-      const stepList = document.getElementById("preview-steps");
-      ingList.innerHTML = data.ingredients.map(i => `<li>${i}</li>`).join("");
-      stepList.innerHTML = (data.steps||[]).map(s => `<li>${s}</li>`).join("");
-      prev.style.display = "block";
+      pendingDetails = { image_url: data.image_url || null };
+      document.getElementById("new-ingredients").value = data.ingredients.join("\n");
+      document.getElementById("new-steps").value = (data.steps||[]).join("\n");
+      if (data.servings) document.getElementById("new-servings").value = data.servings;
+      addMsg(`Found ${data.ingredients.length} ingredients, ${data.steps.length} steps. Edit below then save.`, "success");
     } else {
       addMsg("Page loaded but couldn't find ingredients. Fill in manually.", "error");
     }
@@ -1478,25 +1473,27 @@ async function saveNew() {
   recipes.push(nr);
   const servings = parseInt(document.getElementById("new-servings").value) || 4;
   nr.servings = servings;
+  const ingText  = document.getElementById("new-ingredients").value.trim();
+  const stepText = document.getElementById("new-steps").value.trim();
+  const ingredients = ingText  ? ingText.split("\n").map(s=>s.trim()).filter(Boolean) : [];
+  const steps       = stepText ? stepText.split("\n").map(s=>s.trim()).filter(Boolean) : [];
+  const imageUrl = pendingDetails?.image_url || null;
+  pendingDetails = null;
   let detailsErr = null;
-  if (pendingDetails) {
+  if (ingredients.length || steps.length) {
     try {
-      await api("recipe-details","POST",{ recipe_id:nid, ingredients:pendingDetails.ingredients, steps:pendingDetails.steps, servings: pendingDetails.servings || servings });
-      details[nid] = { ...pendingDetails, servings: pendingDetails.servings || servings };
+      await api("recipe-details","POST",{ recipe_id:nid, ingredients, steps, servings });
+      details[nid] = { ingredients, steps, servings, image_url: imageUrl };
     } catch(e) {
       console.error("Details save failed:", e.message);
       detailsErr = e.message;
     }
-    pendingDetails = null;
   }
   saveBtn.disabled = false;
   buildSelects();
-  ["new-url","new-name","new-protein","new-method","new-source","new-cost"].forEach(id=>document.getElementById(id).value="");
+  ["new-url","new-name","new-protein","new-method","new-source","new-cost","new-ingredients","new-steps"].forEach(id=>document.getElementById(id).value="");
   document.getElementById("add-panel").classList.remove("show");
   document.getElementById("add-msg").style.display = "none";
-  document.getElementById("fetch-preview").style.display = "none";
-  document.getElementById("preview-ingredients").innerHTML = "";
-  document.getElementById("preview-steps").innerHTML = "";
   render();
   if (detailsErr) {
     const t = document.createElement("div");
@@ -3318,11 +3315,10 @@ async function runOcr(imageUrl) {
       document.getElementById("new-servings").value = parsed.servings;
 
     if (parsed.ingredients.length) {
-      pendingDetails = { ingredients: parsed.ingredients, steps: parsed.steps, servings: parsed.servings || 4 };
-      document.getElementById("preview-ingredients").innerHTML = parsed.ingredients.map(i => `<li>${esc(i)}</li>`).join("");
-      document.getElementById("preview-steps").innerHTML = parsed.steps.map(s => `<li>${esc(s)}</li>`).join("");
-      document.getElementById("fetch-preview").style.display = "block";
-      addMsg(`Found ${parsed.ingredients.length} ingredients, ${parsed.steps.length} steps from photo.`, "success");
+      pendingDetails = null;
+      document.getElementById("new-ingredients").value = parsed.ingredients.join("\n");
+      document.getElementById("new-steps").value = parsed.steps.join("\n");
+      addMsg(`Found ${parsed.ingredients.length} ingredients, ${parsed.steps.length} steps from photo. Edit below then save.`, "success");
     } else {
       addMsg("Couldn't extract ingredients from photo. Try a clearer image.", "error");
     }
