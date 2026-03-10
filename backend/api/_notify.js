@@ -5,7 +5,6 @@
 // SETUP: Add to .env
 //   OWNER_PHONE=5551234567        (digits only)
 //   OWNER_CARRIER=verizon         (see CARRIERS below)
-//   ALLOWED_EMAILS=you@gmail.com,spouse@gmail.com  (comma-separated)
 
 const { sendEmail } = require("./_email-helper");
 
