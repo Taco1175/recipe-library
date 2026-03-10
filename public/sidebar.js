@@ -312,6 +312,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Settings button
     const sb = document.createElement('button');
+    sb.id = 'sidebar-settings-btn';
+    sb.title = 'Settings';
+    sb.style.cssText = 'background:none;border:none;color:var(--text2,#b0b5c4);cursor:pointer;display:flex;align-items:center;gap:6px;font-size:13px;padding:6px 4px;width:100%;';
+    sb.innerHTML = `<span style="width:16px;height:16px;display:inline-flex">${_SVG.settings}</span> Settings`;
+    sb.onclick = openSettings;
+    if (ui) footer.insertBefore(sb, ui); else footer.appendChild(sb);
+  }
+
+  // Settings button guard (independent of theme-switcher check)
+  if (footer && !document.getElementById('sidebar-settings-btn')) {
+    const ui = footer.querySelector('.user-info');
+    const sb = document.createElement('button');
+    sb.id = 'sidebar-settings-btn';
     sb.title = 'Settings';
     sb.style.cssText = 'background:none;border:none;color:var(--text2,#b0b5c4);cursor:pointer;display:flex;align-items:center;gap:6px;font-size:13px;padding:6px 4px;width:100%;';
     sb.innerHTML = `<span style="width:16px;height:16px;display:inline-flex">${_SVG.settings}</span> Settings`;
