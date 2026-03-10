@@ -373,6 +373,7 @@ const MI = {"Slow Cooker":"🥘","Oven":"🔥","Stovetop":"🍳","Air Fryer":"�
 let recipes = [];
 let weekOffset = 0;  // 0 = current week
 let plan = {};  // { "2026-02-24": [recipeId, ...], ... }
+let planRecordIds = {};  // { "YYYY-MM-DD_recipeId": pbRecordId } — for archiving
 let pendingRecipe = null;  // recipe being assigned to a day
 
 // ── Google Auth ──
@@ -607,18 +608,75 @@ async function init() {
   } catch(e) { console.error(e); renderWeek(); renderPicker(recipes || []); }
 }
 
-// ── Plan persistence (Supabase via a simple key in localStorage for now, upgrade later) ──
-function planKey() { return "meal-plan-v1"; }
+// ── Plan persistence ────────────────────────────────────────────────────────
 
-async function loadPlan() {
-  try {
-    const saved = localStorage.getItem(planKey());
-    plan = saved ? JSON.parse(saved) : {};
-  } catch(e) { plan = {}; }
+function savePlanLocal() {
+  localStorage.setItem("meal-plan-v1", JSON.stringify(plan));
 }
 
-function savePlan() {
-  localStorage.setItem(planKey(), JSON.stringify(plan));
+async function loadPlan() {
+  // 1. Load from localStorage immediately for instant render
+  try {
+    const saved = localStorage.getItem("meal-plan-v1");
+    plan = saved ? JSON.parse(saved) : {};
+  } catch(e) { plan = {}; }
+
+  // 2. Fetch from PocketBase (source of truth) — wide window covers history
+  try {
+    const h = await Auth.headers();
+    if (!h) return;
+    const from = new Date(); from.setMonth(from.getMonth() - 6);
+    const to   = new Date(); to.setMonth(to.getMonth() + 3);
+    const fromStr = from.toISOString().slice(0, 10);
+    const toStr   = to.toISOString().slice(0, 10);
+
+    const res = await fetch(`${API}/meal-plan?from=${fromStr}&to=${toStr}`, { headers: h });
+    if (!res.ok) return;
+    const entries = await res.json();
+
+    // Rebuild plan and record-ID map from server data
+    plan = {};
+    planRecordIds = {};
+    for (const entry of entries) {
+      if (!plan[entry.date]) plan[entry.date] = [];
+      if (!plan[entry.date].includes(entry.recipe)) plan[entry.date].push(entry.recipe);
+      planRecordIds[`${entry.date}_${entry.recipe}`] = entry.id;
+    }
+
+    // Migrate any localStorage-only entries that aren't in PB yet
+    try {
+      const local = JSON.parse(localStorage.getItem("meal-plan-v1") || "{}");
+      for (const [date, ids] of Object.entries(local)) {
+        for (const id of ids) {
+          if (!planRecordIds[`${date}_${id}`]) {
+            // Exists in localStorage but not in PB — push it up silently
+            _syncMealAdd(date, id);
+          }
+        }
+      }
+    } catch(e) {}
+
+    savePlanLocal();
+    renderWeek();
+  } catch(e) {
+    console.warn("[meal-plan] API load failed, using localStorage:", e.message);
+  }
+}
+
+// Fire-and-forget helper to create a PB record (used during migration + addToPlan)
+async function _syncMealAdd(date, recipe) {
+  try {
+    const h = await Auth.headers();
+    if (!h) return;
+    const res = await fetch(`${API}/meal-plan`, {
+      method: "POST", headers: h,
+      body: JSON.stringify({ recipe, date }),
+    });
+    if (res.ok) {
+      const record = await res.json();
+      planRecordIds[`${date}_${recipe}`] = record.id;
+    }
+  } catch(e) {}
 }
 
 // ── Week helpers ──
@@ -824,9 +882,12 @@ function closeDayPick() {
 
 function addToPlan(ds, id) {
   if (!plan[ds]) plan[ds] = [];
-  if (!plan[ds].includes(id)) plan[ds].push(id);
-  savePlan();
-  renderWeek();
+  if (!plan[ds].includes(id)) {
+    plan[ds].push(id);
+    savePlanLocal();
+    renderWeek();
+    _syncMealAdd(ds, id);  // persist to PB
+  }
   _notifyMealSave(ds, id);
 }
 
@@ -840,9 +901,20 @@ function removeMeal(ds, id) {
     cartIds.delete(id);
     localStorage.setItem("recipe-cart", JSON.stringify([...cartIds]));
   }
-  savePlan();
+  savePlanLocal();
   renderWeek();
   renderPicker(recipes);
+
+  // Archive in PB
+  const key = `${ds}_${id}`;
+  const recordId = planRecordIds[key];
+  if (recordId) {
+    delete planRecordIds[key];
+    Auth.headers().then(h => {
+      if (!h) return;
+      fetch(`${API}/meal-plan?id=${recordId}`, { method: "DELETE", headers: h }).catch(() => {});
+    });
+  }
 }
 
 // ── Recipe detail popup ──
