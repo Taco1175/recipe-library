@@ -1,12 +1,15 @@
 // backend/api/_notify.js
 // SMS notifications via carrier email-to-SMS gateways.
-// Uses the existing Resend email helper — no extra packages required.
+// Uses Gmail SMTP (nodemailer) — trusted by carriers unlike transactional
+// email services (Resend, SendGrid, etc).
 //
 // SETUP: Add to .env
-//   OWNER_PHONE=5551234567        (digits only)
-//   OWNER_CARRIER=verizon         (see CARRIERS below)
+//   GMAIL_USER=you@gmail.com
+//   GMAIL_APP_PASSWORD=xxxx xxxx xxxx xxxx   (16-char App Password, spaces OK)
+//   OWNER_PHONE=5551234567                    (digits only)
+//   OWNER_CARRIER=spectrum                    (see CARRIERS below)
 
-const { sendEmail } = require("./_email-helper");
+const nodemailer = require("nodemailer");
 
 const CARRIERS = {
   att:        "@txt.att.net",
@@ -20,6 +23,20 @@ const CARRIERS = {
   spectrum:   "@vtext.com",   // Spectrum Mobile is a Verizon MVNO
 };
 
+const GMAIL_USER = process.env.GMAIL_USER;
+const GMAIL_PASS = (process.env.GMAIL_APP_PASSWORD || "").replace(/\s/g, "");
+
+let _transporter = null;
+function getTransporter() {
+  if (!_transporter && GMAIL_USER && GMAIL_PASS) {
+    _transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: GMAIL_USER, pass: GMAIL_PASS },
+    });
+  }
+  return _transporter;
+}
+
 async function sendSMS({ phone, carrier, message }) {
   const gateway = CARRIERS[carrier?.toLowerCase()];
   if (!gateway) {
@@ -29,9 +46,27 @@ async function sendSMS({ phone, carrier, message }) {
   const digits = (phone || "").replace(/\D/g, "");
   if (digits.length < 10) return { ok: false, error: "Invalid phone number" };
 
+  const t = getTransporter();
+  if (!t) {
+    console.error("[Notify] GMAIL_USER/GMAIL_APP_PASSWORD not set in .env");
+    return { ok: false, error: "Gmail credentials not configured" };
+  }
+
   const to = digits + gateway;
-  // Carriers display the email body, not the subject — keep it short
-  return sendEmail({ to, subject: "Mealplannr", html: message.replace(/\n/g, "<br>") });
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("SMTP timeout")), 10_000)
+  );
+  try {
+    await Promise.race([
+      t.sendMail({ from: GMAIL_USER, to, subject: "", text: message }),
+      timeout,
+    ]);
+    console.log(`[Notify] SMS sent to ${to}`);
+    return { ok: true };
+  } catch (e) {
+    console.error("[Notify] Send failed:", e.message);
+    return { ok: false, error: e.message };
+  }
 }
 
 // Alert the app owner using env vars — used for security events (unauthorized logins)
