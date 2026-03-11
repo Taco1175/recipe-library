@@ -35,11 +35,11 @@ let _adminExpiry = 0;
 
 async function getAdminToken() {
   if (_adminToken && Date.now() < _adminExpiry - 30000) return _adminToken;
-  const { ok, data } = await pbFetch("admins/auth-with-password", "POST", {
+  const { ok, status, data } = await pbFetch("collections/_superusers/auth-with-password", "POST", {
     identity: PB_ADMIN_EMAIL,
     password: PB_ADMIN_PASSWORD,
   });
-  if (!ok || !data.token) throw new Error("Admin auth failed");
+  if (!ok || !data.token) throw new Error(`Admin auth failed (${status}): ${JSON.stringify(data)}`);
   _adminToken = data.token;
   // PocketBase admin tokens last 1 day by default
   _adminExpiry = Date.now() + 23 * 60 * 60 * 1000;

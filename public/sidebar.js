@@ -119,17 +119,6 @@ window.addEventListener('pageshow', e => { if (e.persisted) window.location.relo
 
 // ── SETTINGS MODAL ──────────────────────────────────────────────────────────
 
-const CARRIER_LABELS = {
-  att:        'AT&T',
-  verizon:    'Verizon',
-  tmobile:    'T-Mobile',
-  sprint:     'Sprint',
-  uscellular: 'US Cellular',
-  boost:      'Boost Mobile',
-  cricket:    'Cricket',
-  metro:      'Metro by T-Mobile',
-  spectrum:   'Spectrum Mobile',
-};
 
 function openSettings() {
   document.getElementById('settings-modal')?.remove();
@@ -149,67 +138,6 @@ function openSettings() {
           style="background:none;border:none;color:var(--text2,#b0b5c4);font-size:20px;cursor:pointer;line-height:1">×</button>
       </div>
 
-      <!-- Notifications section -->
-      <div style="margin-bottom:20px;">
-        <p style="font-size:11px;font-family:monospace;color:var(--text3,#667);letter-spacing:.06em;margin-bottom:12px">
-          NOTIFICATIONS (SMS via carrier gateway)
-        </p>
-
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          <div>
-            <label style="font-size:12px;color:var(--text2,#b0b5c4);display:block;margin-bottom:4px">Phone number</label>
-            <input id="s-phone" type="tel" placeholder="5551234567 (digits only)"
-              style="width:100%;background:var(--bg3,#1e2330);border:1px solid var(--border,#2a2f3e);
-                border-radius:8px;padding:9px 12px;color:var(--text,#E8E4DC);font-size:14px;outline:none;">
-          </div>
-
-          <div>
-            <label style="font-size:12px;color:var(--text2,#b0b5c4);display:block;margin-bottom:4px">Carrier</label>
-            <select id="s-carrier"
-              style="width:100%;background:var(--bg3,#1e2330);border:1px solid var(--border,#2a2f3e);
-                border-radius:8px;padding:9px 12px;color:var(--text,#E8E4DC);font-size:14px;outline:none;">
-              <option value="">— Select carrier —</option>
-              ${Object.entries(CARRIER_LABELS).map(([k,v]) => `<option value="${k}">${v}</option>`).join('')}
-            </select>
-          </div>
-
-          <div>
-            <label style="font-size:12px;color:var(--text2,#b0b5c4);display:block;margin-bottom:4px">Timezone</label>
-            <select id="s-timezone"
-              style="width:100%;background:var(--bg3,#1e2330);border:1px solid var(--border,#2a2f3e);
-                border-radius:8px;padding:9px 12px;color:var(--text,#E8E4DC);font-size:14px;outline:none;">
-              <option value="America/Chicago">Central (CT)</option>
-              <option value="America/New_York">Eastern (ET)</option>
-              <option value="America/Denver">Mountain (MT)</option>
-              <option value="America/Los_Angeles">Pacific (PT)</option>
-              <option value="America/Anchorage">Alaska (AKT)</option>
-              <option value="Pacific/Honolulu">Hawaii (HT)</option>
-            </select>
-          </div>
-
-          <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
-            ${[
-              ['notify_login',        '🔒 Alert me when someone unauthorized tries to log in'],
-              ['notify_meal_save',    '🍽 Text me when a meal is added to the planner'],
-              ['notify_daily_digest', '☀️ Morning digest — text me today\'s meal plan'],
-            ].map(([id, label]) => `
-              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text2,#b0b5c4)">
-                <input type="checkbox" id="s-${id}"
-                  style="width:16px;height:16px;accent-color:var(--accent,#6e8efb);cursor:pointer;"
-                  ${id === 'notify_daily_digest' ? 'onchange="document.getElementById(\'s-digest-time-row\').style.display=this.checked?\'flex\':\'none\'"' : ''}>
-                ${label}
-              </label>
-            `).join('')}
-          <div id="s-digest-time-row" style="display:none;align-items:center;gap:10px;padding-left:26px;margin-top:2px;">
-            <label style="font-size:12px;color:var(--text2,#b0b5c4);white-space:nowrap;">Send at</label>
-            <input type="time" id="s-digest-time" value="07:00"
-              style="background:var(--bg3,#1e2330);border:1px solid var(--border,#2a2f3e);
-                border-radius:8px;padding:6px 10px;color:var(--text,#E8E4DC);font-size:13px;outline:none;">
-          </div>
-          </div>
-        </div>
-      </div>
-
       <div id="s-msg" style="font-size:13px;font-family:monospace;margin-bottom:12px;display:none"></div>
 
       <button onclick="_saveSettings()"
@@ -221,45 +149,9 @@ function openSettings() {
   `;
   document.body.appendChild(modal);
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
-
-  // Default timezone to CST, then auto-detect browser timezone if it matches an option
-  const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const tzSelect = document.getElementById('s-timezone');
-  if (tzSelect && [...tzSelect.options].some(o => o.value === detectedTz)) {
-    tzSelect.value = detectedTz;
-  }
-
-  // Load existing settings from server
-  const token = _getToken();
-  if (token) {
-    fetch('/api/user-preferences', { headers: { Authorization: token } })
-      .then(r => r.json())
-      .then(({ notifications: n = {} }) => {
-        if (n.phone)       document.getElementById('s-phone').value       = n.phone;
-        if (n.carrier)     document.getElementById('s-carrier').value     = n.carrier;
-        if (n.timezone)    document.getElementById('s-timezone').value    = n.timezone;
-        if (n.digest_time) document.getElementById('s-digest-time').value = n.digest_time;
-        ['notify_login','notify_meal_save','notify_daily_digest'].forEach(k => {
-          const el = document.getElementById(`s-${k}`);
-          if (el) el.checked = !!n[k];
-        });
-        if (n.notify_daily_digest) {
-          document.getElementById('s-digest-time-row').style.display = 'flex';
-        }
-      }).catch(() => {});
-  }
 }
 
 async function _saveSettings() {
-  const phone       = document.getElementById('s-phone')?.value.replace(/\D/g,'');
-  const carrier     = document.getElementById('s-carrier')?.value;
-  const timezone    = document.getElementById('s-timezone')?.value || 'America/Chicago';
-  const digest_time = document.getElementById('s-digest-time')?.value || '07:00';
-  const notifs      = { phone, carrier, timezone, digest_time };
-  ['notify_login','notify_meal_save','notify_daily_digest'].forEach(k => {
-    notifs[k] = !!document.getElementById(`s-${k}`)?.checked;
-  });
-
   const token = _getToken();
   if (!token) { _showSettingsMsg('Not logged in', 'error'); return; }
 
@@ -267,7 +159,7 @@ async function _saveSettings() {
     const res = await fetch('/api/user-preferences', {
       method: 'POST',
       headers: { Authorization: token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ notifications: notifs }),
+      body: JSON.stringify({}),
     });
     if (res.ok) {
       _showSettingsMsg('Settings saved!', 'success');

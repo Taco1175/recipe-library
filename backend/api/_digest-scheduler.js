@@ -46,12 +46,8 @@ async function sendSMS({ phone, carrier, message }) {
   const digits = String(phone).replace(/\D/g, "");
   if (digits.length < 10) { console.error("[Digest] Invalid phone number"); return false; }
   const to = digits + gateway;
-  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("SMTP timeout")), 10_000));
   try {
-    await Promise.race([
-      t.sendMail({ from: GMAIL_USER, to, subject: "Mealplannr Summary", text: message }),
-      timeout,
-    ]);
+    await t.sendMail({ from: GMAIL_USER, to, subject: "", text: message });
     return true;
   } catch (e) {
     console.error("[Digest] Send failed:", e.message);
@@ -86,10 +82,6 @@ function parseNotifs(pref) {
   try { return JSON.parse(pref?.notifications || "{}"); } catch { return {}; }
 }
 
-function formatSteps(steps) {
-  if (!Array.isArray(steps) || steps.length === 0) return "";
-  return steps.map((s, i) => `${i + 1}. ${s}`).join("\n");
-}
 
 async function runDigest() {
   const now = currentHHMM();
@@ -153,27 +145,18 @@ async function sendDigestToUser({ userId, phone, carrier, today, adminToken }) {
     // Fetch recipe name
     const recipe = await pbFirst("recipes", `id="${pbEscape(recipeId)}"`, adminToken);
     const name = recipe?.name || "Unknown recipe";
-
-    // Fetch recipe details (steps)
-    const details = await pbFirst("recipe_details", `recipe="${pbEscape(recipeId)}"`, adminToken);
-    const steps = formatSteps(details?.steps);
-
     const link = `${APP_URL}/?recipe=${recipeId}`;
-
-    let section = `--- ${name} ---`;
-    if (steps) section += `\n${steps}`;
-    section += `\nView: ${link}`;
-    sections.push(section);
+    sections.push(`${name}: ${link}`);
   }
 
   const message =
     `Mealplannr Summary - ${dateLabel}\n\n` + sections.join("\n\n");
 
-  const ok = await sendSMS({ phone, carrier, message });
+  const { ok, error } = await sendSMS({ phone, carrier, message });
   if (ok) {
     console.log(`[Digest] Sent to user ${userId} (${entries.length} meal(s))`);
   } else {
-    console.error(`[Digest] SMS failed for user ${userId}`);
+    console.error(`[Digest] SMS failed for user ${userId}: ${error}`);
   }
 }
 
