@@ -7,10 +7,57 @@
 // Checks every minute. Sends once per user per day (tracked in memory).
 // Add digest_time to user notification prefs in Settings to opt in.
 
+const nodemailer = require("nodemailer");
 const { getAdminToken, pbList, pbFirst, pbEscape } = require("./_pb-helper");
-const { sendSMS } = require("./_notify");
 
 const APP_URL = process.env.APP_URL || "https://mealplannr.xyz";
+
+const CARRIERS = {
+  att:        "@txt.att.net",
+  verizon:    "@vtext.com",
+  tmobile:    "@tmomail.net",
+  sprint:     "@messaging.sprintpcs.com",
+  uscellular: "@email.uscc.net",
+  boost:      "@sms.myboostmobile.com",
+  cricket:    "@mms.cricketwireless.net",
+  metro:      "@mymetropcs.com",
+  spectrum:   "@vtext.com",
+};
+
+const GMAIL_USER = process.env.GMAIL_USER;
+const GMAIL_PASS = (process.env.GMAIL_APP_PASSWORD || "").replace(/\s/g, "");
+
+let _transporter = null;
+function getTransporter() {
+  if (!_transporter && GMAIL_USER && GMAIL_PASS) {
+    _transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: GMAIL_USER, pass: GMAIL_PASS },
+    });
+  }
+  return _transporter;
+}
+
+async function sendSMS({ phone, carrier, message }) {
+  const gateway = CARRIERS[carrier?.toLowerCase()];
+  if (!gateway) { console.error("[Digest] Unknown carrier:", carrier); return false; }
+  const t = getTransporter();
+  if (!t) { console.error("[Digest] GMAIL_USER/GMAIL_APP_PASSWORD not set"); return false; }
+  const digits = String(phone).replace(/\D/g, "");
+  if (digits.length < 10) { console.error("[Digest] Invalid phone number"); return false; }
+  const to = digits + gateway;
+  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("SMTP timeout")), 10_000));
+  try {
+    await Promise.race([
+      t.sendMail({ from: GMAIL_USER, to, subject: "Mealplannr Summary", text: message }),
+      timeout,
+    ]);
+    return true;
+  } catch (e) {
+    console.error("[Digest] Send failed:", e.message);
+    return false;
+  }
+}
 
 // Track which users already got their digest today: "userId:YYYY-MM-DD"
 const _sentToday = new Set();
@@ -122,11 +169,11 @@ async function sendDigestToUser({ userId, phone, carrier, today, adminToken }) {
   const message =
     `Mealplannr Summary - ${dateLabel}\n\n` + sections.join("\n\n");
 
-  const result = await sendSMS({ phone, carrier, message });
-  if (result.ok) {
+  const ok = await sendSMS({ phone, carrier, message });
+  if (ok) {
     console.log(`[Digest] Sent to user ${userId} (${entries.length} meal(s))`);
   } else {
-    console.error(`[Digest] SMS failed for user ${userId}:`, result.error);
+    console.error(`[Digest] SMS failed for user ${userId}`);
   }
 }
 
