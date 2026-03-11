@@ -152,11 +152,11 @@ async function sendDigestToUser({ userId, phone, carrier, today, adminToken }) {
   const message =
     `Mealplannr Summary - ${dateLabel}\n\n` + sections.join("\n\n");
 
-  const ok = await sendSMS({ phone, carrier, message });
+  const { ok, error } = await sendSMS({ phone, carrier, message });
   if (ok) {
     console.log(`[Digest] Sent to user ${userId} (${entries.length} meal(s))`);
   } else {
-    console.error(`[Digest] SMS failed for user ${userId}`);
+    console.error(`[Digest] SMS failed for user ${userId}: ${error}`);
   }
 }
 
