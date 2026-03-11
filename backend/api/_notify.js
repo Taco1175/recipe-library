@@ -53,14 +53,8 @@ async function sendSMS({ phone, carrier, message }) {
   }
 
   const to = digits + gateway;
-  const timeout = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error("SMTP timeout")), 10_000)
-  );
   try {
-    await Promise.race([
-      t.sendMail({ from: GMAIL_USER, to, subject: "", text: message }),
-      timeout,
-    ]);
+    await t.sendMail({ from: GMAIL_USER, to, subject: "", text: message });
     console.log(`[Notify] SMS sent to ${to}`);
     return { ok: true };
   } catch (e) {
