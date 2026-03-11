@@ -39,7 +39,7 @@ async function getAdminToken() {
     identity: PB_ADMIN_EMAIL,
     password: PB_ADMIN_PASSWORD,
   });
-  if (!ok || !data.token) throw new Error("Admin auth failed");
+  if (!ok || !data.token) throw new Error(`Admin auth failed (${status}): ${JSON.stringify(data)}`);
   _adminToken = data.token;
   // PocketBase admin tokens last 1 day by default
   _adminExpiry = Date.now() + 23 * 60 * 60 * 1000;
