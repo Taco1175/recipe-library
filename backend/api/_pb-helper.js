@@ -35,7 +35,7 @@ let _adminExpiry = 0;
 
 async function getAdminToken() {
   if (_adminToken && Date.now() < _adminExpiry - 30000) return _adminToken;
-  const { ok, data } = await pbFetch("admins/auth-with-password", "POST", {
+  const { ok, status, data } = await pbFetch("admins/auth-with-password", "POST", {
     identity: PB_ADMIN_EMAIL,
     password: PB_ADMIN_PASSWORD,
   });
