@@ -36,6 +36,7 @@ const gcalEventHandler        = require("./api/gcal-event");
 const requestAccessHandler    = require("./api/request-access");
 const claudeProxyHandler      = require("./api/claude-proxy");
 const mealPlanHandler         = require("./api/meal-plan");
+const { startDigestScheduler } = require("./api/_digest-scheduler");
 
 const PORT        = process.env.PORT || 3000;
 const PB_INTERNAL = process.env.PB_URL || "http://localhost:8090";
@@ -235,6 +236,7 @@ server.listen(PORT, () => {
   console.log(`Mealplannr API running on port ${PORT}`);
   console.log(`PocketBase internal: ${PB_INTERNAL}`);
   console.log(`Static files: ${STATIC_DIR}`);
+  startDigestScheduler();
 });
 
 process.on("uncaughtException", err => console.error("Uncaught:", err.message));
