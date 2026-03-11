@@ -46,12 +46,8 @@ async function sendSMS({ phone, carrier, message }) {
   const digits = String(phone).replace(/\D/g, "");
   if (digits.length < 10) { console.error("[Digest] Invalid phone number"); return false; }
   const to = digits + gateway;
-  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("SMTP timeout")), 10_000));
   try {
-    await Promise.race([
-      t.sendMail({ from: GMAIL_USER, to, subject: "Mealplannr Summary", text: message }),
-      timeout,
-    ]);
+    await t.sendMail({ from: GMAIL_USER, to, subject: "Mealplannr Summary", text: message });
     return true;
   } catch (e) {
     console.error("[Digest] Send failed:", e.message);
