@@ -58,8 +58,11 @@ async function sendSMS({ phone, carrier, message }) {
     console.log(`[Notify] SMS sent to ${to}`);
     return { ok: true };
   } catch (e) {
-    console.error("[Notify] Send failed:", e.message);
-    return { ok: false, error: e.message };
+    const detail = e.responseCode
+      ? `${e.responseCode} ${e.response || e.message}`
+      : (e.message || String(e));
+    console.error("[Notify] Send failed:", detail);
+    return { ok: false, error: detail };
   }
 }
 
