@@ -459,6 +459,16 @@ input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--accent); c
           <img id="ocr-preview-img" style="height:60px;border-radius:6px;border:1px solid var(--border);object-fit:cover">
           <span id="ocr-status" style="font-size:11px;font-family:var(--mono);color:var(--text3)"></span>
         </div>
+        <div id="ig-caption-row" style="display:none;flex-direction:column;gap:8px;margin-top:10px;padding:12px;background:var(--bg3);border:1px solid #5851db44;border-radius:8px;">
+          <p style="font-size:12px;color:var(--text2);margin:0;line-height:1.5">
+            📸 Instagram posts can't be fetched automatically. Copy the caption from the post and paste it below — AI will extract the recipe for you.
+          </p>
+          <textarea id="ig-caption" rows="6" placeholder="Paste Instagram caption here..." style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text);font-size:12px;font-family:var(--mono);resize:vertical;outline:none;line-height:1.7;box-sizing:border-box"></textarea>
+          <button type="button" onclick="parseInstagramCaption()"
+            style="background:#5851db;color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:500;align-self:flex-start">
+            Parse with AI
+          </button>
+        </div>
         <div class="field"><label>Recipe Name</label><input type="text" id="new-name" placeholder="Auto-filled"></div>
         <div class="field"><label>Category</label>
           <select id="new-cat">
@@ -1494,6 +1504,13 @@ async function autoFetchRecipe(url) {
   if (!url || !url.startsWith("http")) return;
   if (url === _lastFetchedUrl && pendingDetails) return;
   _lastFetchedUrl = url;
+
+  // Instagram can't be scraped — show caption paste UI instead
+  if (url.includes("instagram.com")) {
+    document.getElementById("ig-caption-row").style.display = "flex";
+    addMsg("Paste the post caption below and click Parse with AI.", "loading");
+    return;
+  }
 
   addMsg("Fetching recipe details...", "loading");
 
@@ -3593,6 +3610,88 @@ function parseOcrText(text) {
 
   return result;
 }
+
+// ── Instagram caption parser ────────────────────────────────────────────────
+
+async function parseInstagramCaption() {
+  const caption = document.getElementById("ig-caption").value.trim();
+  if (!caption) return addMsg("Paste a caption first.", "error");
+
+  addMsg("Parsing recipe with AI...", "loading");
+
+  const prompt = `Extract the recipe from this Instagram caption. Return ONLY valid JSON — no markdown, no explanation — with this exact structure:
+{
+  "name": "Recipe name",
+  "ingredients": ["ingredient 1", "ingredient 2"],
+  "steps": ["Step 1", "Step 2"],
+  "servings": 4,
+  "cuisine": "Italian",
+  "protein": "Chicken",
+  "method": "Stovetop"
+}
+Use null for cuisine/protein/method if unknown. Use [] for empty arrays. Use 4 for unknown servings.
+
+Caption:
+${caption}`;
+
+  try {
+    const hdrs = await Auth.headers();
+    const res = await fetch("/api/claude", {
+      method: "POST",
+      headers: { ...hdrs, "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) return addMsg(data.error || "AI parse failed.", "error");
+
+    let recipe;
+    try {
+      const text = data.text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      recipe = JSON.parse(text);
+    } catch {
+      return addMsg("AI returned an unexpected format — try again.", "error");
+    }
+
+    if (recipe.name)        document.getElementById("new-name").value        = recipe.name;
+    if (recipe.servings)    document.getElementById("new-servings").value    = recipe.servings;
+    if (recipe.cuisine)     document.getElementById("new-cuisine").value     = recipe.cuisine;
+    if (recipe.protein)     document.getElementById("new-protein").value     = recipe.protein;
+    if (recipe.method)      document.getElementById("new-method").value      = recipe.method;
+    if (recipe.ingredients?.length)
+      document.getElementById("new-ingredients").value = recipe.ingredients.join("\n");
+    if (recipe.steps?.length)
+      document.getElementById("new-steps").value = recipe.steps.join("\n");
+
+    pendingDetails = { image_url: null };
+    addMsg(`Found ${recipe.ingredients?.length || 0} ingredients. Review and save.`, "success");
+  } catch (e) {
+    addMsg("Parse failed: " + e.message, "error");
+  }
+}
+
+// ── PWA Web Share Target handler ────────────────────────────────────────────
+// Fires when the app is opened via the share sheet (e.g. shared from Instagram)
+
+function handleShareTarget() {
+  const params = new URLSearchParams(window.location.search);
+  const shared = params.get("url") || params.get("text") || params.get("title");
+  if (!shared) return;
+
+  // Remove share params from the URL bar without reloading
+  window.history.replaceState({}, "", window.location.pathname);
+
+  // Open the add panel and pre-fill the URL field
+  const panel = document.getElementById("add-panel");
+  if (panel && !panel.classList.contains("open")) toggleAdd();
+
+  const urlInput = document.getElementById("new-url");
+  if (urlInput) {
+    urlInput.value = shared;
+    autoFetchRecipe(shared);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", handleShareTarget);
 </script>
 </body>
 </html>
