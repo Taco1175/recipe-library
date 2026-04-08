@@ -22,5 +22,14 @@
     }
   ],
   "screenshots": [],
-  "categories": ["food", "lifestyle", "utilities"]
+  "categories": ["food", "lifestyle", "utilities"],
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": {
+      "url": "url",
+      "text": "text",
+      "title": "title"
+    }
+  }
 }
