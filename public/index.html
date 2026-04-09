@@ -459,6 +459,16 @@ input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--accent); c
           <img id="ocr-preview-img" style="height:60px;border-radius:6px;border:1px solid var(--border);object-fit:cover">
           <span id="ocr-status" style="font-size:11px;font-family:var(--mono);color:var(--text3)"></span>
         </div>
+        <div id="ig-caption-row" style="display:none;flex-direction:column;gap:8px;margin-top:10px;padding:12px;background:var(--bg3);border:1px solid #5851db44;border-radius:8px;">
+          <p style="font-size:12px;color:var(--text2);margin:0;line-height:1.5">
+            📸 Instagram posts can't be fetched automatically. Copy the caption from the post and paste it below — AI will extract the recipe for you.
+          </p>
+          <textarea id="ig-caption" rows="6" placeholder="Paste Instagram caption here..." style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text);font-size:12px;font-family:var(--mono);resize:vertical;outline:none;line-height:1.7;box-sizing:border-box"></textarea>
+          <button type="button" onclick="parseInstagramCaption()"
+            style="background:#5851db;color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:500;align-self:flex-start">
+            Parse with AI
+          </button>
+        </div>
         <div class="field"><label>Recipe Name</label><input type="text" id="new-name" placeholder="Auto-filled"></div>
         <div class="field"><label>Category</label>
           <select id="new-cat">
@@ -1484,9 +1494,18 @@ function guessSourceFromUrl(url) {
       "sisufitness.com": "SISU Fitness", "awaken180weightloss.com": "Awaken180",
       "flexibledietinglifestyle.com": "Flexible Dieting Lifestyle",
       "eatingbirdfood.com": "Eating Bird Food",
+      "instagram.com": "Instagram", "facebook.com": "Facebook",
+      "fb.watch": "Facebook", "fb.com": "Facebook",
     };
     return map[host] || host.split(".")[0].replace(/-/g, " ").replace(/\w/g, c => c.toUpperCase());
   } catch(e) { return ""; }
+}
+
+function isSocialMediaUrl(url) {
+  try {
+    const host = new URL(url).hostname.replace("www.", "");
+    return ["instagram.com", "facebook.com", "fb.watch", "fb.com"].some(d => host.includes(d));
+  } catch { return false; }
 }
 
 async function autoFetchRecipe(url) {
@@ -1495,7 +1514,8 @@ async function autoFetchRecipe(url) {
   if (url === _lastFetchedUrl && pendingDetails) return;
   _lastFetchedUrl = url;
 
-  addMsg("Fetching recipe details...", "loading");
+  const social = isSocialMediaUrl(url);
+  addMsg(social ? "Extracting recipe from social media post..." : "Fetching recipe details...", "loading");
 
   // Normalize URL - strip print query params but KEEP /print/NNNNN/ paths (they work fine)
   let fetchUrl = url
@@ -1506,9 +1526,9 @@ async function autoFetchRecipe(url) {
 
 
   try {
-    // Use our API — handles JustTheRecipe + fallback parsers server-side
     const hdrs = await Auth.headers();
-    const res = await fetch("/api/fetch-recipe", {
+    const endpoint = social ? "/api/fetch-social-recipe" : "/api/fetch-recipe";
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: { ...hdrs, "Content-Type": "application/json" },
       body: JSON.stringify({ url: fetchUrl }),
@@ -1523,6 +1543,19 @@ async function autoFetchRecipe(url) {
     if (data.name) document.getElementById("new-name").value = data.name.replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">");
     if (data.servings) document.getElementById("new-servings").value = data.servings;
 
+    // Social media: show confidence warning and manual paste fallback
+    if (social && (data.confidence === "none" || (!data.ingredients?.length && !data.name))) {
+      addMsg(`Could not find a recipe in this post. <button onclick="showSocialPasteBox()" style="background:var(--accent);color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;margin-left:8px;font-size:12px">Paste Recipe Text</button>`, "error");
+      showSocialPasteBox();
+      return;
+    }
+
+    if (social && data.confidence === "low") {
+      addMsg("Recipe extracted from social post — confidence is low. Please review carefully.", "error");
+    } else if (social && data.confidence === "medium") {
+      addMsg("Recipe extracted from social post — please review before saving.", "success");
+    }
+
     if (data.ingredients?.length) {
       pendingDetails = { image_url: data.image_url || null };
       document.getElementById("new-ingredients").value = data.ingredients.join("\n");
@@ -1535,6 +1568,46 @@ async function autoFetchRecipe(url) {
   } catch (e) {
     addMsg("Fetch failed: " + e.message, "error");
   }
+}
+
+function showSocialPasteBox() {
+  let box = document.getElementById("social-paste-box");
+  if (box) { box.style.display = "block"; return; }
+  const prev = document.getElementById("fetch-preview");
+  box = document.createElement("div");
+  box.id = "social-paste-box";
+  box.style.cssText = "margin-top:12px;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;";
+  box.innerHTML = `<label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">Paste recipe text from the post (ingredients, steps, etc.)</label>
+    <textarea id="social-paste-text" rows="8" style="width:100%;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:13px;font-family:var(--mono);resize:vertical" placeholder="Paste the recipe text here..."></textarea>
+    <button onclick="parseSocialPasteText()" style="margin-top:8px;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px">Parse with AI</button>`;
+  prev.parentNode.insertBefore(box, prev);
+}
+
+async function parseSocialPasteText() {
+  const text = document.getElementById("social-paste-text")?.value?.trim();
+  if (!text) return;
+  addMsg("Parsing pasted recipe text...", "loading");
+  try {
+    const hdrs = await Auth.headers();
+    const res = await fetch("/api/fetch-social-recipe", {
+      method: "POST",
+      headers: { ...hdrs, "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) { addMsg(data.error || "Could not parse text.", "error"); return; }
+    if (data.name) document.getElementById("new-name").value = data.name;
+    if (data.servings) document.getElementById("new-servings").value = data.servings;
+    if (data.ingredients?.length) {
+      pendingDetails = { ingredients: data.ingredients, steps: data.steps || [], servings: data.servings || 4 };
+      addMsg(`Parsed ${data.ingredients.length} ingredients, ${data.steps.length} steps from pasted text. Review below.`, "success");
+      const prev = document.getElementById("fetch-preview");
+      document.getElementById("preview-ingredients").innerHTML = data.ingredients.map(i => `<li>${i}</li>`).join("");
+      document.getElementById("preview-steps").innerHTML = (data.steps||[]).map(s => `<li>${s}</li>`).join("");
+      prev.style.display = "block";
+      document.getElementById("social-paste-box").style.display = "none";
+    } else { addMsg("Could not find recipe in pasted text.", "error"); }
+  } catch(e) { addMsg("Parse failed: " + e.message, "error"); }
 }
 
 async function saveNew() {
@@ -2891,7 +2964,8 @@ async function startBulkFetch() {
       updateBulkRow(idx);
       try {
         const hdrs = await Auth.headers();
-        const res = await fetch('/api/fetch-recipe', {
+        const endpoint = isSocialMediaUrl(url) ? '/api/fetch-social-recipe' : '/api/fetch-recipe';
+        const res = await fetch(endpoint, {
           method: 'POST',
           headers: { ...hdrs, 'Content-Type': 'application/json' },
           body: JSON.stringify({ url }),
@@ -3593,6 +3667,88 @@ function parseOcrText(text) {
 
   return result;
 }
+
+// ── Instagram caption parser ────────────────────────────────────────────────
+
+async function parseInstagramCaption() {
+  const caption = document.getElementById("ig-caption").value.trim();
+  if (!caption) return addMsg("Paste a caption first.", "error");
+
+  addMsg("Parsing recipe with AI...", "loading");
+
+  const prompt = `Extract the recipe from this Instagram caption. Return ONLY valid JSON — no markdown, no explanation — with this exact structure:
+{
+  "name": "Recipe name",
+  "ingredients": ["ingredient 1", "ingredient 2"],
+  "steps": ["Step 1", "Step 2"],
+  "servings": 4,
+  "cuisine": "Italian",
+  "protein": "Chicken",
+  "method": "Stovetop"
+}
+Use null for cuisine/protein/method if unknown. Use [] for empty arrays. Use 4 for unknown servings.
+
+Caption:
+${caption}`;
+
+  try {
+    const hdrs = await Auth.headers();
+    const res = await fetch("/api/claude", {
+      method: "POST",
+      headers: { ...hdrs, "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) return addMsg(data.error || "AI parse failed.", "error");
+
+    let recipe;
+    try {
+      const text = data.text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      recipe = JSON.parse(text);
+    } catch {
+      return addMsg("AI returned an unexpected format — try again.", "error");
+    }
+
+    if (recipe.name)        document.getElementById("new-name").value        = recipe.name;
+    if (recipe.servings)    document.getElementById("new-servings").value    = recipe.servings;
+    if (recipe.cuisine)     document.getElementById("new-cuisine").value     = recipe.cuisine;
+    if (recipe.protein)     document.getElementById("new-protein").value     = recipe.protein;
+    if (recipe.method)      document.getElementById("new-method").value      = recipe.method;
+    if (recipe.ingredients?.length)
+      document.getElementById("new-ingredients").value = recipe.ingredients.join("\n");
+    if (recipe.steps?.length)
+      document.getElementById("new-steps").value = recipe.steps.join("\n");
+
+    pendingDetails = { image_url: null };
+    addMsg(`Found ${recipe.ingredients?.length || 0} ingredients. Review and save.`, "success");
+  } catch (e) {
+    addMsg("Parse failed: " + e.message, "error");
+  }
+}
+
+// ── PWA Web Share Target handler ────────────────────────────────────────────
+// Fires when the app is opened via the share sheet (e.g. shared from Instagram)
+
+function handleShareTarget() {
+  const params = new URLSearchParams(window.location.search);
+  const shared = params.get("url") || params.get("text") || params.get("title");
+  if (!shared) return;
+
+  // Remove share params from the URL bar without reloading
+  window.history.replaceState({}, "", window.location.pathname);
+
+  // Open the add panel and pre-fill the URL field
+  const panel = document.getElementById("add-panel");
+  if (panel && !panel.classList.contains("open")) toggleAdd();
+
+  const urlInput = document.getElementById("new-url");
+  if (urlInput) {
+    urlInput.value = shared;
+    autoFetchRecipe(shared);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", handleShareTarget);
 </script>
 </body>
 </html>
