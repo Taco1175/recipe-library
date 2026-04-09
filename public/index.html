@@ -1545,8 +1545,8 @@ async function autoFetchRecipe(url) {
 
     // Social media: show confidence warning and manual paste fallback
     if (social && (data.confidence === "none" || (!data.ingredients?.length && !data.name))) {
-      addMsg(`Could not find a recipe in this post. <button onclick="showSocialPasteBox()" style="background:var(--accent);color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;margin-left:8px;font-size:12px">Paste Recipe Text</button>`, "error");
-      showSocialPasteBox();
+      document.getElementById("ig-caption-row").style.display = "flex";
+      addMsg("Could not extract recipe automatically. Paste the post caption below and click Parse with AI.", "error");
       return;
     }
 
@@ -1568,46 +1568,6 @@ async function autoFetchRecipe(url) {
   } catch (e) {
     addMsg("Fetch failed: " + e.message, "error");
   }
-}
-
-function showSocialPasteBox() {
-  let box = document.getElementById("social-paste-box");
-  if (box) { box.style.display = "block"; return; }
-  const prev = document.getElementById("fetch-preview");
-  box = document.createElement("div");
-  box.id = "social-paste-box";
-  box.style.cssText = "margin-top:12px;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;";
-  box.innerHTML = `<label style="font-size:12px;color:var(--text2);display:block;margin-bottom:6px">Paste recipe text from the post (ingredients, steps, etc.)</label>
-    <textarea id="social-paste-text" rows="8" style="width:100%;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:13px;font-family:var(--mono);resize:vertical" placeholder="Paste the recipe text here..."></textarea>
-    <button onclick="parseSocialPasteText()" style="margin-top:8px;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px">Parse with AI</button>`;
-  prev.parentNode.insertBefore(box, prev);
-}
-
-async function parseSocialPasteText() {
-  const text = document.getElementById("social-paste-text")?.value?.trim();
-  if (!text) return;
-  addMsg("Parsing pasted recipe text...", "loading");
-  try {
-    const hdrs = await Auth.headers();
-    const res = await fetch("/api/fetch-social-recipe", {
-      method: "POST",
-      headers: { ...hdrs, "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
-    });
-    const data = await res.json();
-    if (!res.ok || data.error) { addMsg(data.error || "Could not parse text.", "error"); return; }
-    if (data.name) document.getElementById("new-name").value = data.name;
-    if (data.servings) document.getElementById("new-servings").value = data.servings;
-    if (data.ingredients?.length) {
-      pendingDetails = { ingredients: data.ingredients, steps: data.steps || [], servings: data.servings || 4 };
-      addMsg(`Parsed ${data.ingredients.length} ingredients, ${data.steps.length} steps from pasted text. Review below.`, "success");
-      const prev = document.getElementById("fetch-preview");
-      document.getElementById("preview-ingredients").innerHTML = data.ingredients.map(i => `<li>${i}</li>`).join("");
-      document.getElementById("preview-steps").innerHTML = (data.steps||[]).map(s => `<li>${s}</li>`).join("");
-      prev.style.display = "block";
-      document.getElementById("social-paste-box").style.display = "none";
-    } else { addMsg("Could not find recipe in pasted text.", "error"); }
-  } catch(e) { addMsg("Parse failed: " + e.message, "error"); }
 }
 
 async function saveNew() {
