@@ -37,6 +37,7 @@ const requestAccessHandler    = require("./api/request-access");
 const claudeProxyHandler      = require("./api/claude-proxy");
 const mealPlanHandler         = require("./api/meal-plan");
 const { startDigestScheduler } = require("./api/_digest-scheduler");
+const fetchSocialRecipeHandler = require("./api/fetch-social-recipe");
 
 const PORT        = process.env.PORT || 3000;
 const PB_INTERNAL = process.env.PB_URL || "http://localhost:8090";
@@ -173,9 +174,10 @@ const API_ROUTES = {
   "/api/google-calendar":    googleCalendarHandler,
   "/api/gcal-event":         gcalEventHandler,
   "/api/collections/users/auth-with-oauth2": authInterceptHandler,
-  "/api/request-access": requestAccessHandler,
-  "/api/claude":         claudeProxyHandler,
-  "/api/meal-plan":      mealPlanHandler,
+  "/api/request-access":     requestAccessHandler,
+  "/api/claude":             claudeProxyHandler,
+  "/api/meal-plan":          mealPlanHandler,
+  "/api/fetch-social-recipe": fetchSocialRecipeHandler,
 };
 
 // ── Main server ────────────────────────────────────────────────────────────
