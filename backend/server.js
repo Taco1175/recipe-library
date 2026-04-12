@@ -38,6 +38,7 @@ const claudeProxyHandler      = require("./api/claude-proxy");
 const mealPlanHandler         = require("./api/meal-plan");
 const { startDigestScheduler } = require("./api/_digest-scheduler");
 const fetchSocialRecipeHandler = require("./api/fetch-social-recipe");
+const scanRecipeHandler         = require("./api/scan-recipe");
 
 const PORT        = process.env.PORT || 3000;
 const PB_INTERNAL = process.env.PB_URL || "http://localhost:8090";
@@ -75,10 +76,10 @@ const MIME = {
 };
 
 // ── Body parser ────────────────────────────────────────────────────────────
-function readBody(req) {
+function readBody(req, maxSize = 2e6) {
   return new Promise((resolve, reject) => {
     let data = "";
-    req.on("data", chunk => { data += chunk; if (data.length > 2e6) reject(new Error("Body too large")); });
+    req.on("data", chunk => { data += chunk; if (data.length > maxSize) reject(new Error("Body too large")); });
     req.on("end", () => {
       try { resolve(data ? JSON.parse(data) : {}); }
       catch { resolve({}); }
@@ -178,6 +179,7 @@ const API_ROUTES = {
   "/api/claude":             claudeProxyHandler,
   "/api/meal-plan":          mealPlanHandler,
   "/api/fetch-social-recipe": fetchSocialRecipeHandler,
+  "/api/scan-recipe":         scanRecipeHandler,
 };
 
 // ── Main server ────────────────────────────────────────────────────────────
@@ -213,7 +215,8 @@ const server = http.createServer(async (req, res) => {
   const handler = API_ROUTES[pathname];
   if (handler) {
     try {
-      req.body = await readBody(req);
+      const maxSize = pathname === "/api/scan-recipe" ? 15e6 : 2e6;
+      req.body = await readBody(req, maxSize);
       await handler(req, res);
     } catch (e) {
       console.error(`[${pathname}] Error:`, e.message);

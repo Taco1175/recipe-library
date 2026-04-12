@@ -452,7 +452,7 @@ input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--accent); c
               onmouseover="this.style.background='#3a5a3a'" onmouseout="this.style.background='#2a3f2a'">
               📷 Scan
             </button>
-            <input type="file" id="ocr-file-input" accept="image/*" style="display:none" onchange="ocrFromFile(this)">
+            <input type="file" id="ocr-file-input" accept="image/*" capture="environment" style="display:none" onchange="ocrFromFile(this)">
           </div>
         </div>
         <div id="ocr-preview-row" style="display:none;margin-top:8px;align-items:center;gap:10px">
@@ -3521,55 +3521,91 @@ function ocrFromFile(input) {
   if (!input.files?.length) return;
   const file = input.files[0];
   input.value = "";
-  const url = URL.createObjectURL(file);
-  runOcr(url);
+  runOcr(file);
 }
 
 document.addEventListener("paste", e => {
   if (!document.getElementById("add-panel").classList.contains("show")) return;
   const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith("image/"));
   if (!item) return;
-  const url = URL.createObjectURL(item.getAsFile());
-  runOcr(url);
+  runOcr(item.getAsFile());
 });
 
-async function runOcr(imageUrl) {
+// Convert File to base64
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function runOcr(file) {
   const row = document.getElementById("ocr-preview-row");
   const img = document.getElementById("ocr-preview-img");
   const status = document.getElementById("ocr-status");
 
-  img.src = imageUrl;
+  const previewUrl = URL.createObjectURL(file);
+  img.src = previewUrl;
   row.style.display = "flex";
-  status.textContent = "Reading image...";
+  status.textContent = "Uploading to Pi...";
   addMsg("Scanning recipe photo...", "loading");
 
   try {
-    const { data: { text } } = await Tesseract.recognize(imageUrl, "eng", {
-      logger: m => {
-        if (m.status === "recognizing text")
-          status.textContent = `Reading... ${Math.round(m.progress * 100)}%`;
-      }
+    // Try server-side Tesseract first (faster + more accurate on Pi)
+    const base64 = await fileToBase64(file);
+    const hdrs = await Auth.headers();
+    const res = await fetch("/api/scan-recipe", {
+      method: "POST",
+      headers: { ...hdrs, "Content-Type": "application/json" },
+      body: JSON.stringify({ image: base64 }),
     });
 
+    if (!res.ok) throw new Error((await res.json()).error || "Server scan failed");
+    const parsed = await res.json();
+
     status.textContent = "Done";
-    const parsed = parseOcrText(text);
-
-    if (parsed.name && !document.getElementById("new-name").value)
-      document.getElementById("new-name").value = parsed.name;
-    if (parsed.servings)
-      document.getElementById("new-servings").value = parsed.servings;
-
-    if (parsed.ingredients.length) {
-      pendingDetails = null;
-      document.getElementById("new-ingredients").value = parsed.ingredients.join("\n");
-      document.getElementById("new-steps").value = parsed.steps.join("\n");
-      addMsg(`Found ${parsed.ingredients.length} ingredients, ${parsed.steps.length} steps from photo. Edit below then save.`, "success");
-    } else {
-      addMsg("Couldn't extract ingredients from photo. Try a clearer image.", "error");
+    applyScannedRecipe(parsed);
+  } catch (serverErr) {
+    // Fallback: client-side Tesseract.js if server unavailable
+    console.warn("Server OCR failed, falling back to browser:", serverErr.message);
+    status.textContent = "Server unavailable, scanning locally...";
+    try {
+      const { data: { text } } = await Tesseract.recognize(previewUrl, "eng", {
+        logger: m => {
+          if (m.status === "recognizing text")
+            status.textContent = `Reading locally... ${Math.round(m.progress * 100)}%`;
+        }
+      });
+      status.textContent = "Done";
+      applyScannedRecipe(parseOcrText(text));
+    } catch (e) {
+      status.textContent = "Failed";
+      addMsg("OCR failed: " + e.message, "error");
     }
-  } catch(e) {
-    status.textContent = "Failed";
-    addMsg("OCR failed: " + e.message, "error");
+  }
+}
+
+function applyScannedRecipe(parsed) {
+  if (parsed.name && !document.getElementById("new-name").value)
+    document.getElementById("new-name").value = parsed.name;
+  if (parsed.servings)
+    document.getElementById("new-servings").value = parsed.servings;
+  if (parsed.cuisine)
+    document.getElementById("new-cuisine").value = parsed.cuisine;
+  if (parsed.protein)
+    document.getElementById("new-protein").value = parsed.protein;
+  if (parsed.method)
+    document.getElementById("new-method").value = parsed.method;
+
+  if (parsed.ingredients?.length) {
+    pendingDetails = null;
+    document.getElementById("new-ingredients").value = parsed.ingredients.join("\n");
+    document.getElementById("new-steps").value = (parsed.steps || []).join("\n");
+    addMsg(`Found ${parsed.ingredients.length} ingredients, ${parsed.steps?.length || 0} steps from photo. Edit below then save.`, "success");
+  } else {
+    addMsg("Couldn't extract ingredients from photo. Try a clearer image or better lighting.", "error");
   }
 }
 
